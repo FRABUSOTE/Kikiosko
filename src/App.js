@@ -643,11 +643,15 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
                     onBlur={async e => {
                       const val = parseFloat(e.target.value.replace(",", ".")) || 0;
                       await supabase.from("productos").update({ precio: val }).eq("id", p.id);
-                      mostrarToast("✅ Precio actualizado");
                     }}
                     style={{ width: 70, background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 7, padding: "6px 8px", fontSize: 14, fontWeight: 900, color: "#f97316", fontFamily: "inherit", outline: "none", textAlign: "center" }}
                     onFocus={e => { e.target.style.borderColor = "#f97316"; e.target.select(); }}
-                    onBlur={e => { e.target.style.borderColor = "#fed7aa"; mostrarToast("✅ Precio actualizado"); }}
+                    onBlur={async e => {
+                      e.target.style.borderColor = "#fed7aa";
+                      const val = parseFloat(e.target.value.replace(",", ".")) || 0;
+                      await supabase.from("productos").update({ precio: val }).eq("id", p.id);
+                      mostrarToast("✅ Precio actualizado");
+                    }}
                   />
                 </div>
               </div>
