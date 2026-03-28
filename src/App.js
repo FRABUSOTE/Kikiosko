@@ -1,0 +1,1001 @@
+import { useState, useRef } from "react";
+
+// ─── DATOS INICIALES ───
+const SUPERADMIN = { email: "admin@kikiosko.pe", clave: "admin123" };
+
+const KIOSKOS_INIT = [
+  {
+    id: 1, nombre: "Kiosko Rosita", dueno: "Rosa Flores", email: "rosita@kiosko.pe",
+    clave: "1234", whatsapp: "999111222", plan: "Pro", monto: 59, slug: "rosita",
+    vence: "2026-04-23", activo: true, pagos: 3,
+    productos: [
+      { id: 1, nombre: "Juice 250ml", precio: 1.50, categoria: "Bebidas", emoji: "🥤", stock: true, cantidad: 10 },
+      { id: 2, nombre: "Agua San Luis", precio: 1.00, categoria: "Bebidas", emoji: "💧", stock: true, cantidad: 20 },
+      { id: 3, nombre: "Choco-Bon", precio: 0.50, categoria: "Golosinas", emoji: "🍫", stock: true, cantidad: 15 },
+      { id: 4, nombre: "Galletas Oreo", precio: 1.00, categoria: "Golosinas", emoji: "🍪", stock: true, cantidad: 8 },
+      { id: 5, nombre: "Regla 30cm", precio: 2.00, categoria: "Útiles", emoji: "📏", stock: true, cantidad: 5 },
+      { id: 6, nombre: "Lápiz HB", precio: 0.50, categoria: "Útiles", emoji: "✏️", stock: true, cantidad: 30 },
+    ]
+  },
+  {
+    id: 2, nombre: "Bodega Don Juan", dueno: "Juan Mamani", email: "juan@kiosko.pe",
+    clave: "5678", whatsapp: "999333444", plan: "Básico", monto: 29, slug: "juan",
+    vence: "2026-04-01", activo: true, pagos: 1,
+    productos: [
+      { id: 1, nombre: "Coca Cola 500ml", precio: 3.00, categoria: "Bebidas", emoji: "🥤", stock: true },
+      { id: 2, nombre: "Pan de molde", precio: 4.50, categoria: "Otros", emoji: "🍞", stock: true },
+      { id: 3, nombre: "Yogurt", precio: 2.50, categoria: "Bebidas", emoji: "🥛", stock: false },
+    ]
+  },
+  {
+    id: 3, nombre: "Kiosko María", dueno: "María Quispe", email: "maria@kiosko.pe",
+    clave: "9999", whatsapp: "999555666", plan: "Pro", monto: 59, slug: "maria",
+    vence: "2026-03-15", activo: false, pagos: 2,
+    productos: []
+  },
+];
+
+const PLANES = [
+  { id: "Básico", precio: 29 },
+  { id: "Pro", precio: 59 },
+  { id: "Premium", precio: 99 },
+];
+
+function fmtFecha(f) {
+  if (!f) return "—";
+  const [y, m, d] = f.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+function diasRestantes(f) {
+  if (!f) return 999;
+  return Math.ceil((new Date(f) - new Date("2026-03-25")) / (1000 * 60 * 60 * 24));
+}
+
+// ─── SUPER ADMIN ───
+function SuperAdmin({ onSalir }) {
+  const [kioskos, setKioskos] = useState(KIOSKOS_INIT);
+  const [filtro, setFiltro] = useState("todos");
+  const [busqueda, setBusqueda] = useState("");
+  const [detalle, setDetalle] = useState(null);
+  const [modalNuevo, setModalNuevo] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [vistaProductos, setVistaProductos] = useState(null);
+  const [nuevoKiosko, setNuevoKiosko] = useState({ nombre: "", dueno: "", email: "", clave: "", whatsapp: "", plan: "Pro", vence: "" });
+  const fileRef = useRef();
+
+  const mostrarToast = (msg, tipo = "ok") => { setToast({ msg, tipo }); setTimeout(() => setToast(null), 2500); };
+
+  const toggleAcceso = (id) => {
+    setKioskos(prev => prev.map(k => {
+      if (k.id === id) {
+        const nuevo = { ...k, activo: !k.activo };
+        mostrarToast(nuevo.activo ? "✅ Acceso activado" : "❌ Acceso desactivado", nuevo.activo ? "ok" : "error");
+        if (detalle?.id === id) setDetalle(nuevo);
+        return nuevo;
+      }
+      return k;
+    }));
+  };
+
+  const cambiarPlan = (id, plan) => {
+    const monto = PLANES.find(p => p.id === plan)?.precio || 59;
+    setKioskos(prev => prev.map(k => k.id === id ? { ...k, plan, monto } : k));
+    setDetalle(prev => prev ? { ...prev, plan, monto } : null);
+    mostrarToast(`✅ Plan cambiado a ${plan}`);
+  };
+
+  const enviarWhatsApp = (k) => {
+    const msg = encodeURIComponent(`Hola ${k.dueno.split(" ")[0]}! 👋\n\nAquí están tus accesos a KiKiosko 🏪\n\n🛒 Link para tus compradores:\nkikiosko.vercel.app/${k.slug}\n← Comparte este link con tus clientes\n\n⚙️ Tu panel de administrador:\nkikiosko.vercel.app\n👤 Usuario: ${k.email}\n🔑 Clave: ${k.clave}\n\n📅 Acceso hasta: ${fmtFecha(k.vence)}\n\nCualquier consulta escríbeme 😊`);
+    window.open(`https://wa.me/51${k.whatsapp}?text=${msg}`, "_blank");
+  };
+
+  const crearKiosko = () => {
+    const monto = PLANES.find(p => p.id === nuevoKiosko.plan)?.precio || 59;
+    const slug = nuevoKiosko.nombre.toLowerCase().replace(/\s+/g, "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").slice(0, 20);
+    const nuevo = { id: Date.now(), ...nuevoKiosko, monto, slug, activo: true, pagos: 0, productos: [] };
+    setKioskos(prev => [...prev, nuevo]);
+    setModalNuevo(false);
+    setNuevoKiosko({ nombre: "", dueno: "", email: "", clave: "", whatsapp: "", plan: "Pro", vence: "" });
+    mostrarToast("✅ Kiosko creado exitosamente");
+  };
+
+  const subirExcel = (kioskoid, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    // Simula carga de Excel
+    const productosSimulados = [
+      { id: Date.now() + 1, nombre: "Producto Excel 1", precio: 2.50, categoria: "Bebidas", emoji: "🥤", stock: true },
+      { id: Date.now() + 2, nombre: "Producto Excel 2", precio: 1.00, categoria: "Golosinas", emoji: "🍬", stock: true },
+      { id: Date.now() + 3, nombre: "Producto Excel 3", precio: 3.50, categoria: "Útiles", emoji: "✏️", stock: true },
+    ];
+    setKioskos(prev => prev.map(k => k.id === kioskoid ? { ...k, productos: [...k.productos, ...productosSimulados] } : k));
+    mostrarToast(`✅ ${productosSimulados.length} productos cargados desde Excel`);
+  };
+
+  const activos = kioskos.filter(k => k.activo);
+  const inactivos = kioskos.filter(k => !k.activo);
+  const ingresoMensual = activos.reduce((s, k) => s + k.monto, 0);
+
+  const filtrados = kioskos.filter(k => {
+    const matchFiltro = filtro === "todos" ? true : filtro === "activos" ? k.activo : !k.activo;
+    const matchBusqueda = busqueda === "" || k.nombre.toLowerCase().includes(busqueda.toLowerCase()) || k.dueno.toLowerCase().includes(busqueda.toLowerCase());
+    return matchFiltro && matchBusqueda;
+  });
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "'Nunito', sans-serif", color: "#111827" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        .btn { border: none; border-radius: 8px; font-family: inherit; cursor: pointer; font-weight: 700; transition: all 0.15s; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; }
+        .toggle { position: relative; width: 42px; height: 23px; border-radius: 999px; cursor: pointer; border: none; outline: none; transition: background 0.2s; flex-shrink: 0; }
+        .toggle-knob { position: absolute; top: 2.5px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .inp { width: 100%; background: #f9fafb; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #111827; font-family: inherit; outline: none; transition: border 0.2s; }
+        .inp:focus { border-color: #f97316; background: #fff; }
+        select { font-family: inherit; background: #f9fafb; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #111827; width: 100%; outline: none; cursor: pointer; }
+        .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; overflow-y: auto; }
+        .modal { background: #fff; border-radius: 18px; padding: 28px; width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto; }
+        .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); padding: 11px 22px; border-radius: 999px; font-size: 13px; font-weight: 700; z-index: 200; white-space: nowrap; }
+        .row:hover { background: #fafafa; cursor: pointer; }
+        .fade { animation: fade 0.3s ease both; }
+        @keyframes fade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 3px; }
+        .upload-zone { border: 2px dashed #fed7aa; border-radius: 10px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s; background: #fff7ed; }
+        .upload-zone:hover { border-color: #f97316; }
+      `}</style>
+
+      {toast && <div className="toast" style={{ background: toast.tipo === "ok" ? "#059669" : "#dc2626", color: "#fff" }}>{toast.msg}</div>}
+
+      {/* Header */}
+      <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "13px 24px", display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ fontSize: 24 }}>🏪</span>
+        <span style={{ fontWeight: 900, fontSize: 18 }}>Ki<span style={{ color: "#f97316" }}>Kiosko</span></span>
+        <span style={{ fontSize: 11, background: "#fef3c7", color: "#92400e", padding: "3px 10px", borderRadius: 999, fontWeight: 700 }}>👑 SÚPER ADMIN</span>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "9px 18px", fontSize: 12 }} onClick={() => setModalNuevo(true)}>+ Nuevo kiosko</button>
+          <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "9px 14px", fontSize: 12, border: "1px solid #e5e7eb" }} onClick={onSalir}>Salir</button>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "28px 20px" }}>
+
+        {/* Stats */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
+          {[
+            { label: "Total kioskos", val: kioskos.length, color: "#111827", icon: "🏪" },
+            { label: "Activos", val: activos.length, color: "#059669", icon: "✅" },
+            { label: "Inactivos", val: inactivos.length, color: "#dc2626", icon: "❌" },
+            { label: "Ingreso mensual", val: `S/. ${ingresoMensual}`, color: "#f97316", icon: "💰" },
+          ].map(s => (
+            <div key={s.label} className="card" style={{ padding: "16px 18px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <p style={{ fontSize: 10, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>{s.label}</p>
+                <span>{s.icon}</span>
+              </div>
+              <p style={{ fontWeight: 900, fontSize: 26, color: s.color }}>{s.val}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Alertas vencimiento */}
+        {kioskos.filter(k => k.activo && diasRestantes(k.vence) <= 7 && diasRestantes(k.vence) >= 0).length > 0 && (
+          <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "#92400e" }}>
+            ⚠️ <strong>{kioskos.filter(k => k.activo && diasRestantes(k.vence) <= 7).length} kiosko(s)</strong> vencen en los próximos 7 días
+          </div>
+        )}
+
+        {/* Filtros */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+          <input className="inp" style={{ width: 240 }} placeholder="🔍 Buscar kiosko o dueño..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+          {[["todos", "Todos"], ["activos", `✅ Activos (${activos.length})`], ["inactivos", `❌ Inactivos (${inactivos.length})`]].map(([id, label]) => (
+            <button key={id} className="btn" style={{ padding: "8px 14px", fontSize: 11, background: filtro === id ? "#fff7ed" : "#f3f4f6", color: filtro === id ? "#f97316" : "#6b7280", border: `1px solid ${filtro === id ? "#fed7aa" : "#e5e7eb"}` }} onClick={() => setFiltro(id)}>{label}</button>
+          ))}
+        </div>
+
+        {/* Tabla */}
+        <div className="card" style={{ overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
+                {["Kiosko", "Plan", "Productos", "Vence", "Estado", "Acceso"].map(h => (
+                  <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 10, color: "#9ca3af", letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 700 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtrados.map(k => (
+                <tr key={k.id} className="row" style={{ borderBottom: "1px solid #f3f4f6" }} onClick={() => setDetalle(k)}>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: k.activo ? "#fff7ed" : "#fee2e2", display: "grid", placeItems: "center", fontSize: 18, flexShrink: 0 }}>🏪</div>
+                      <div>
+                        <p style={{ fontSize: 13, fontWeight: 800 }}>{k.nombre}</p>
+                        <p style={{ fontSize: 11, color: "#9ca3af" }}>{k.dueno} · {k.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <span style={{ fontSize: 12, color: "#f97316", fontWeight: 700 }}>{k.plan}</span>
+                    <p style={{ fontSize: 11, color: "#9ca3af" }}>S/. {k.monto}/mes</p>
+                  </td>
+                  <td style={{ padding: "12px 16px", fontSize: 13, fontWeight: 700, color: k.productos.length > 0 ? "#059669" : "#dc2626" }}>
+                    {k.productos.length} productos
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <p style={{ fontSize: 12, color: diasRestantes(k.vence) <= 7 ? "#f97316" : "#6b7280", fontWeight: diasRestantes(k.vence) <= 7 ? 700 : 400 }}>{fmtFecha(k.vence)}</p>
+                    {diasRestantes(k.vence) <= 7 && diasRestantes(k.vence) >= 0 && <p style={{ fontSize: 10, color: "#f97316" }}>Vence en {diasRestantes(k.vence)} días</p>}
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: k.activo ? "#dcfce7" : "#fee2e2", color: k.activo ? "#059669" : "#dc2626" }}>
+                      {k.activo ? "✅ Activo" : "❌ Inactivo"}
+                    </span>
+                  </td>
+                  <td style={{ padding: "12px 16px" }} onClick={e => { e.stopPropagation(); toggleAcceso(k.id); }}>
+                    <button className="toggle" style={{ background: k.activo ? "#f97316" : "#d1d5db" }}>
+                      <div className="toggle-knob" style={{ left: k.activo ? "21px" : "3px" }} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modal detalle kiosko */}
+      {detalle && (
+        <div className="modal-bg" onClick={() => setDetalle(null)}>
+          <div className="modal fade" onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 24 }}>🏪</span>
+                <div>
+                  <p style={{ fontWeight: 900, fontSize: 16 }}>{detalle.nombre}</p>
+                  <p style={{ fontSize: 11, color: "#9ca3af" }}>{detalle.dueno}</p>
+                </div>
+              </div>
+              <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "6px 12px", fontSize: 11, border: "1px solid #e5e7eb" }} onClick={() => setDetalle(null)}>✕</button>
+            </div>
+
+            {/* Link público */}
+            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 14px", margin: "12px 0" }}>
+              <p style={{ fontSize: 11, color: "#059669", fontWeight: 700, marginBottom: 4 }}>🛒 Link público para compradores</p>
+              <p style={{ fontSize: 13, fontWeight: 800, color: "#111827" }}>kikiosko.vercel.app/{detalle.slug}</p>
+              <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>Comparte este link con tus clientes — sin usuario ni clave</p>
+            </div>
+
+            {/* Datos */}
+            {[
+              ["Correo", detalle.email],
+              ["WhatsApp", `+51 ${detalle.whatsapp}`],
+              ["Clave actual", detalle.clave],
+              ["Monto", `S/. ${detalle.monto}/mes`],
+              ["Vence", fmtFecha(detalle.vence)],
+              ["Pagos", `${detalle.pagos} pagos`],
+              ["Productos", `${detalle.productos.length} productos`],
+              ["Estado", detalle.activo ? "✅ Activo" : "❌ Inactivo"],
+            ].map(([k, v]) => (
+              <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f3f4f6", fontSize: 13 }}>
+                <span style={{ color: "#9ca3af" }}>{k}</span>
+                <span style={{ fontWeight: 700 }}>{v}</span>
+              </div>
+            ))}
+
+            {/* Cambiar plan */}
+            <div style={{ padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
+              <p style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Plan actual</p>
+              <div style={{ display: "flex", gap: 8 }}>
+                {PLANES.map(p => (
+                  <button key={p.id} className="btn" style={{ flex: 1, padding: "9px", fontSize: 11, background: detalle.plan === p.id ? "#fff7ed" : "#f3f4f6", color: detalle.plan === p.id ? "#f97316" : "#374151", border: `1px solid ${detalle.plan === p.id ? "#fed7aa" : "#e5e7eb"}` }}
+                    onClick={() => cambiarPlan(detalle.id, p.id)}>
+                    {p.id}<br /><span style={{ fontSize: 10 }}>S/. {p.precio}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Subir Excel */}
+            <div style={{ padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
+              <p style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Cargar productos desde Excel</p>
+              <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: "none" }} onChange={(e) => subirExcel(detalle.id, e)} />
+              <div className="upload-zone" onClick={() => fileRef.current.click()}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: "#f97316" }}>📊 Subir Excel de productos</p>
+                <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>nombre · precio · categoría · emoji · stock</p>
+              </div>
+            </div>
+
+            {/* Ver productos */}
+            <button className="btn" style={{ width: "100%", background: "#f3f4f6", color: "#374151", padding: "10px", fontSize: 12, border: "1px solid #e5e7eb", marginTop: 12 }}
+              onClick={() => { setVistaProductos(detalle); setDetalle(null); }}>
+              📦 Ver y gestionar productos ({detalle.productos.length})
+            </button>
+
+            {/* Botones */}
+            <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+              <button className="btn" style={{ flex: 1, padding: "11px", fontSize: 12, background: detalle.activo ? "#fee2e2" : "#dcfce7", color: detalle.activo ? "#dc2626" : "#059669", border: `1px solid ${detalle.activo ? "#fecaca" : "#bbf7d0"}` }}
+                onClick={() => toggleAcceso(detalle.id)}>
+                {detalle.activo ? "❌ Desactivar" : "✅ Activar"}
+              </button>
+              <button className="btn" style={{ flex: 1, padding: "11px", fontSize: 12, background: "#dcfce7", color: "#059669", border: "1px solid #bbf7d0" }}
+                onClick={() => enviarWhatsApp(detalle)}>
+                📱 Enviar accesos
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal nuevo kiosko */}
+      {modalNuevo && (
+        <div className="modal-bg" onClick={() => setModalNuevo(false)}>
+          <div className="modal fade" onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <span style={{ fontWeight: 900, fontSize: 16 }}>🏪 Nuevo kiosko</span>
+              <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "6px 12px", fontSize: 11, border: "1px solid #e5e7eb" }} onClick={() => setModalNuevo(false)}>✕</button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {[
+                ["Nombre del kiosko", "nombre", "Kiosko Rosita"],
+                ["Nombre del dueño", "dueno", "Rosa Flores"],
+                ["Correo", "email", "rosita@correo.pe"],
+                ["WhatsApp", "whatsapp", "999888777"],
+                ["Contraseña", "clave", "clave123"],
+              ].map(([label, key, ph]) => (
+                <div key={key}>
+                  <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>{label}</label>
+                  <input className="inp" placeholder={ph} value={nuevoKiosko[key]} onChange={e => setNuevoKiosko(p => ({ ...p, [key]: e.target.value }))} />
+                </div>
+              ))}
+              <div>
+                <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>Plan</label>
+                <select value={nuevoKiosko.plan} onChange={e => setNuevoKiosko(p => ({ ...p, plan: e.target.value }))}>
+                  {PLANES.map(p => <option key={p.id}>{p.id} — S/. {p.precio}/mes</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>Acceso hasta</label>
+                <input className="inp" type="date" value={nuevoKiosko.vence} onChange={e => setNuevoKiosko(p => ({ ...p, vence: e.target.value }))} />
+              </div>
+            </div>
+            <button className="btn" style={{ width: "100%", background: "#f97316", color: "#fff", padding: 13, fontSize: 14, marginTop: 20 }}
+              onClick={crearKiosko}
+              disabled={!nuevoKiosko.nombre || !nuevoKiosko.email || !nuevoKiosko.clave || !nuevoKiosko.whatsapp || !nuevoKiosko.vence}>
+              ✅ Crear kiosko y activar acceso
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal gestión productos */}
+      {vistaProductos && (
+        <div className="modal-bg" onClick={() => setVistaProductos(null)}>
+          <div className="modal fade" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <span style={{ fontWeight: 900, fontSize: 16 }}>📦 Productos — {vistaProductos.nombre}</span>
+              <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "6px 12px", fontSize: 11, border: "1px solid #e5e7eb" }} onClick={() => setVistaProductos(null)}>✕</button>
+            </div>
+            {vistaProductos.productos.length === 0 ? (
+              <p style={{ fontSize: 13, color: "#9ca3af", textAlign: "center", padding: "20px 0" }}>Sin productos aún — sube un Excel desde el detalle</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {vistaProductos.productos.map(p => (
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb" }}>
+                    <span style={{ fontSize: 22 }}>{p.emoji}</span>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700 }}>{p.nombre}</p>
+                      <p style={{ fontSize: 11, color: "#9ca3af" }}>{p.categoria}</p>
+                    </div>
+                    <span style={{ fontWeight: 900, color: "#f97316", fontSize: 14 }}>S/. {p.precio.toFixed(2)}</span>
+                    <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 999, background: p.stock ? "#dcfce7" : "#fee2e2", color: p.stock ? "#059669" : "#dc2626", fontWeight: 700 }}>
+                      {p.stock ? "✅" : "❌"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── PANEL ADMIN KIOSKO ───
+function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
+  const [productos, setProductos] = useState(kiosko.productos);
+
+  const actualizarProductos = (nuevos) => {
+    setProductos(nuevos);
+    onProductosChange(nuevos);
+  };
+  const [modalProducto, setModalProducto] = useState(null);
+  const [nuevoProducto, setNuevoProducto] = useState({ nombre: "", precio: "", categoria: "Bebidas", emoji: "🛒", stock: true, cantidad: 0, foto: null });
+  const [toast, setToast] = useState(null);
+
+  const mostrarToast = (msg, tipo = "ok") => { setToast({ msg, tipo }); setTimeout(() => setToast(null), 2500); };
+
+  const toggleStock = (id) => {
+    const nuevos = productos.map(p => p.id === id ? { ...p, stock: !p.stock } : p);
+    actualizarProductos(nuevos);
+    mostrarToast("✅ Stock actualizado");
+  };
+
+  const eliminar = (id) => {
+    const nuevos = productos.filter(p => p.id !== id);
+    actualizarProductos(nuevos);
+    mostrarToast("🗑 Producto eliminado");
+  };
+
+  const guardar = () => {
+    const productoFinal = {
+      ...nuevoProducto,
+      precio: parseFloat(nuevoProducto.precio) || 0,
+      foto: nuevoProducto.foto || null,
+      cantidad: parseInt(nuevoProducto.cantidad) || 0,
+      stock: (parseInt(nuevoProducto.cantidad) || 0) > 0,
+    };
+    let nuevos;
+    if (modalProducto?.id) {
+      nuevos = productos.map(p => p.id === modalProducto.id ? { ...p, ...productoFinal } : p);
+      mostrarToast("✅ Producto actualizado");
+    } else {
+      nuevos = [...productos, { id: Date.now(), ...productoFinal }];
+      mostrarToast("✅ Producto agregado");
+    }
+    actualizarProductos(nuevos);
+    setModalProducto(null);
+    setNuevoProducto({ nombre: "", precio: "", categoria: "Bebidas", emoji: "🛒", stock: true, cantidad: 0, foto: null });
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "'Nunito', sans-serif", color: "#111827" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        .btn { border: none; border-radius: 8px; font-family: inherit; cursor: pointer; font-weight: 700; transition: all 0.15s; }
+        .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; }
+        .toggle { position: relative; width: 42px; height: 23px; border-radius: 999px; cursor: pointer; border: none; outline: none; transition: background 0.2s; flex-shrink: 0; }
+        .toggle-knob { position: absolute; top: 2.5px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .inp { width: 100%; background: #f9fafb; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #111827; font-family: inherit; outline: none; }
+        .inp:focus { border-color: #f97316; background: #fff; }
+        select { font-family: inherit; background: #f9fafb; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #111827; width: 100%; outline: none; cursor: pointer; }
+        .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+        .modal { background: #fff; border-radius: 18px; padding: 28px; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
+        .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); padding: 11px 22px; border-radius: 999px; font-size: 13px; font-weight: 700; z-index: 200; white-space: nowrap; }
+        .row:hover { background: #fafafa; }
+        .fade { animation: fade 0.3s ease both; }
+        @keyframes fade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+      `}</style>
+
+      {toast && <div className="toast" style={{ background: toast.tipo === "ok" ? "#059669" : "#dc2626", color: "#fff" }}>{toast.msg}</div>}
+
+      {/* Header */}
+      <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "13px 20px", display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ fontSize: 22 }}>🏪</span>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontWeight: 900, fontSize: 15 }}>{kiosko.nombre}</p>
+          <p style={{ fontSize: 11, color: "#9ca3af" }}>Panel de administración</p>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "8px 14px", fontSize: 12 }}
+            onClick={() => { setModalProducto({}); setNuevoProducto({ nombre: "", precio: "", categoria: "Bebidas", emoji: "🛒", stock: true }); }}>
+            + Agregar
+          </button>
+          <button className="btn" style={{ background: "#ecfdf5", color: "#059669", padding: "8px 14px", fontSize: 12, border: "1px solid #bbf7d0" }}
+            onClick={onVerCatalogo}>
+            👁 Ver catálogo
+          </button>
+          <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "8px 14px", fontSize: 12, border: "1px solid #e5e7eb" }}
+            onClick={onSalir}>
+            Salir
+          </button>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 800, margin: "0 auto", padding: "24px 20px" }}>
+
+        {/* Stats */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
+          {[
+            { label: "Total productos", val: productos.length, color: "#111827", icon: "📦" },
+            { label: "En stock", val: productos.filter(p => p.stock).length, color: "#059669", icon: "✅" },
+            { label: "Sin stock", val: productos.filter(p => !p.stock).length, color: "#dc2626", icon: "❌" },
+          ].map(s => (
+            <div key={s.label} className="card" style={{ padding: "14px 16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <p style={{ fontSize: 10, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>{s.label}</p>
+                <span>{s.icon}</span>
+              </div>
+              <p style={{ fontWeight: 900, fontSize: 24, color: s.color }}>{s.val}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Link público */}
+        <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 16px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <p style={{ fontSize: 11, color: "#059669", fontWeight: 700, marginBottom: 2 }}>🛒 Link para tus compradores</p>
+            <p style={{ fontSize: 13, fontWeight: 800 }}>kikiosko.vercel.app/{kiosko.slug}</p>
+          </div>
+          <button className="btn" style={{ background: "#059669", color: "#fff", padding: "8px 14px", fontSize: 11 }}
+            onClick={() => { navigator.clipboard?.writeText(`kikiosko.vercel.app/${kiosko.slug}`); mostrarToast("📋 Link copiado"); }}>
+            📋 Copiar
+          </button>
+        </div>
+
+        {/* Tabla productos */}
+        <div className="card" style={{ overflow: "hidden" }}>
+          {productos.length === 0 ? (
+            <div style={{ padding: "32px", textAlign: "center", color: "#9ca3af", fontSize: 13 }}>
+              Sin productos — agrega el primero con el botón de arriba
+            </div>
+          ) : productos.map(p => (
+            <div key={p.id} style={{ borderBottom: "1px solid #f3f4f6", padding: "12px 16px", background: p.stock ? "#fff" : "#fafafa", opacity: p.stock ? 1 : 0.6 }}>
+              {/* Fila 1: check + foto/emoji + nombre + acciones */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={p.stock}
+                  onChange={() => toggleStock(p.id)}
+                  style={{ width: 18, height: 18, accentColor: "#f97316", cursor: "pointer", flexShrink: 0 }}
+                />
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: "#fff7ed", display: "grid", placeItems: "center", overflow: "hidden", flexShrink: 0 }}>
+                  {p.foto ? (
+                    <img src={p.foto} alt={p.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <span style={{ fontSize: 20 }}>{p.emoji}</span>
+                  )}
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 800, flex: 1, color: p.stock ? "#111827" : "#9ca3af" }}>{p.nombre}</span>
+                <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                  <button className="btn" style={{ background: "#fff7ed", color: "#f97316", padding: "5px 10px", fontSize: 11, border: "1px solid #fed7aa" }}
+                    onClick={() => { setModalProducto(p); setNuevoProducto({ nombre: p.nombre, precio: p.precio, categoria: p.categoria, emoji: p.emoji, stock: p.stock, cantidad: p.cantidad || 0, foto: p.foto || null }); }}>
+                    ✏️
+                  </button>
+                  <button className="btn" style={{ background: "#fee2e2", color: "#dc2626", padding: "5px 10px", fontSize: 11, border: "1px solid #fecaca" }}
+                    onClick={() => eliminar(p.id)}>
+                    🗑
+                  </button>
+                </div>
+              </div>
+              {/* Fila 2: categoría + precio editable + stock */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, paddingLeft: 28 }}>
+                <span style={{ fontSize: 11, background: "#fff7ed", color: "#f97316", padding: "3px 10px", borderRadius: 999, fontWeight: 700 }}>{p.categoria}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: "auto" }}>
+                  {/* Stock cantidad */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginRight: 8 }}>
+                    <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 700 }}>Stock:</span>
+                    <button className="btn" style={{ width: 24, height: 24, background: "#fff7ed", color: "#f97316", fontSize: 14, border: "1px solid #fed7aa", borderRadius: 6, padding: 0, lineHeight: 1 }}
+                      onClick={() => {
+                        const nuevos = productos.map(pr => pr.id === p.id ? { ...pr, cantidad: Math.max(0, (parseInt(pr.cantidad) || 0) - 1), stock: Math.max(0, (parseInt(pr.cantidad) || 0) - 1) > 0 } : pr);
+                        actualizarProductos(nuevos);
+                      }}>
+                      −
+                    </button>
+                    <input
+                      type="number"
+                      min="0"
+                      value={p.cantidad ?? 0}
+                      onChange={e => {
+                        const val = parseInt(e.target.value) || 0;
+                        const nuevos = productos.map(pr => pr.id === p.id ? { ...pr, cantidad: val, stock: val > 0 } : pr);
+                        actualizarProductos(nuevos);
+                      }}
+                      style={{ width: 44, background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 6, padding: "3px 4px", fontSize: 12, fontWeight: 900, color: "#f97316", fontFamily: "inherit", outline: "none", textAlign: "center" }}
+                    />
+                    <button className="btn" style={{ width: 24, height: 24, background: "#f97316", color: "#fff", fontSize: 14, borderRadius: 6, padding: 0, lineHeight: 1 }}
+                      onClick={() => {
+                        const nuevos = productos.map(pr => pr.id === p.id ? { ...pr, cantidad: (parseInt(pr.cantidad) || 0) + 1, stock: true } : pr);
+                        actualizarProductos(nuevos);
+                      }}>
+                      +
+                    </button>
+                  </div>
+                  {/* Precio */}
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#9ca3af" }}>S/.</span>
+                  <input
+                    type="text"
+                    value={isNaN(p.precio) ? "" : Number(p.precio).toFixed(2)}
+                    onChange={e => {
+                      const val = e.target.value.replace(",", ".");
+                      const nuevos = productos.map(pr => pr.id === p.id ? { ...pr, precio: parseFloat(val) || 0 } : pr);
+                      actualizarProductos(nuevos);
+                    }}
+                    style={{ width: 70, background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 7, padding: "6px 8px", fontSize: 14, fontWeight: 900, color: "#f97316", fontFamily: "inherit", outline: "none", textAlign: "center" }}
+                    onFocus={e => { e.target.style.borderColor = "#f97316"; e.target.select(); }}
+                    onBlur={e => { e.target.style.borderColor = "#fed7aa"; mostrarToast("✅ Precio actualizado"); }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Modal agregar/editar */}
+      {modalProducto !== null && (
+        <div className="modal-bg" onClick={() => setModalProducto(null)}>
+          <div className="modal fade" onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <span style={{ fontWeight: 900, fontSize: 16 }}>{modalProducto?.id ? "✏️ Editar producto" : "➕ Nuevo producto"}</span>
+              <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "6px 12px", fontSize: 11, border: "1px solid #e5e7eb" }} onClick={() => setModalProducto(null)}>✕</button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+              {/* Foto del producto */}
+              <div>
+                <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>Foto del producto</label>
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  {/* Preview */}
+                  <div style={{ width: 72, height: 72, borderRadius: 12, background: "#fff7ed", border: "1.5px solid #fed7aa", display: "grid", placeItems: "center", overflow: "hidden", flexShrink: 0 }}>
+                    {nuevoProducto.foto ? (
+                      <img src={nuevoProducto.foto} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <span style={{ fontSize: 28 }}>{nuevoProducto.emoji || "📷"}</span>
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      id="foto-upload"
+                      style={{ display: "none" }}
+                      onChange={e => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        if (file.size > 2 * 1024 * 1024) { alert("La foto no debe superar 2MB"); return; }
+                        const reader = new FileReader();
+                        reader.onload = ev => setNuevoProducto(p => ({ ...p, foto: ev.target.result }));
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                    <button className="btn" style={{ width: "100%", background: "#fff7ed", color: "#f97316", padding: "10px", fontSize: 12, border: "1.5px dashed #fed7aa", borderRadius: 8, marginBottom: 6 }}
+                      onClick={() => document.getElementById("foto-upload").click()}>
+                      📸 Subir foto
+                    </button>
+                    <p style={{ fontSize: 10, color: "#9ca3af" }}>JPG, PNG o WEBP · Máx. 2MB</p>
+                    {nuevoProducto.foto && (
+                      <button className="btn" style={{ fontSize: 10, color: "#dc2626", background: "transparent", padding: "4px 0", marginTop: 4 }}
+                        onClick={() => setNuevoProducto(p => ({ ...p, foto: null }))}>
+                        🗑 Quitar foto
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {[["Nombre", "nombre", "Juice 250ml"], ["Emoji (si no hay foto)", "emoji", "🥤"], ["Precio (S/.)", "precio", "1.50"]].map(([label, key, ph]) => (
+                <div key={key}>
+                  <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>{label}</label>
+                  <input className="inp" placeholder={ph} value={nuevoProducto[key]} onChange={e => setNuevoProducto(p => ({ ...p, [key]: e.target.value }))} />
+                </div>
+              ))}
+              <div>
+                <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>Categoría</label>
+                <select value={nuevoProducto.categoria} onChange={e => setNuevoProducto(p => ({ ...p, categoria: e.target.value }))}>
+                  {["Bebidas", "Golosinas", "Útiles", "Otros"].map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+              {/* Stock cantidad manual */}
+              <div>
+                <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>
+                  Cantidad en stock
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <button className="btn" style={{ width: 36, height: 36, background: "#fff7ed", color: "#f97316", fontSize: 20, border: "1.5px solid #fed7aa", borderRadius: 8, flexShrink: 0 }}
+                    onClick={() => setNuevoProducto(p => ({ ...p, cantidad: Math.max(0, (parseInt(p.cantidad) || 0) - 1), stock: Math.max(0, (parseInt(p.cantidad) || 0) - 1) > 0 }))}>
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    min="0"
+                    value={nuevoProducto.cantidad ?? ""}
+                    placeholder="0"
+                    onChange={e => {
+                      const val = parseInt(e.target.value) || 0;
+                      setNuevoProducto(p => ({ ...p, cantidad: val, stock: val > 0 }));
+                    }}
+                    style={{ flex: 1, background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 8, padding: "9px 14px", fontSize: 16, fontWeight: 900, color: "#f97316", fontFamily: "inherit", outline: "none", textAlign: "center" }}
+                  />
+                  <button className="btn" style={{ width: 36, height: 36, background: "#f97316", color: "#fff", fontSize: 20, borderRadius: 8, flexShrink: 0 }}
+                    onClick={() => setNuevoProducto(p => ({ ...p, cantidad: (parseInt(p.cantidad) || 0) + 1, stock: true }))}>
+                    +
+                  </button>
+                </div>
+                <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 5 }}>
+                  {(parseInt(nuevoProducto.cantidad) || 0) === 0 ? "⚠️ Sin stock — no aparecerá disponible en el catálogo" : `✅ ${nuevoProducto.cantidad} unidades disponibles`}
+                </p>
+              </div>
+            </div>
+            <button className="btn" style={{ width: "100%", background: "#f97316", color: "#fff", padding: 13, fontSize: 14, marginTop: 20 }}
+              onClick={guardar} disabled={!nuevoProducto.nombre || !nuevoProducto.precio}>
+              {modalProducto?.id ? "✅ Guardar cambios" : "✅ Agregar producto"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── CATÁLOGO CLIENTE ───
+function CatalogoCliente({ kiosko, onSalir }) {
+  const [carrito, setCarrito] = useState({});
+  const [categoria, setCategoria] = useState("Todos");
+  const [busqueda, setBusqueda] = useState("");
+  const [nombreCliente, setNombreCliente] = useState("");
+  const [verCarrito, setVerCarrito] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const mostrarToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2000); };
+
+  const categorias = ["Todos", ...new Set(kiosko.productos.map(p => p.categoria))];
+
+  const agregar = (id) => setCarrito(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
+  const quitar = (id) => setCarrito(prev => { const n = { ...prev }; if (n[id] > 1) n[id]--; else delete n[id]; return n; });
+
+  const totalItems = Object.values(carrito).reduce((s, v) => s + v, 0);
+  const totalPrecio = Object.entries(carrito).reduce((s, [id, cant]) => {
+    const p = kiosko.productos.find(p => p.id === parseInt(id));
+    return s + (p ? p.precio * cant : 0);
+  }, 0);
+
+  const enviarPedido = () => {
+    const lineas = Object.entries(carrito).map(([id, cant]) => {
+      const p = kiosko.productos.find(p => p.id === parseInt(id));
+      return `${p.emoji} ${p.nombre} x${cant} — S/. ${(p.precio * cant).toFixed(2)}`;
+    }).join("\n");
+    const msg = encodeURIComponent(`Hola ${kiosko.nombre}! 👋\n\nMi pedido:\n${lineas}\n\n💰 Total: S/. ${totalPrecio.toFixed(2)}\n👤 ${nombreCliente || "Sin nombre"}\n\n¡Gracias! 😊`);
+    window.open(`https://wa.me/51${kiosko.whatsapp}?text=${msg}`, "_blank");
+    setCarrito({});
+    setVerCarrito(false);
+    mostrarToast("✅ Pedido enviado");
+  };
+
+  const filtrados = kiosko.productos.filter(p =>
+    (categoria === "Todos" || p.categoria === categoria) &&
+    (busqueda === "" || p.nombre.toLowerCase().includes(busqueda.toLowerCase()))
+  );
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#fff7ed", fontFamily: "'Nunito', sans-serif", color: "#1c1917", paddingBottom: 100 }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        .btn { border: none; border-radius: 10px; font-family: inherit; cursor: pointer; font-weight: 800; transition: all 0.15s; }
+        .prod-card { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06); transition: transform 0.15s; }
+        .prod-card:hover { transform: translateY(-2px); }
+        .cat-btn { padding: 8px 18px; border-radius: 999px; font-size: 12px; font-weight: 800; cursor: pointer; border: none; font-family: inherit; transition: all 0.15s; white-space: nowrap; }
+        .toast-fixed { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); padding: 10px 22px; border-radius: 999px; font-size: 13px; font-weight: 700; z-index: 200; white-space: nowrap; background: #059669; color: #fff; }
+        .fade { animation: fade 0.3s ease both; }
+        @keyframes fade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
+        .modal-carrito { background: #fff; border-radius: 24px 24px 0 0; padding: 28px 20px; width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto; }
+        .inp2 { width: 100%; background: #fff7ed; border: 1.5px solid #fed7aa; border-radius: 10px; padding: 11px 14px; font-size: 14px; color: #1c1917; font-family: inherit; outline: none; }
+        .inp2:focus { border-color: #f97316; }
+        ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: #fed7aa; border-radius: 2px; }
+      `}</style>
+
+      {toast && <div className="toast-fixed">{toast}</div>}
+
+      <div style={{ background: "#f97316", padding: "16px 20px", display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ fontSize: 28 }}>🏪</span>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontWeight: 900, fontSize: 17, color: "#fff" }}>{kiosko.nombre}</p>
+          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.8)" }}>¡Hola! Bienvenido 🛒</p>
+        </div>
+        <button className="btn" style={{ background: "rgba(255,255,255,0.2)", color: "#fff", padding: "7px 14px", fontSize: 11 }} onClick={onSalir}>← Salir</button>
+      </div>
+
+      <div style={{ padding: "14px 20px 8px" }}>
+        <input className="inp2" placeholder="🔍 Buscar producto..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+      </div>
+
+      <div style={{ display: "flex", gap: 8, padding: "8px 20px 16px", overflowX: "auto" }}>
+        {categorias.map(c => (
+          <button key={c} className="cat-btn" style={{ background: categoria === c ? "#f97316" : "#fff", color: categoria === c ? "#fff" : "#6b7280", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }} onClick={() => setCategoria(c)}>
+            {c}
+          </button>
+        ))}
+      </div>
+
+      {filtrados.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "40px 20px", color: "#9ca3af" }}>
+          <p style={{ fontSize: 32, marginBottom: 8 }}>📦</p>
+          <p style={{ fontSize: 14 }}>Sin productos aún</p>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14, padding: "0 20px" }}>
+          {filtrados.map(p => (
+            <div key={p.id} className="prod-card" style={{ opacity: p.stock ? 1 : 0.5 }}>
+              <div style={{ background: "#fff7ed", height: 120, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                {p.foto ? (
+                  <img src={p.foto} alt={p.nombre} style={{ width: "100%", height: "100%", objectFit: "contain", padding: "8px" }} />
+                ) : (
+                  <span style={{ fontSize: 48 }}>{p.emoji}</span>
+                )}
+              </div>
+              <div style={{ padding: "12px 14px" }}>
+                <p style={{ fontWeight: 800, fontSize: 13, marginBottom: 2 }}>{p.nombre}</p>
+                <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8 }}>{p.categoria}</p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontWeight: 900, fontSize: 16, color: "#f97316" }}>S/. {p.precio.toFixed(2)}</span>
+                  {p.stock ? (
+                    carrito[p.id] ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <button className="btn" style={{ background: "#fff7ed", color: "#f97316", width: 28, height: 28, fontSize: 16, padding: 0, border: "1.5px solid #fed7aa", borderRadius: 8 }} onClick={() => quitar(p.id)}>−</button>
+                        <span style={{ fontWeight: 900, fontSize: 14, minWidth: 16, textAlign: "center" }}>{carrito[p.id]}</span>
+                        <button className="btn" style={{ background: "#f97316", color: "#fff", width: 28, height: 28, fontSize: 16, padding: 0, borderRadius: 8 }} onClick={() => agregar(p.id)}>+</button>
+                      </div>
+                    ) : (
+                      <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "7px 14px", fontSize: 12 }} onClick={() => { agregar(p.id); mostrarToast(`✅ ${p.nombre} agregado`); }}>
+                        + Agregar
+                      </button>
+                    )
+                  ) : (
+                    <span style={{ fontSize: 11, color: "#dc2626", fontWeight: 700 }}>Sin stock</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {totalItems > 0 && (
+        <div style={{ position: "fixed", bottom: 20, left: 0, right: 0, padding: "0 20px", zIndex: 50 }}>
+          <button className="btn fade" style={{ width: "100%", background: "#f97316", color: "#fff", padding: "16px 24px", fontSize: 15, display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 8px 24px rgba(249,115,22,0.4)" }}
+            onClick={() => setVerCarrito(true)}>
+            <span>🛒 Ver pedido ({totalItems})</span>
+            <span style={{ fontWeight: 900 }}>S/. {totalPrecio.toFixed(2)}</span>
+          </button>
+        </div>
+      )}
+
+      {verCarrito && (
+        <div className="modal-bg" onClick={() => setVerCarrito(false)}>
+          <div className="modal-carrito fade" onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <span style={{ fontWeight: 900, fontSize: 18 }}>🛒 Tu pedido</span>
+              <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "6px 12px", fontSize: 11, border: "1px solid #e5e7eb", borderRadius: 8 }} onClick={() => setVerCarrito(false)}>✕</button>
+            </div>
+            {Object.entries(carrito).map(([id, cant]) => {
+              const p = kiosko.productos.find(p => p.id === parseInt(id));
+              return (
+                <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 22 }}>{p.emoji}</span>
+                    <div>
+                      <p style={{ fontSize: 13, fontWeight: 700 }}>{p.nombre}</p>
+                      <p style={{ fontSize: 11, color: "#9ca3af" }}>S/. {p.precio.toFixed(2)} c/u</p>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <button className="btn" style={{ background: "#fff7ed", color: "#f97316", width: 28, height: 28, fontSize: 16, padding: 0, border: "1.5px solid #fed7aa", borderRadius: 8 }} onClick={() => quitar(p.id)}>−</button>
+                    <span style={{ fontWeight: 900, fontSize: 14, minWidth: 16, textAlign: "center" }}>{cant}</span>
+                    <button className="btn" style={{ background: "#f97316", color: "#fff", width: 28, height: 28, fontSize: 16, padding: 0, borderRadius: 8 }} onClick={() => agregar(p.id)}>+</button>
+                    <span style={{ fontWeight: 900, fontSize: 13, color: "#f97316", minWidth: 52, textAlign: "right" }}>S/. {(p.precio * cant).toFixed(2)}</span>
+                  </div>
+                </div>
+              );
+            })}
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0", borderTop: "2px solid #f97316", marginTop: 8 }}>
+              <span style={{ fontWeight: 900, fontSize: 16 }}>Total</span>
+              <span style={{ fontWeight: 900, fontSize: 20, color: "#f97316" }}>S/. {totalPrecio.toFixed(2)}</span>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 6 }}>Tu nombre (opcional)</label>
+              <input className="inp2" placeholder="Ej: Ana García" value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} />
+            </div>
+            <button className="btn" style={{ width: "100%", background: "#25D366", color: "#fff", padding: 15, fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 12 }} onClick={enviarPedido}>
+              <span style={{ fontSize: 18 }}>📱</span> Enviar pedido por WhatsApp
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── APP PRINCIPAL ───
+export default function App() {
+  const [pantalla, setPantalla] = useState("login");
+  const [loginForm, setLoginForm] = useState({ email: "", clave: "" });
+  const [loginError, setLoginError] = useState("");
+  const [kioskosData] = useState(KIOSKOS_INIT);
+  const [kioskoCurrent, setKioskoCurrent] = useState(null);
+  const [productosActuales, setProductosActuales] = useState([]);
+
+  // Detectar link público tipo /rosita
+  const slug = window.location.hash.replace("#/", "").replace("/", "").toLowerCase();
+  const kioskoPorSlug = slug ? kioskosData.find(k => k.slug === slug) : null;
+
+  if (kioskoPorSlug) {
+    if (!kioskoPorSlug.activo) return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Nunito', sans-serif", background: "#fff7ed" }}>
+        <div style={{ textAlign: "center", padding: 40 }}>
+          <p style={{ fontSize: 48, marginBottom: 16 }}>🔒</p>
+          <p style={{ fontSize: 18, fontWeight: 900, color: "#dc2626" }}>Kiosko no disponible</p>
+          <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 8 }}>Contacta al administrador</p>
+        </div>
+      </div>
+    );
+    return <CatalogoCliente kiosko={kioskoPorSlug} onSalir={() => { window.location.hash = ""; }} />;
+  }
+
+  const handleLogin = () => {
+    if (loginForm.email === SUPERADMIN.email && loginForm.clave === SUPERADMIN.clave) {
+      setPantalla("superadmin");
+      setLoginError("");
+      return;
+    }
+    const kiosko = kioskosData.find(k => k.email === loginForm.email && k.clave === loginForm.clave);
+    if (kiosko) {
+      if (!kiosko.activo) { setLoginError("Tu acceso está inactivo. Contacta al administrador."); return; }
+      setKioskoCurrent(kiosko);
+      setProductosActuales(kiosko.productos);
+      setPantalla("adminkiosko");
+      setLoginError("");
+      return;
+    }
+    setLoginError("Correo o clave incorrectos");
+  };
+
+  if (pantalla === "superadmin") return <SuperAdmin onSalir={() => { setPantalla("login"); setLoginForm({ email: "", clave: "" }); }} />;
+  
+  if (pantalla === "adminkiosko" && kioskoCurrent) return (
+    <AdminKiosko
+      kiosko={{ ...kioskoCurrent, productos: productosActuales }}
+      onProductosChange={setProductosActuales}
+      onSalir={() => { setPantalla("login"); setKioskoCurrent(null); setLoginForm({ email: "", clave: "" }); }}
+      onVerCatalogo={() => setPantalla("catalogo")}
+    />
+  );
+
+  if (pantalla === "catalogo" && kioskoCurrent) return (
+    <CatalogoCliente
+      kiosko={{ ...kioskoCurrent, productos: productosActuales }}
+      onSalir={() => setPantalla("adminkiosko")}
+    />
+  );
+
+  return (
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Nunito', sans-serif", padding: 20 }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        .inp2 { width: 100%; background: #fff; border: 1.5px solid #fed7aa; border-radius: 10px; padding: 13px 16px; font-size: 14px; color: #1c1917; font-family: inherit; outline: none; transition: border 0.2s; }
+        .inp2:focus { border-color: #f97316; }
+        .fade { animation: fade 0.4s ease both; }
+        @keyframes fade { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+      `}</style>
+      <div className="fade" style={{ background: "#fff", borderRadius: 22, padding: "40px 32px", width: "100%", maxWidth: 400, boxShadow: "0 8px 40px rgba(249,115,22,0.12)" }}>
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div style={{ fontSize: 52, marginBottom: 8 }}>🏪</div>
+          <h1 style={{ fontSize: 26, fontWeight: 900, color: "#1c1917", letterSpacing: "-0.02em" }}>Ki<span style={{ color: "#f97316" }}>Kiosko</span></h1>
+          <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>Tu catálogo digital con pedidos por WhatsApp</p>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
+          <input className="inp2" placeholder="Correo" value={loginForm.email} onChange={e => setLoginForm({ ...loginForm, email: e.target.value })} onKeyDown={e => e.key === "Enter" && handleLogin()} />
+          <input className="inp2" type="password" placeholder="Contraseña" value={loginForm.clave} onChange={e => setLoginForm({ ...loginForm, clave: e.target.value })} onKeyDown={e => e.key === "Enter" && handleLogin()} />
+        </div>
+        {loginError && <p style={{ fontSize: 12, color: "#dc2626", marginBottom: 12, textAlign: "center" }}>⚠️ {loginError}</p>}
+        <button onClick={handleLogin} style={{ width: "100%", background: "#f97316", border: "none", borderRadius: 12, padding: "14px", fontSize: 15, fontWeight: 900, color: "#fff", cursor: "pointer", fontFamily: "inherit" }}>
+          Ingresar →
+        </button>
+        <div style={{ marginTop: 20, padding: "14px", background: "#fff7ed", borderRadius: 10, fontSize: 11, color: "#9ca3af" }}>
+          <p style={{ fontWeight: 700, marginBottom: 6, color: "#f97316" }}>Accesos de prueba:</p>
+          <p style={{ marginBottom: 2 }}>👑 Admin: admin@kikiosko.pe / admin123</p>
+          <p style={{ marginBottom: 2 }}>🏪 Kiosko: rosita@kiosko.pe / 1234</p>
+          <p style={{ marginBottom: 8 }}>🏪 Bodega: juan@kiosko.pe / 5678</p>
+          <p style={{ fontWeight: 700, marginBottom: 4, color: "#059669" }}>Links públicos (sin login):</p>
+          <p style={{ cursor: "pointer", color: "#059669", textDecoration: "underline" }} onClick={() => { window.location.hash = "/rosita"; window.location.reload(); }}>🛒 kikiosko.vercel.app/rosita</p>
+          <p style={{ cursor: "pointer", color: "#059669", textDecoration: "underline", marginTop: 2 }} onClick={() => { window.location.hash = "/juan"; window.location.reload(); }}>🛒 kikiosko.vercel.app/juan</p>
+        </div>
+      </div>
+    </div>
+  );
+}
