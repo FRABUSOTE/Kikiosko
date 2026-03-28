@@ -86,7 +86,7 @@ function SuperAdmin({ onSalir }) {
   };
 
   const enviarWhatsApp = (k) => {
-    const msg = encodeURIComponent(`Hola ${k.dueno.split(" ")[0]}! 👋\n\nAquí están tus accesos a KiKiosko 🏪\n\n🛒 Link para tus compradores:\nkikiosko.vercel.app/${k.slug}\n← Comparte este link con tus clientes\n\n⚙️ Tu panel de administrador:\nkikiosko.vercel.app\n👤 Usuario: ${k.email}\n🔑 Clave: ${k.clave}\n\n📅 Acceso hasta: ${fmtFecha(k.vence)}\n\nCualquier consulta escríbeme 😊`);
+    const msg = encodeURIComponent(`Hola ${k.dueno.split(" ")[0]}! 👋\n\nAquí están tus accesos a KiKiosko 🏪\n\n🛒 Link para tus compradores:\nkikiosko-vyvv.vercel.app/#/${k.slug}\n← Comparte este link con tus clientes\n\n⚙️ Tu panel de administrador:\nkikiosko-vyvv.vercel.app\n👤 Usuario: ${k.email}\n🔑 Clave: ${k.clave}\n\n📅 Acceso hasta: ${fmtFecha(k.vence)}\n\nCualquier consulta escríbeme 😊`);
     window.open(`https://wa.me/51${k.whatsapp}?text=${msg}`, "_blank");
   };
 
@@ -263,7 +263,7 @@ function SuperAdmin({ onSalir }) {
             {/* Link público */}
             <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 14px", margin: "12px 0" }}>
               <p style={{ fontSize: 11, color: "#059669", fontWeight: 700, marginBottom: 4 }}>🛒 Link público para compradores</p>
-              <p style={{ fontSize: 13, fontWeight: 800, color: "#111827" }}>kikiosko.vercel.app/{detalle.slug}</p>
+              <p style={{ fontSize: 13, fontWeight: 800, color: "#111827" }}>kikiosko-vyvv.vercel.app/#/{detalle.slug}</p>
               <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>Comparte este link con tus clientes — sin usuario ni clave</p>
             </div>
 
@@ -518,10 +518,10 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
         <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 16px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <p style={{ fontSize: 11, color: "#059669", fontWeight: 700, marginBottom: 2 }}>🛒 Link para tus compradores</p>
-            <p style={{ fontSize: 13, fontWeight: 800 }}>kikiosko.vercel.app/{kiosko.slug}</p>
+            <p style={{ fontSize: 13, fontWeight: 800 }}>kikiosko-vyvv.vercel.app/#/{kiosko.slug}</p>
           </div>
           <button className="btn" style={{ background: "#059669", color: "#fff", padding: "8px 14px", fontSize: 11 }}
-            onClick={() => { navigator.clipboard?.writeText(`kikiosko.vercel.app/${kiosko.slug}`); mostrarToast("📋 Link copiado"); }}>
+            onClick={() => { navigator.clipboard?.writeText(`kikiosko-vyvv.vercel.app/#/${kiosko.slug}`); mostrarToast("📋 Link copiado"); }}>
             📋 Copiar
           </button>
         </div>
