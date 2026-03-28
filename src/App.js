@@ -267,22 +267,42 @@ function SuperAdmin({ onSalir }) {
               <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>Comparte este link con tus clientes — sin usuario ni clave</p>
             </div>
 
-            {/* Datos */}
-            {[
-              ["Correo", detalle.email],
-              ["WhatsApp", `+51 ${detalle.whatsapp}`],
-              ["Clave actual", detalle.clave],
-              ["Monto", `S/. ${detalle.monto}/mes`],
-              ["Vence", fmtFecha(detalle.vence)],
-              ["Pagos", `${detalle.pagos} pagos`],
-              ["Productos", `${detalle.productos.length} productos`],
-              ["Estado", detalle.activo ? "✅ Activo" : "❌ Inactivo"],
-            ].map(([k, v]) => (
-              <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f3f4f6", fontSize: 13 }}>
-                <span style={{ color: "#9ca3af" }}>{k}</span>
-                <span style={{ fontWeight: 700 }}>{v}</span>
-              </div>
-            ))}
+            {/* Datos editables */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 4 }}>
+              {[
+                ["WhatsApp", "whatsapp", detalle.whatsapp],
+                ["Correo", "email", detalle.email],
+                ["Clave", "clave", detalle.clave],
+                ["Acceso hasta", "vence", detalle.vence],
+              ].map(([label, key, val]) => (
+                <div key={key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #f3f4f6" }}>
+                  <span style={{ fontSize: 12, color: "#9ca3af", width: 90, flexShrink: 0 }}>{label}</span>
+                  <input
+                    type={key === "vence" ? "date" : "text"}
+                    defaultValue={val}
+                    onBlur={e => {
+                      const nuevo = { ...detalle, [key]: e.target.value };
+                      setDetalle(nuevo);
+                      setKioskos(prev => prev.map(k => k.id === detalle.id ? { ...k, [key]: e.target.value } : k));
+                      mostrarToast("✅ Dato actualizado");
+                    }}
+                    style={{ flex: 1, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 7, padding: "6px 10px", fontSize: 12, fontWeight: 700, color: "#111827", fontFamily: "inherit", outline: "none" }}
+                    onFocus={e => e.target.style.borderColor = "#f97316"}
+                  />
+                </div>
+              ))}
+              {[
+                ["Monto", `S/. ${detalle.monto}/mes`],
+                ["Pagos", `${detalle.pagos} pagos`],
+                ["Productos", `${detalle.productos.length} productos`],
+                ["Estado", detalle.activo ? "✅ Activo" : "❌ Inactivo"],
+              ].map(([k, v]) => (
+                <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f3f4f6", fontSize: 13 }}>
+                  <span style={{ color: "#9ca3af" }}>{k}</span>
+                  <span style={{ fontWeight: 700 }}>{v}</span>
+                </div>
+              ))}
+            </div>
 
             {/* Cambiar plan */}
             <div style={{ padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
@@ -734,20 +754,26 @@ function CatalogoCliente({ kiosko, onSalir }) {
 
   const categorias = ["Todos", ...new Set(kiosko.productos.map(p => p.categoria))];
 
-  const agregar = (id) => setCarrito(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
-  const quitar = (id) => setCarrito(prev => { const n = { ...prev }; if (n[id] > 1) n[id]--; else delete n[id]; return n; });
+  const agregar = (id) => setCarrito(prev => ({ ...prev, [String(id)]: (prev[String(id)] || 0) + 1 }));
+  const quitar = (id) => setCarrito(prev => {
+    const n = { ...prev };
+    if (n[String(id)] > 1) n[String(id)]--;
+    else delete n[String(id)];
+    return n;
+  });
 
   const totalItems = Object.values(carrito).reduce((s, v) => s + v, 0);
   const totalPrecio = Object.entries(carrito).reduce((s, [id, cant]) => {
-    const p = kiosko.productos.find(p => p.id === parseInt(id));
+    const p = kiosko.productos.find(p => String(p.id) === String(id));
     return s + (p ? p.precio * cant : 0);
   }, 0);
 
   const enviarPedido = () => {
     const lineas = Object.entries(carrito).map(([id, cant]) => {
-      const p = kiosko.productos.find(p => p.id === parseInt(id));
+      const p = kiosko.productos.find(p => String(p.id) === String(id));
+      if (!p) return "";
       return `${p.emoji} ${p.nombre} x${cant} — S/. ${(p.precio * cant).toFixed(2)}`;
-    }).join("\n");
+    }).filter(Boolean).join("\n");
     const msg = encodeURIComponent(`Hola ${kiosko.nombre}! 👋\n\nMi pedido:\n${lineas}\n\n💰 Total: S/. ${totalPrecio.toFixed(2)}\n👤 ${nombreCliente || "Sin nombre"}\n\n¡Gracias! 😊`);
     window.open(`https://wa.me/51${kiosko.whatsapp}?text=${msg}`, "_blank");
     setCarrito({});
@@ -824,10 +850,10 @@ function CatalogoCliente({ kiosko, onSalir }) {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontWeight: 900, fontSize: 16, color: "#f97316" }}>S/. {p.precio.toFixed(2)}</span>
                   {p.stock ? (
-                    carrito[p.id] ? (
+                    carrito[String(p.id)] ? (
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <button className="btn" style={{ background: "#fff7ed", color: "#f97316", width: 28, height: 28, fontSize: 16, padding: 0, border: "1.5px solid #fed7aa", borderRadius: 8 }} onClick={() => quitar(p.id)}>−</button>
-                        <span style={{ fontWeight: 900, fontSize: 14, minWidth: 16, textAlign: "center" }}>{carrito[p.id]}</span>
+                        <span style={{ fontWeight: 900, fontSize: 14, minWidth: 16, textAlign: "center" }}>{carrito[String(p.id)]}</span>
                         <button className="btn" style={{ background: "#f97316", color: "#fff", width: 28, height: 28, fontSize: 16, padding: 0, borderRadius: 8 }} onClick={() => agregar(p.id)}>+</button>
                       </div>
                     ) : (
@@ -863,7 +889,8 @@ function CatalogoCliente({ kiosko, onSalir }) {
               <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "6px 12px", fontSize: 11, border: "1px solid #e5e7eb", borderRadius: 8 }} onClick={() => setVerCarrito(false)}>✕</button>
             </div>
             {Object.entries(carrito).map(([id, cant]) => {
-              const p = kiosko.productos.find(p => p.id === parseInt(id));
+              const p = kiosko.productos.find(p => String(p.id) === String(id));
+              if (!p) return null;
               return (
                 <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -909,9 +936,14 @@ export default function App() {
   const [kioskoCurrent, setKioskoCurrent] = useState(null);
   const [productosActuales, setProductosActuales] = useState([]);
 
-  // Detectar link público tipo /rosita
-  const slug = window.location.hash.replace("#/", "").replace("/", "").toLowerCase();
-  const kioskoPorSlug = slug ? kioskosData.find(k => k.slug === slug) : null;
+  // Detectar link público tipo /#/rosita o /#rosita
+  const hash = window.location.hash;
+  const slug = hash
+    .replace(/^#\/?/, "")
+    .replace(/\/$/, "")
+    .toLowerCase()
+    .trim();
+  const kioskoPorSlug = slug && slug.length > 0 ? kioskosData.find(k => k.slug === slug) : null;
 
   if (kioskoPorSlug) {
     if (!kioskoPorSlug.activo) return (
