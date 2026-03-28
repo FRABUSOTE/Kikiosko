@@ -1,39 +1,8 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { supabase } from "./supabase";
 
 // ─── DATOS INICIALES ───
 const SUPERADMIN = { email: "admin@kikiosko.pe", clave: "admin123" };
-
-const KIOSKOS_INIT = [
-  {
-    id: 1, nombre: "Kiosko Rosita", dueno: "Rosa Flores", email: "rosita@kiosko.pe",
-    clave: "1234", whatsapp: "999111222", plan: "Pro", monto: 59, slug: "rosita",
-    vence: "2026-04-23", activo: true, pagos: 3,
-    productos: [
-      { id: 1, nombre: "Juice 250ml", precio: 1.50, categoria: "Bebidas", emoji: "🥤", stock: true, cantidad: 10 },
-      { id: 2, nombre: "Agua San Luis", precio: 1.00, categoria: "Bebidas", emoji: "💧", stock: true, cantidad: 20 },
-      { id: 3, nombre: "Choco-Bon", precio: 0.50, categoria: "Golosinas", emoji: "🍫", stock: true, cantidad: 15 },
-      { id: 4, nombre: "Galletas Oreo", precio: 1.00, categoria: "Golosinas", emoji: "🍪", stock: true, cantidad: 8 },
-      { id: 5, nombre: "Regla 30cm", precio: 2.00, categoria: "Útiles", emoji: "📏", stock: true, cantidad: 5 },
-      { id: 6, nombre: "Lápiz HB", precio: 0.50, categoria: "Útiles", emoji: "✏️", stock: true, cantidad: 30 },
-    ]
-  },
-  {
-    id: 2, nombre: "Bodega Don Juan", dueno: "Juan Mamani", email: "juan@kiosko.pe",
-    clave: "5678", whatsapp: "999333444", plan: "Básico", monto: 29, slug: "juan",
-    vence: "2026-04-01", activo: true, pagos: 1,
-    productos: [
-      { id: 1, nombre: "Coca Cola 500ml", precio: 3.00, categoria: "Bebidas", emoji: "🥤", stock: true },
-      { id: 2, nombre: "Pan de molde", precio: 4.50, categoria: "Otros", emoji: "🍞", stock: true },
-      { id: 3, nombre: "Yogurt", precio: 2.50, categoria: "Bebidas", emoji: "🥛", stock: false },
-    ]
-  },
-  {
-    id: 3, nombre: "Kiosko María", dueno: "María Quispe", email: "maria@kiosko.pe",
-    clave: "9999", whatsapp: "999555666", plan: "Pro", monto: 59, slug: "maria",
-    vence: "2026-03-15", activo: false, pagos: 2,
-    productos: []
-  },
-];
 
 const PLANES = [
   { id: "Básico", precio: 29 },
@@ -43,18 +12,20 @@ const PLANES = [
 
 function fmtFecha(f) {
   if (!f) return "—";
-  const [y, m, d] = f.split("-");
-  return `${d}/${m}/${y}`;
+  const parts = f.split("-");
+  if (parts.length !== 3) return f;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }
 
 function diasRestantes(f) {
   if (!f) return 999;
-  return Math.ceil((new Date(f) - new Date("2026-03-25")) / (1000 * 60 * 60 * 24));
+  return Math.ceil((new Date(f) - new Date()) / (1000 * 60 * 60 * 24));
 }
 
 // ─── SUPER ADMIN ───
 function SuperAdmin({ onSalir }) {
-  const [kioskos, setKioskos] = useState(KIOSKOS_INIT);
+  const [kioskos, setKioskos] = useState([]);
+  const [cargando, setCargando] = useState(true);
   const [filtro, setFiltro] = useState("todos");
   const [busqueda, setBusqueda] = useState("");
   const [detalle, setDetalle] = useState(null);
@@ -66,11 +37,32 @@ function SuperAdmin({ onSalir }) {
 
   const mostrarToast = (msg, tipo = "ok") => { setToast({ msg, tipo }); setTimeout(() => setToast(null), 2500); };
 
-  const toggleAcceso = (id) => {
+  // Cargar kioskos desde Supabase
+  useEffect(() => {
+    cargarKioskos();
+  }, []);
+
+  const cargarKioskos = async () => {
+    setCargando(true);
+    const { data: ks, error } = await supabase.from("kioskos").select("*").order("created_at", { ascending: false });
+    if (error) { mostrarToast("Error cargando kioskos", "error"); setCargando(false); return; }
+    // Cargar productos de cada kiosko
+    const kioskosConProductos = await Promise.all(ks.map(async k => {
+      const { data: prods } = await supabase.from("productos").select("*").eq("kiosko_id", k.id);
+      return { ...k, productos: prods || [] };
+    }));
+    setKioskos(kioskosConProductos);
+    setCargando(false);
+  };
+
+  const toggleAcceso = async (id) => {
+    const kiosko = kioskos.find(k => k.id === id);
+    const nuevoActivo = !kiosko.activo;
+    await supabase.from("kioskos").update({ activo: nuevoActivo }).eq("id", id);
     setKioskos(prev => prev.map(k => {
       if (k.id === id) {
-        const nuevo = { ...k, activo: !k.activo };
-        mostrarToast(nuevo.activo ? "✅ Acceso activado" : "❌ Acceso desactivado", nuevo.activo ? "ok" : "error");
+        const nuevo = { ...k, activo: nuevoActivo };
+        mostrarToast(nuevoActivo ? "✅ Acceso activado" : "❌ Acceso desactivado", nuevoActivo ? "ok" : "error");
         if (detalle?.id === id) setDetalle(nuevo);
         return nuevo;
       }
@@ -78,8 +70,9 @@ function SuperAdmin({ onSalir }) {
     }));
   };
 
-  const cambiarPlan = (id, plan) => {
+  const cambiarPlan = async (id, plan) => {
     const monto = PLANES.find(p => p.id === plan)?.precio || 59;
+    await supabase.from("kioskos").update({ plan, monto }).eq("id", id);
     setKioskos(prev => prev.map(k => k.id === id ? { ...k, plan, monto } : k));
     setDetalle(prev => prev ? { ...prev, plan, monto } : null);
     mostrarToast(`✅ Plan cambiado a ${plan}`);
@@ -90,11 +83,12 @@ function SuperAdmin({ onSalir }) {
     window.open(`https://wa.me/51${k.whatsapp}?text=${msg}`, "_blank");
   };
 
-  const crearKiosko = () => {
+  const crearKiosko = async () => {
     const monto = PLANES.find(p => p.id === nuevoKiosko.plan)?.precio || 59;
     const slug = nuevoKiosko.nombre.toLowerCase().replace(/\s+/g, "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").slice(0, 20);
-    const nuevo = { id: Date.now(), ...nuevoKiosko, monto, slug, activo: true, pagos: 0, productos: [] };
-    setKioskos(prev => [...prev, nuevo]);
+    const { data, error } = await supabase.from("kioskos").insert([{ ...nuevoKiosko, monto, slug, activo: true, pagos: 0 }]).select();
+    if (error) { mostrarToast("Error creando kiosko", "error"); return; }
+    setKioskos(prev => [...prev, { ...data[0], productos: [] }]);
     setModalNuevo(false);
     setNuevoKiosko({ nombre: "", dueno: "", email: "", clave: "", whatsapp: "", plan: "Pro", vence: "" });
     mostrarToast("✅ Kiosko creado exitosamente");
@@ -103,7 +97,6 @@ function SuperAdmin({ onSalir }) {
   const subirExcel = (kioskoid, e) => {
     const file = e.target.files[0];
     if (!file) return;
-    // Simula carga de Excel
     const productosSimulados = [
       { id: Date.now() + 1, nombre: "Producto Excel 1", precio: 2.50, categoria: "Bebidas", emoji: "🥤", stock: true },
       { id: Date.now() + 2, nombre: "Producto Excel 2", precio: 1.00, categoria: "Golosinas", emoji: "🍬", stock: true },
@@ -111,6 +104,13 @@ function SuperAdmin({ onSalir }) {
     ];
     setKioskos(prev => prev.map(k => k.id === kioskoid ? { ...k, productos: [...k.productos, ...productosSimulados] } : k));
     mostrarToast(`✅ ${productosSimulados.length} productos cargados desde Excel`);
+  };
+
+  const actualizarDato = async (id, campo, valor) => {
+    await supabase.from("kioskos").update({ [campo]: valor }).eq("id", id);
+    setKioskos(prev => prev.map(k => k.id === id ? { ...k, [campo]: valor } : k));
+    if (detalle?.id === id) setDetalle(prev => ({ ...prev, [campo]: valor }));
+    mostrarToast("✅ Dato actualizado");
   };
 
   const activos = kioskos.filter(k => k.activo);
@@ -148,6 +148,12 @@ function SuperAdmin({ onSalir }) {
       `}</style>
 
       {toast && <div className="toast" style={{ background: toast.tipo === "ok" ? "#059669" : "#dc2626", color: "#fff" }}>{toast.msg}</div>}
+
+      {cargando && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(255,255,255,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
+          <p style={{ fontSize: 16, fontWeight: 700, color: "#f97316" }}>⏳ Cargando kioskos...</p>
+        </div>
+      )}
 
       {/* Header */}
       <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "13px 24px", display: "flex", alignItems: "center", gap: 10 }}>
@@ -280,12 +286,7 @@ function SuperAdmin({ onSalir }) {
                   <input
                     type={key === "vence" ? "date" : "text"}
                     defaultValue={val}
-                    onBlur={e => {
-                      const nuevo = { ...detalle, [key]: e.target.value };
-                      setDetalle(nuevo);
-                      setKioskos(prev => prev.map(k => k.id === detalle.id ? { ...k, [key]: e.target.value } : k));
-                      mostrarToast("✅ Dato actualizado");
-                    }}
+                    onBlur={e => actualizarDato(detalle.id, key, e.target.value)}
                     style={{ flex: 1, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 7, padding: "6px 10px", fontSize: 12, fontWeight: 700, color: "#111827", fontFamily: "inherit", outline: "none" }}
                     onFocus={e => e.target.style.borderColor = "#f97316"}
                   />
@@ -437,32 +438,39 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
 
   const mostrarToast = (msg, tipo = "ok") => { setToast({ msg, tipo }); setTimeout(() => setToast(null), 2500); };
 
-  const toggleStock = (id) => {
-    const nuevos = productos.map(p => p.id === id ? { ...p, stock: !p.stock } : p);
+  const toggleStock = async (id) => {
+    const p = productos.find(p => p.id === id);
+    const nuevoStock = !p.stock;
+    await supabase.from("productos").update({ stock: nuevoStock }).eq("id", id);
+    const nuevos = productos.map(p => p.id === id ? { ...p, stock: nuevoStock } : p);
     actualizarProductos(nuevos);
     mostrarToast("✅ Stock actualizado");
   };
 
-  const eliminar = (id) => {
+  const eliminar = async (id) => {
+    await supabase.from("productos").delete().eq("id", id);
     const nuevos = productos.filter(p => p.id !== id);
     actualizarProductos(nuevos);
     mostrarToast("🗑 Producto eliminado");
   };
 
-  const guardar = () => {
+  const guardar = async () => {
     const productoFinal = {
       ...nuevoProducto,
       precio: parseFloat(nuevoProducto.precio) || 0,
       foto: nuevoProducto.foto || null,
       cantidad: parseInt(nuevoProducto.cantidad) || 0,
       stock: (parseInt(nuevoProducto.cantidad) || 0) > 0,
+      kiosko_id: kiosko.id,
     };
     let nuevos;
     if (modalProducto?.id) {
+      await supabase.from("productos").update(productoFinal).eq("id", modalProducto.id);
       nuevos = productos.map(p => p.id === modalProducto.id ? { ...p, ...productoFinal } : p);
       mostrarToast("✅ Producto actualizado");
     } else {
-      nuevos = [...productos, { id: Date.now(), ...productoFinal }];
+      const { data } = await supabase.from("productos").insert([productoFinal]).select();
+      nuevos = [...productos, data[0]];
       mostrarToast("✅ Producto agregado");
     }
     actualizarProductos(nuevos);
@@ -589,8 +597,10 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
                   <div style={{ display: "flex", alignItems: "center", gap: 4, marginRight: 8 }}>
                     <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 700 }}>Stock:</span>
                     <button className="btn" style={{ width: 24, height: 24, background: "#fff7ed", color: "#f97316", fontSize: 14, border: "1px solid #fed7aa", borderRadius: 6, padding: 0, lineHeight: 1 }}
-                      onClick={() => {
-                        const nuevos = productos.map(pr => pr.id === p.id ? { ...pr, cantidad: Math.max(0, (parseInt(pr.cantidad) || 0) - 1), stock: Math.max(0, (parseInt(pr.cantidad) || 0) - 1) > 0 } : pr);
+                      onClick={async () => {
+                        const nuevaCantidad = Math.max(0, (parseInt(p.cantidad) || 0) - 1);
+                        await supabase.from("productos").update({ cantidad: nuevaCantidad, stock: nuevaCantidad > 0 }).eq("id", p.id);
+                        const nuevos = productos.map(pr => pr.id === p.id ? { ...pr, cantidad: nuevaCantidad, stock: nuevaCantidad > 0 } : pr);
                         actualizarProductos(nuevos);
                       }}>
                       −
@@ -604,11 +614,17 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
                         const nuevos = productos.map(pr => pr.id === p.id ? { ...pr, cantidad: val, stock: val > 0 } : pr);
                         actualizarProductos(nuevos);
                       }}
+                      onBlur={async e => {
+                        const val = parseInt(e.target.value) || 0;
+                        await supabase.from("productos").update({ cantidad: val, stock: val > 0 }).eq("id", p.id);
+                      }}
                       style={{ width: 44, background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 6, padding: "3px 4px", fontSize: 12, fontWeight: 900, color: "#f97316", fontFamily: "inherit", outline: "none", textAlign: "center" }}
                     />
                     <button className="btn" style={{ width: 24, height: 24, background: "#f97316", color: "#fff", fontSize: 14, borderRadius: 6, padding: 0, lineHeight: 1 }}
-                      onClick={() => {
-                        const nuevos = productos.map(pr => pr.id === p.id ? { ...pr, cantidad: (parseInt(pr.cantidad) || 0) + 1, stock: true } : pr);
+                      onClick={async () => {
+                        const nuevaCantidad = (parseInt(p.cantidad) || 0) + 1;
+                        await supabase.from("productos").update({ cantidad: nuevaCantidad, stock: true }).eq("id", p.id);
+                        const nuevos = productos.map(pr => pr.id === p.id ? { ...pr, cantidad: nuevaCantidad, stock: true } : pr);
                         actualizarProductos(nuevos);
                       }}>
                       +
@@ -623,6 +639,11 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
                       const val = e.target.value.replace(",", ".");
                       const nuevos = productos.map(pr => pr.id === p.id ? { ...pr, precio: parseFloat(val) || 0 } : pr);
                       actualizarProductos(nuevos);
+                    }}
+                    onBlur={async e => {
+                      const val = parseFloat(e.target.value.replace(",", ".")) || 0;
+                      await supabase.from("productos").update({ precio: val }).eq("id", p.id);
+                      mostrarToast("✅ Precio actualizado");
                     }}
                     style={{ width: 70, background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 7, padding: "6px 8px", fontSize: 14, fontWeight: 900, color: "#f97316", fontFamily: "inherit", outline: "none", textAlign: "center" }}
                     onFocus={e => { e.target.style.borderColor = "#f97316"; e.target.select(); }}
@@ -768,13 +789,20 @@ function CatalogoCliente({ kiosko, onSalir }) {
     return s + (p ? p.precio * cant : 0);
   }, 0);
 
-  const enviarPedido = () => {
+  const enviarPedido = async () => {
     const lineas = Object.entries(carrito).map(([id, cant]) => {
       const p = kiosko.productos.find(p => String(p.id) === String(id));
       if (!p) return "";
       return `${p.emoji} ${p.nombre} x${cant} — S/. ${(p.precio * cant).toFixed(2)}`;
     }).filter(Boolean).join("\n");
     const msg = encodeURIComponent(`Hola ${kiosko.nombre}! 👋\n\nMi pedido:\n${lineas}\n\n💰 Total: S/. ${totalPrecio.toFixed(2)}\n👤 ${nombreCliente || "Sin nombre"}\n\n¡Gracias! 😊`);
+    // Guardar pedido en Supabase
+    await supabase.from("pedidos").insert([{
+      kiosko_id: kiosko.id,
+      nombre_cliente: nombreCliente || "Sin nombre",
+      detalle: lineas,
+      total: totalPrecio,
+    }]);
     window.open(`https://wa.me/51${kiosko.whatsapp}?text=${msg}`, "_blank");
     setCarrito({});
     setVerCarrito(false);
@@ -932,18 +960,36 @@ export default function App() {
   const [pantalla, setPantalla] = useState("login");
   const [loginForm, setLoginForm] = useState({ email: "", clave: "" });
   const [loginError, setLoginError] = useState("");
-  const [kioskosData] = useState(KIOSKOS_INIT);
   const [kioskoCurrent, setKioskoCurrent] = useState(null);
   const [productosActuales, setProductosActuales] = useState([]);
+  const [cargandoPublico, setCargandoPublico] = useState(false);
+  const [kioskoPorSlug, setKioskoPorSlug] = useState(null);
 
-  // Detectar link público tipo /#/rosita o /#rosita
+  // Detectar link público tipo /#/rosita
   const hash = window.location.hash;
-  const slug = hash
-    .replace(/^#\/?/, "")
-    .replace(/\/$/, "")
-    .toLowerCase()
-    .trim();
-  const kioskoPorSlug = slug && slug.length > 0 ? kioskosData.find(k => k.slug === slug) : null;
+  const slug = hash.replace(/^#\/?/, "").replace(/\/$/, "").toLowerCase().trim();
+
+  useEffect(() => {
+    if (slug && slug.length > 0) {
+      cargarKioskoPorSlug(slug);
+    }
+  }, [slug]);
+
+  const cargarKioskoPorSlug = async (slug) => {
+    setCargandoPublico(true);
+    const { data: ks } = await supabase.from("kioskos").select("*").eq("slug", slug).single();
+    if (ks) {
+      const { data: prods } = await supabase.from("productos").select("*").eq("kiosko_id", ks.id);
+      setKioskoPorSlug({ ...ks, productos: prods || [] });
+    }
+    setCargandoPublico(false);
+  };
+
+  if (cargandoPublico) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#fff7ed", fontFamily: "'Nunito', sans-serif" }}>
+      <p style={{ fontSize: 16, fontWeight: 700, color: "#f97316" }}>⏳ Cargando catálogo...</p>
+    </div>
+  );
 
   if (kioskoPorSlug) {
     if (!kioskoPorSlug.activo) return (
@@ -955,20 +1001,21 @@ export default function App() {
         </div>
       </div>
     );
-    return <CatalogoCliente kiosko={kioskoPorSlug} onSalir={() => { window.location.hash = ""; }} />;
+    return <CatalogoCliente kiosko={kioskoPorSlug} onSalir={() => { window.location.hash = ""; setKioskoPorSlug(null); }} />;
   }
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (loginForm.email === SUPERADMIN.email && loginForm.clave === SUPERADMIN.clave) {
       setPantalla("superadmin");
       setLoginError("");
       return;
     }
-    const kiosko = kioskosData.find(k => k.email === loginForm.email && k.clave === loginForm.clave);
-    if (kiosko) {
-      if (!kiosko.activo) { setLoginError("Tu acceso está inactivo. Contacta al administrador."); return; }
-      setKioskoCurrent(kiosko);
-      setProductosActuales(kiosko.productos);
+    const { data: ks } = await supabase.from("kioskos").select("*").eq("email", loginForm.email).eq("clave", loginForm.clave).single();
+    if (ks) {
+      if (!ks.activo) { setLoginError("Tu acceso está inactivo. Contacta al administrador."); return; }
+      const { data: prods } = await supabase.from("productos").select("*").eq("kiosko_id", ks.id);
+      setKioskoCurrent(ks);
+      setProductosActuales(prods || []);
       setPantalla("adminkiosko");
       setLoginError("");
       return;
