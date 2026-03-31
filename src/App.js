@@ -455,22 +455,28 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
   };
 
   const guardar = async () => {
-    const productoFinal = {
-      ...nuevoProducto,
+    // IMPORTANTE: no incluir 'foto' en el objeto que va a Supabase
+    // El base64 de una imagen es demasiado grande y hace fallar el insert silenciosamente
+    const productoParaDB = {
+      nombre: nuevoProducto.nombre,
       precio: parseFloat(nuevoProducto.precio) || 0,
-      foto: nuevoProducto.foto || null,
+      emoji: nuevoProducto.emoji || "🛒",
+      categoria: nuevoProducto.categoria,
       cantidad: parseInt(nuevoProducto.cantidad) || 0,
       stock: (parseInt(nuevoProducto.cantidad) || 0) > 0,
       kiosko_id: kiosko.id,
     };
     let nuevos;
     if (modalProducto?.id) {
-      await supabase.from("productos").update(productoFinal).eq("id", modalProducto.id);
-      nuevos = productos.map(p => p.id === modalProducto.id ? { ...p, ...productoFinal } : p);
+      const { error } = await supabase.from("productos").update(productoParaDB).eq("id", modalProducto.id);
+      if (error) { mostrarToast("❌ Error: " + error.message, "error"); return; }
+      nuevos = productos.map(p => p.id === modalProducto.id ? { ...p, ...productoParaDB, foto: nuevoProducto.foto } : p);
       mostrarToast("✅ Producto actualizado");
     } else {
-      const { data } = await supabase.from("productos").insert([productoFinal]).select();
-      nuevos = [...productos, data[0]];
+      const { data, error } = await supabase.from("productos").insert([productoParaDB]).select();
+      if (error) { mostrarToast("❌ Error: " + error.message, "error"); return; }
+      if (!data || !data[0]) { mostrarToast("❌ No se pudo guardar", "error"); return; }
+      nuevos = [...productos, { ...data[0], foto: nuevoProducto.foto }];
       mostrarToast("✅ Producto agregado");
     }
     actualizarProductos(nuevos);
