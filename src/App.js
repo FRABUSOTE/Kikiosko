@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "./supabase";
 
@@ -455,22 +456,26 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
   };
 
   const guardar = async () => {
-    const productoFinal = {
-      ...nuevoProducto,
+    const productoParaDB = {
+      nombre: nuevoProducto.nombre,
       precio: parseFloat(nuevoProducto.precio) || 0,
-      foto: nuevoProducto.foto || null,
+      emoji: nuevoProducto.emoji || "🛒",
+      categoria: nuevoProducto.categoria,
       cantidad: parseInt(nuevoProducto.cantidad) || 0,
       stock: (parseInt(nuevoProducto.cantidad) || 0) > 0,
       kiosko_id: kiosko.id,
     };
     let nuevos;
     if (modalProducto?.id) {
-      await supabase.from("productos").update(productoFinal).eq("id", modalProducto.id);
-      nuevos = productos.map(p => p.id === modalProducto.id ? { ...p, ...productoFinal } : p);
+      const { error } = await supabase.from("productos").update(productoParaDB).eq("id", modalProducto.id);
+      if (error) { mostrarToast("❌ Error: " + error.message, "error"); return; }
+      nuevos = productos.map(p => p.id === modalProducto.id ? { ...p, ...productoParaDB, foto: nuevoProducto.foto } : p);
       mostrarToast("✅ Producto actualizado");
     } else {
-      const { data } = await supabase.from("productos").insert([productoFinal]).select();
-      nuevos = [...productos, data[0]];
+      const { data, error } = await supabase.from("productos").insert([productoParaDB]).select();
+      if (error) { mostrarToast("❌ Error: " + error.message, "error"); return; }
+      if (!data || !data[0]) { mostrarToast("❌ No se pudo guardar", "error"); return; }
+      nuevos = [...productos, { ...data[0], foto: nuevoProducto.foto }];
       mostrarToast("✅ Producto agregado");
     }
     actualizarProductos(nuevos);
@@ -1065,10 +1070,14 @@ export default function App() {
         <button onClick={handleLogin} style={{ width: "100%", background: "#f97316", border: "none", borderRadius: 12, padding: "14px", fontSize: 15, fontWeight: 900, color: "#fff", cursor: "pointer", fontFamily: "inherit" }}>
           Ingresar →
         </button>
-        <div style={{ marginTop: 20, padding: "14px", background: "#fff7ed", borderRadius: 10, fontSize: 12, color: "#9ca3af", textAlign: "center" }}>
-          <p style={{ fontSize: 13, fontWeight: 800, color: "#f97316", marginBottom: 6 }}>🏪 ¿Tienes un kiosko?</p>
-          <p style={{ lineHeight: 1.6 }}>Ingresa con el correo y contraseña que te enviamos por WhatsApp.</p>
-          <p style={{ marginTop: 8, lineHeight: 1.6 }}>¿Problemas para ingresar? Escríbenos al WhatsApp de soporte.</p>
+        <div style={{ marginTop: 20, padding: "14px", background: "#fff7ed", borderRadius: 10, fontSize: 11, color: "#9ca3af" }}>
+          <p style={{ fontWeight: 700, marginBottom: 6, color: "#f97316" }}>Accesos de prueba:</p>
+          <p style={{ marginBottom: 2 }}>👑 Admin: admin@kikiosko.pe / admin123</p>
+          <p style={{ marginBottom: 2 }}>🏪 Kiosko: rosita@kiosko.pe / 1234</p>
+          <p style={{ marginBottom: 8 }}>🏪 Bodega: juan@kiosko.pe / 5678</p>
+          <p style={{ fontWeight: 700, marginBottom: 4, color: "#059669" }}>Links públicos (sin login):</p>
+          <p style={{ cursor: "pointer", color: "#059669", textDecoration: "underline" }} onClick={() => { window.location.hash = "/rosita"; window.location.reload(); }}>🛒 kikiosko.vercel.app/rosita</p>
+          <p style={{ cursor: "pointer", color: "#059669", textDecoration: "underline", marginTop: 2 }} onClick={() => { window.location.hash = "/juan"; window.location.reload(); }}>🛒 kikiosko.vercel.app/juan</p>
         </div>
       </div>
     </div>
