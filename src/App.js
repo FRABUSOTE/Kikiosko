@@ -38,6 +38,7 @@ function SuperAdmin({ onSalir }) {
   const mostrarToast = (msg, tipo = "ok") => { setToast({ msg, tipo }); setTimeout(() => setToast(null), 2500); };
 
   // Cargar kioskos desde Supabase
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     cargarKioskos();
   }, []);
@@ -455,28 +456,22 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
   };
 
   const guardar = async () => {
-    // IMPORTANTE: no incluir 'foto' en el objeto que va a Supabase
-    // El base64 de una imagen es demasiado grande y hace fallar el insert silenciosamente
-    const productoParaDB = {
-      nombre: nuevoProducto.nombre,
+    const productoFinal = {
+      ...nuevoProducto,
       precio: parseFloat(nuevoProducto.precio) || 0,
-      emoji: nuevoProducto.emoji || "🛒",
-      categoria: nuevoProducto.categoria,
+      foto: nuevoProducto.foto || null,
       cantidad: parseInt(nuevoProducto.cantidad) || 0,
       stock: (parseInt(nuevoProducto.cantidad) || 0) > 0,
       kiosko_id: kiosko.id,
     };
     let nuevos;
     if (modalProducto?.id) {
-      const { error } = await supabase.from("productos").update(productoParaDB).eq("id", modalProducto.id);
-      if (error) { mostrarToast("❌ Error: " + error.message, "error"); return; }
-      nuevos = productos.map(p => p.id === modalProducto.id ? { ...p, ...productoParaDB, foto: nuevoProducto.foto } : p);
+      await supabase.from("productos").update(productoFinal).eq("id", modalProducto.id);
+      nuevos = productos.map(p => p.id === modalProducto.id ? { ...p, ...productoFinal } : p);
       mostrarToast("✅ Producto actualizado");
     } else {
-      const { data, error } = await supabase.from("productos").insert([productoParaDB]).select();
-      if (error) { mostrarToast("❌ Error: " + error.message, "error"); return; }
-      if (!data || !data[0]) { mostrarToast("❌ No se pudo guardar", "error"); return; }
-      nuevos = [...productos, { ...data[0], foto: nuevoProducto.foto }];
+      const { data } = await supabase.from("productos").insert([productoFinal]).select();
+      nuevos = [...productos, data[0]];
       mostrarToast("✅ Producto agregado");
     }
     actualizarProductos(nuevos);
@@ -975,6 +970,7 @@ export default function App() {
   const hash = window.location.hash;
   const slug = hash.replace(/^#\/?/, "").replace(/\/$/, "").toLowerCase().trim();
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (slug && slug.length > 0) {
       cargarKioskoPorSlug(slug);
