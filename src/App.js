@@ -892,9 +892,24 @@ function CatalogoCliente({ kiosko, onSalir }) {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14, padding: "0 20px" }}>
           {filtrados.map(p => (
             <div key={p.id} className="prod-card" style={{ opacity: p.stock ? 1 : 0.5 }}>
-              <div style={{ background: "#fff7ed", height: 120, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                {p.foto ? (
-                  <img src={p.foto} alt={p.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <div style={{
+  background: "#fff7ed",
+  height: 140,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  overflow: "hidden"
+}}>
+  {p.foto ? (
+    <img
+      src={p.foto}
+      alt={p.nombre}
+      style={{
+        maxWidth: "100%",
+        maxHeight: "100%",
+        objectFit: "contain"
+      }}
+    />
                 ) : (
                   <span style={{ fontSize: 48 }}>{p.emoji}</span>
                 )}
