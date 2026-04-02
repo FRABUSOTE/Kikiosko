@@ -510,7 +510,10 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
         <div style={{ display: "flex", gap: 8 }}>
           <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "8px 14px", fontSize: 12 }}
             onClick={() => { setModalProducto({}); setNuevoProducto({ nombre: "", precio: "", categoria: "Bebidas", emoji: "🛒", stock: true }); }}>
-            + Agregar producto
+            + Agregar
+          </button>
+          <button className="btn" style={{ background: "#ecfdf5", color: "#059669", padding: "8px 14px", fontSize: 12, border: "1px solid #bbf7d0" }}
+            onClick={onVerCatalogo}>
             👁 Ver catálogo
           </button>
           <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "8px 14px", fontSize: 12, border: "1px solid #e5e7eb" }}
@@ -862,9 +865,21 @@ function CatalogoCliente({ kiosko, onSalir }) {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14, padding: "0 20px" }}>
           {filtrados.map(p => (
             <div key={p.id} className="prod-card" style={{ opacity: p.stock ? 1 : 0.5 }}>
-              <div style={{ background: "#fff7ed", height: 120, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+              <div style={{ position: "relative", height: 120, overflow: "hidden", background: "#fff7ed", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {p.foto ? (
-                  <img src={p.foto} alt={p.nombre} style={{ width: "100%", height: "100%", objectFit: "contain", padding: "8px" }} />
+                  <>
+                    {/* Fondo borroso con la misma imagen */}
+                    <div style={{
+                      position: "absolute", inset: 0,
+                      backgroundImage: `url(${p.foto})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                      filter: "blur(12px) brightness(0.85)",
+                      transform: "scale(1.1)",
+                    }} />
+                    {/* Imagen principal encima */}
+                    <img src={p.foto} alt={p.nombre} style={{ position: "relative", zIndex: 1, maxHeight: "100%", maxWidth: "100%", objectFit: "contain", padding: "6px" }} />
+                  </>
                 ) : (
                   <span style={{ fontSize: 48 }}>{p.emoji}</span>
                 )}
