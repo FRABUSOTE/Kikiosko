@@ -456,6 +456,24 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
   };
 
   const guardar = async () => {
+    mostrarToast("⏳ Guardando...", "ok");
+    let fotoUrl = nuevoProducto.foto && !nuevoProducto.fotoFile ? nuevoProducto.foto : null;
+
+    // Si hay un archivo nuevo, subirlo a Supabase Storage
+    if (nuevoProducto.fotoFile) {
+      const ext = nuevoProducto.fotoFile.name.split(".").pop();
+      const fileName = `${kiosko.id}_${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("fotos-productos")
+        .upload(fileName, nuevoProducto.fotoFile, { upsert: true });
+      if (uploadError) {
+        mostrarToast("❌ Error subiendo foto: " + uploadError.message, "error");
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("fotos-productos").getPublicUrl(fileName);
+      fotoUrl = urlData.publicUrl;
+    }
+
     const productoParaDB = {
       nombre: nuevoProducto.nombre,
       precio: parseFloat(nuevoProducto.precio) || 0,
@@ -464,23 +482,25 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
       cantidad: parseInt(nuevoProducto.cantidad) || 0,
       stock: (parseInt(nuevoProducto.cantidad) || 0) > 0,
       kiosko_id: kiosko.id,
+      foto: fotoUrl,
     };
+
     let nuevos;
     if (modalProducto?.id) {
       const { error } = await supabase.from("productos").update(productoParaDB).eq("id", modalProducto.id);
       if (error) { mostrarToast("❌ Error: " + error.message, "error"); return; }
-      nuevos = productos.map(p => p.id === modalProducto.id ? { ...p, ...productoParaDB, foto: nuevoProducto.foto } : p);
+      nuevos = productos.map(p => p.id === modalProducto.id ? { ...p, ...productoParaDB } : p);
       mostrarToast("✅ Producto actualizado");
     } else {
       const { data, error } = await supabase.from("productos").insert([productoParaDB]).select();
       if (error) { mostrarToast("❌ Error: " + error.message, "error"); return; }
       if (!data || !data[0]) { mostrarToast("❌ No se pudo guardar", "error"); return; }
-      nuevos = [...productos, { ...data[0], foto: nuevoProducto.foto }];
+      nuevos = [...productos, data[0]];
       mostrarToast("✅ Producto agregado");
     }
     actualizarProductos(nuevos);
     setModalProducto(null);
-    setNuevoProducto({ nombre: "", precio: "", categoria: "Bebidas", emoji: "🛒", stock: true, cantidad: 0, foto: null });
+    setNuevoProducto({ nombre: "", precio: "", categoria: "Bebidas", emoji: "🛒", stock: true, cantidad: 0, foto: null, fotoFile: null });
   };
 
   return (
@@ -514,9 +534,10 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "8px 14px", fontSize: 12 }}
-            onClick={() => { setModalProducto({}); setNuevoProducto({ nombre: "", precio: "", categoria: "Bebidas", emoji: "🛒", stock: true }); }}>
-            + Agregar
+            onClick={() => { setModalProducto({}); setNuevoProducto({ nombre: "", precio: "", categoria: "Bebidas", emoji: "🛒", stock: true, cantidad: 0, foto: null, fotoFile: null }); }}>
+            + Agregar producto
           </button>
+          <div style={{ width: 1, background: "#e5e7eb", margin: "0 4px" }} />
           <button className="btn" style={{ background: "#ecfdf5", color: "#059669", padding: "8px 14px", fontSize: 12, border: "1px solid #bbf7d0" }}
             onClick={onVerCatalogo}>
             👁 Ver catálogo
@@ -693,8 +714,9 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
                         const file = e.target.files[0];
                         if (!file) return;
                         if (file.size > 2 * 1024 * 1024) { alert("La foto no debe superar 2MB"); return; }
+                        // Guardamos el archivo original Y un preview base64 para mostrar
                         const reader = new FileReader();
-                        reader.onload = ev => setNuevoProducto(p => ({ ...p, foto: ev.target.result }));
+                        reader.onload = ev => setNuevoProducto(p => ({ ...p, foto: ev.target.result, fotoFile: file }));
                         reader.readAsDataURL(file);
                       }}
                     />
