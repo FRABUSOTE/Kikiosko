@@ -889,7 +889,12 @@ function CatalogoCliente({ kiosko, onSalir }) {
           <p style={{ fontSize: 14 }}>Sin productos aún</p>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14, padding: "0 20px" }}>
+        <div style={{
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+  gap: 14,
+  padding: "0 20px"
+}}>
           {filtrados.map(p => (
             <div key={p.id} className="prod-card" style={{ opacity: p.stock ? 1 : 0.5 }}>
               <div style={{
