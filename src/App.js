@@ -893,12 +893,14 @@ function CatalogoCliente({ kiosko, onSalir }) {
           {filtrados.map(p => (
             <div key={p.id} className="prod-card" style={{ opacity: p.stock ? 1 : 0.5 }}>
               <div style={{
-  background: "#fff7ed",
+  background: "#fff", // 👈 blanco para que no se note el fondo
   height: 140,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  overflow: "hidden"
+  overflow: "hidden",
+  padding: 10, // 👈 espacio interno (clave)
+  borderBottom: "1px solid #f3f4f6" // 👈 línea suave (opcional pero PRO)
 }}>
   {p.foto ? (
     <img
@@ -907,7 +909,8 @@ function CatalogoCliente({ kiosko, onSalir }) {
       style={{
         maxWidth: "100%",
         maxHeight: "100%",
-        objectFit: "contain"
+        objectFit: "contain",
+        borderRadius: 8 // 👈 suave, se ve mejor
       }}
     />
                 ) : (
