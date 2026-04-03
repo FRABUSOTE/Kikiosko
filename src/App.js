@@ -909,15 +909,16 @@ function CatalogoCliente({ kiosko, onSalir }) {
 }}>
   {p.foto ? (
     <img
-      src={p.foto}
-      alt={p.nombre}
-      style={{
-        maxWidth: "100%",
-        maxHeight: "100%",
-        objectFit: "contain",
-        borderRadius: 8 // 👈 suave, se ve mejor
-      }}
-    />
+  src={p.foto}
+  alt={p.nombre}
+  loading="lazy"
+  decoding="async"
+  style={{
+    maxWidth: "100%",
+    maxHeight: "100%",
+    objectFit: "contain"
+  }}
+/>
                 ) : (
                   <span style={{ fontSize: 48 }}>{p.emoji}</span>
                 )}
