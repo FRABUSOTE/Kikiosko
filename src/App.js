@@ -893,7 +893,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
   gap: 10,
-  padding: "0 20px"
+  padding: "0 15px"
 }}>
           {filtrados.map(p => (
             <div key={p.id} className="prod-card" style={{ opacity: p.stock ? 1 : 0.5 }}>
