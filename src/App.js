@@ -891,7 +891,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
       ) : (
         <div style={{
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+  gridTemplateColumns: "repeat(auto-fit, minmax(135px, 1fr))",
   gap: 14,
   padding: "0 20px"
 }}>
