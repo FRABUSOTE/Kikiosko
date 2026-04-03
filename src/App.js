@@ -458,16 +458,22 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
   const guardar = async () => {
     mostrarToast("⏳ Guardando...", "ok");
     let fotoUrl = nuevoProducto.foto && !nuevoProducto.fotoFile ? nuevoProducto.foto : null;
+
+    // Si hay un archivo nuevo, subirlo a Supabase Storage
     if (nuevoProducto.fotoFile) {
       const ext = nuevoProducto.fotoFile.name.split(".").pop();
       const fileName = `${kiosko.id}_${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from("fotos-productos")
         .upload(fileName, nuevoProducto.fotoFile, { upsert: true });
-      if (uploadError) { mostrarToast("❌ Error subiendo foto: " + uploadError.message, "error"); return; }
+      if (uploadError) {
+        mostrarToast("❌ Error subiendo foto: " + uploadError.message, "error");
+        return;
+      }
       const { data: urlData } = supabase.storage.from("fotos-productos").getPublicUrl(fileName);
       fotoUrl = urlData.publicUrl;
     }
+
     const productoParaDB = {
       nombre: nuevoProducto.nombre,
       precio: parseFloat(nuevoProducto.precio) || 0,
@@ -478,6 +484,7 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
       kiosko_id: kiosko.id,
       foto: fotoUrl,
     };
+
     let nuevos;
     if (modalProducto?.id) {
       const { error } = await supabase.from("productos").update(productoParaDB).eq("id", modalProducto.id);
@@ -707,6 +714,7 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
                         const file = e.target.files[0];
                         if (!file) return;
                         if (file.size > 2 * 1024 * 1024) { alert("La foto no debe superar 2MB"); return; }
+                        // Guardamos el archivo original Y un preview base64 para mostrar
                         const reader = new FileReader();
                         reader.onload = ev => setNuevoProducto(p => ({ ...p, foto: ev.target.result, fotoFile: file }));
                         reader.readAsDataURL(file);
@@ -881,12 +889,35 @@ function CatalogoCliente({ kiosko, onSalir }) {
           <p style={{ fontSize: 14 }}>Sin productos aún</p>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 14, padding: "0 20px" }}>
+        <div style={{
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  gap: 14,
+  padding: "0 20px"
+}}>
           {filtrados.map(p => (
             <div key={p.id} className="prod-card" style={{ opacity: p.stock ? 1 : 0.5 }}>
-              <div style={{ background: "#fff7ed", height: 120, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                {p.foto ? (
-                  <img src={p.foto} alt={p.nombre} style={{ width: "100%", height: "100%", objectFit: "contain", padding: "8px" }} />
+              <div style={{
+  background: "#fff", // 👈 blanco para que no se note el fondo
+  height: 140,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  overflow: "hidden",
+  padding: 10, // 👈 espacio interno (clave)
+  borderBottom: "1px solid #f3f4f6" // 👈 línea suave (opcional pero PRO)
+}}>
+  {p.foto ? (
+    <img
+      src={p.foto}
+      alt={p.nombre}
+      style={{
+        maxWidth: "100%",
+        maxHeight: "100%",
+        objectFit: "contain",
+        borderRadius: 8 // 👈 suave, se ve mejor
+      }}
+    />
                 ) : (
                   <span style={{ fontSize: 48 }}>{p.emoji}</span>
                 )}
