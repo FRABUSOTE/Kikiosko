@@ -891,8 +891,8 @@ function CatalogoCliente({ kiosko, onSalir }) {
       ) : (
         <div style={{
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(135px, 1fr))",
-  gap: 14,
+  gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+  gap: 10,
   padding: "0 20px"
 }}>
           {filtrados.map(p => (
