@@ -43,18 +43,25 @@ function SuperAdmin({ onSalir }) {
     cargarKioskos();
   }, []);
 
-  const cargarKioskos = async () => {
-    setCargando(true);
-    const { data: ks, error } = await supabase.from("kioskos").select("*").order("created_at", { ascending: false });
-    if (error) { mostrarToast("Error cargando kioskos", "error"); setCargando(false); return; }
-    // Cargar productos de cada kiosko
-    const kioskosConProductos = await Promise.all(ks.map(async k => {
-      const { data: prods } = await supabase.from("productos").select("*").eq("kiosko_id", k.id);
-      return { ...k, productos: prods || [] };
-    }));
-    setKioskos(kioskosConProductos);
-    setCargando(false);
-  };
+ const cargarKioskos = async () => {
+  setCargando(true);
+  
+  const { data, error } = await supabase
+    .from("kioskos")
+    .select(`
+      *,
+      productos (*)
+    `)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    mostrarToast("Error cargando kioskos", "error");
+  } else {
+    setKioskos(data);
+  }
+  
+  setCargando(false);
+};
 
   const toggleAcceso = async (id) => {
     const kiosko = kioskos.find(k => k.id === id);
