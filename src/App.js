@@ -95,16 +95,63 @@ function SuperAdmin({ onSalir }) {
     mostrarToast("✅ Kiosko creado exitosamente");
   };
 
-  const subirExcel = (kioskoid, e) => {
+const subirExcel = async (kioskoid, e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const productosSimulados = [
-      { id: Date.now() + 1, nombre: "Producto Excel 1", precio: 2.50, categoria: "Bebidas", emoji: "🥤", stock: true },
-      { id: Date.now() + 2, nombre: "Producto Excel 2", precio: 1.00, categoria: "Golosinas", emoji: "🍬", stock: true },
-      { id: Date.now() + 3, nombre: "Producto Excel 3", precio: 3.50, categoria: "Útiles", emoji: "✏️", stock: true },
-    ];
-    setKioskos(prev => prev.map(k => k.id === kioskoid ? { ...k, productos: [...k.productos, ...productosSimulados] } : k));
-    mostrarToast(`✅ ${productosSimulados.length} productos cargados desde Excel`);
+    mostrarToast("⏳ Leyendo Excel...", "ok");
+
+    try {
+      const XLSX = await import("https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs");
+      const buffer = await file.arrayBuffer();
+      const wb = XLSX.read(buffer, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const filas = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+      if (!filas || filas.length === 0) {
+        mostrarToast("❌ El Excel está vacío", "error");
+        return;
+      }
+
+      const productos = filas.map(fila => {
+        const get = (keys) => {
+          for (const k of keys) {
+            const found = Object.keys(fila).find(f => f.toLowerCase().trim() === k.toLowerCase());
+            if (found) return fila[found];
+          }
+          return "";
+        };
+        const stockVal = get(["stock"]);
+        const stock = stockVal === true || stockVal === 1 || String(stockVal).toLowerCase() === "true" || String(stockVal).toLowerCase() === "si" || String(stockVal).toLowerCase() === "sí" || stockVal === "";
+        return {
+          nombre: String(get(["nombre", "name", "producto"]) || "").trim(),
+          precio: parseFloat(get(["precio", "price", "costo"])) || 0,
+          categoria: String(get(["categoria", "category", "categoría"]) || "Otros").trim(),
+          emoji: String(get(["emoji"]) || "🛒").trim(),
+          stock: stock,
+          cantidad: parseInt(get(["cantidad", "stock", "quantity"])) || 0,
+          kiosko_id: kioskoid,
+          foto: null,
+        };
+      }).filter(p => p.nombre);
+
+      if (productos.length === 0) {
+        mostrarToast("❌ No se encontraron productos con nombre", "error");
+        return;
+      }
+
+      const { data, error } = await supabase.from("productos").insert(productos).select();
+      if (error) { mostrarToast("❌ Error guardando: " + error.message, "error"); return; }
+
+      setKioskos(prev => prev.map(k => k.id === kioskoid
+        ? { ...k, productos: [...k.productos, ...data] }
+        : k
+      ));
+      mostrarToast(`✅ ${data.length} productos cargados desde Excel`);
+    } catch (err) {
+      mostrarToast("❌ Error leyendo Excel: " + err.message, "error");
+    }
+
+    e.target.value = "";
   };
 
   const actualizarDato = async (id, campo, valor) => {
