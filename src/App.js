@@ -36,17 +36,6 @@ function SuperAdmin({ onSalir }) {
   const [nuevoKiosko, setNuevoKiosko] = useState({ nombre: "", dueno: "", email: "", clave: "", whatsapp: "", plan: "Pro", vence: "" });
   const fileRef = useRef();
 
-  const [categorias, setCategorias] = useState([]);
-
-const cargarCategorias = async () => {
-  const { data } = await supabase.from("categorias").select("*").order("nombre");
-  if (data) setCategorias(data);
-};
-
-useEffect(() => {
-  cargarKioskos();
-  cargarCategorias();
-}, []);
   const mostrarToast = (msg, tipo = "ok") => { setToast({ msg, tipo }); setTimeout(() => setToast(null), 2500); };
 
   // Cargar kioskos desde Supabase
@@ -315,52 +304,6 @@ const subirExcel = async (kioskoid, e) => {
             </tbody>
           </table>
         </div>
-        {/* Gestión de categorías */}
-<div className="card" style={{ padding: "20px", marginTop: 20 }}>
-  <p style={{ fontWeight: 900, fontSize: 15, marginBottom: 14 }}>🏷️ Categorías</p>
-  <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-    <input
-      className="inp"
-      placeholder="Nueva categoría (ej: Papelería)"
-      id="nueva-categoria"
-    />
-    <input
-      className="inp"
-      placeholder="Emoji"
-      id="nueva-categoria-emoji"
-      style={{ width: 80 }}
-    />
-    <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "10px 16px", fontSize: 12, flexShrink: 0 }}
-      onClick={async () => {
-        const nombre = document.getElementById("nueva-categoria").value.trim();
-        const emoji = document.getElementById("nueva-categoria-emoji").value.trim() || "📦";
-        if (!nombre) return;
-        const { data, error } = await supabase.from("categorias").insert([{ nombre, emoji }]).select();
-        if (error) { mostrarToast("❌ Error: " + error.message, "error"); return; }
-        setCategorias(prev => [...prev, data[0]]);
-        document.getElementById("nueva-categoria").value = "";
-        document.getElementById("nueva-categoria-emoji").value = "";
-        mostrarToast("✅ Categoría creada");
-      }}>
-      + Agregar
-    </button>
-  </div>
-  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-    {categorias.map(c => (
-      <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8, padding: "6px 12px" }}>
-        <span>{c.emoji}</span>
-        <span style={{ fontSize: 13, fontWeight: 700 }}>{c.nombre}</span>
-        <button className="btn" style={{ background: "transparent", color: "#dc2626", fontSize: 12, padding: "0 4px" }}
-          onClick={async () => {
-            await supabase.from("categorias").delete().eq("id", c.id);
-            setCategorias(prev => prev.filter(x => x.id !== c.id));
-            mostrarToast("🗑 Categoría eliminada");
-          }}>✕</button>
-      </div>
-    ))}
-  </div>
-</div> 
-            
       </div>
 
       {/* Modal detalle kiosko */}
@@ -545,14 +488,8 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
     onProductosChange(nuevos);
   };
   const [modalProducto, setModalProducto] = useState(null);
-  const [nuevoProducto, setNuevoProducto] = useState({ nombre: "", precio: "", categoria: "", emoji: "🛒", stock: true, cantidad: 0, foto: null });
-  const [categorias, setCategorias] = useState([]);
-
-useEffect(() => {
-  supabase.from("categorias").select("*").order("nombre").then(({ data }) => {
-    if (data) setCategorias(data);
-  });
-}, []);
+  const [nuevoProducto, setNuevoProducto] = useState({ nombre: "", precio: "", categoria: "Bebidas", emoji: "🛒", stock: true, cantidad: 0, foto: null });
+  const [toast, setToast] = useState(null);
 
   const mostrarToast = (msg, tipo = "ok") => { setToast({ msg, tipo }); setTimeout(() => setToast(null), 2500); };
 
@@ -861,7 +798,7 @@ useEffect(() => {
               <div>
                 <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>Categoría</label>
                 <select value={nuevoProducto.categoria} onChange={e => setNuevoProducto(p => ({ ...p, categoria: e.target.value }))}>
-                 {categorias.map(c => <option key={c.id} value={c.nombre}>{c.emoji} {c.nombre}</option>)}
+                  {["Bebidas", "Golosinas", "Útiles", "Otros"].map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
               {/* Stock cantidad manual */}
