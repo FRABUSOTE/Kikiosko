@@ -482,13 +482,33 @@ const subirExcel = async (kioskoid, e) => {
 // ─── PANEL ADMIN KIOSKO ───
 function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
   const [productos, setProductos] = useState(kiosko.productos);
+  
+  // --- AQUÍ COLOCAS LA PARTE UNO ---
+  // Obtenemos categorías únicas de los productos actuales
+  const categoriasExistentes = [
+    ...new Set(productos.map(p => p.categoria))
+  ].filter(Boolean);
+
+  // Si no hay categorías (kiosko nuevo), usamos una lista base
+  const categoriasParaMostrar = categoriasExistentes.length > 0 
+    ? categoriasExistentes 
+    : ["Bebidas", "Snacks", "Abarrotes", "Otros"];
+  // ---------------------------------
 
   const actualizarProductos = (nuevos) => {
     setProductos(nuevos);
     onProductosChange(nuevos);
   };
   const [modalProducto, setModalProducto] = useState(null);
-  const [nuevoProducto, setNuevoProducto] = useState({ nombre: "", precio: "", categoria: "Bebidas", emoji: "🛒", stock: true, cantidad: 0, foto: null });
+  const [nuevoProducto, setNuevoProducto] = useState({ 
+  nombre: "", 
+  precio: "", 
+  categoria: categoriasParaMostrar[0], // <--- CAMBIO AQUÍ
+  emoji: "🛒", 
+  stock: true, 
+  cantidad: 0, 
+  foto: null 
+});
   const [toast, setToast] = useState(null);
 
   const mostrarToast = (msg, tipo = "ok") => { setToast({ msg, tipo }); setTimeout(() => setToast(null), 2500); };
@@ -798,7 +818,7 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
               <div>
                 <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>Categoría</label>
                 <select value={nuevoProducto.categoria} onChange={e => setNuevoProducto(p => ({ ...p, categoria: e.target.value }))}>
-                  {["Bebidas", "Golosinas", "Útiles", "Otros"].map(c => <option key={c}>{c}</option>)}
+                  {categoriasParaMostrar.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
               {/* Stock cantidad manual */}
