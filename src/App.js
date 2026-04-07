@@ -1075,33 +1075,40 @@ function CatalogoCliente({ kiosko, onSalir }) {
               <span style={{ fontWeight: 900, fontSize: 18 }}>🛒 Tu pedido</span>
               <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "6px 12px", fontSize: 11, border: "1px solid #e5e7eb", borderRadius: 8 }} onClick={() => setVerCarrito(false)}>✕</button>
             </div>
-            {Object.entries(carrito).map(([key, cant]) => {
-              const info = obtenerDatosItem(key);
-              if (!info) return null;
-              return (
-                <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 22 }}>{info.emoji}</span>
-                    <div>
-                      <p style={{ fontSize: 13, fontWeight: 700 }}>{info.nombreFinal}</p>
-                      <p style={{ fontSize: 11, color: "#9ca3af" }}>S/. {info.precioFinal.toFixed(2)} c/u</p>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+              {Object.entries(carrito).map(([key, cant]) => {
+                const info = obtenerDatosItem(key);
+                if (!info) return null;
+                return (
+                  <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
+                    <div style={{ flex: 1, paddingRight: 10 }}>
+                      <p style={{ fontSize: 14, fontWeight: 800, marginBottom: 2 }}>{info.nombreFinal}</p>
+                      <p style={{ fontSize: 12, color: "#f97316", fontWeight: 700 }}>S/. {info.precioFinal.toFixed(2)}</p>
+                    </div>
+                    
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <button className="btn" style={{ background: "#fff7ed", color: "#f97316", width: 32, height: 32, border: "1.5px solid #fed7aa", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => quitar(key)}>−</button>
+                      <span style={{ fontWeight: 900, fontSize: 15, minWidth: 20, textAlign: "center" }}>{cant}</span>
+                      <button className="btn" style={{ background: "#f97316", color: "#fff", width: 32, height: 32, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => agregar(info, info.variaciones?.find(v => key.includes(v.nombre)))}>+</button>
                     </div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <button className="btn" style={{ background: "#fff7ed", color: "#f97316", width: 28, height: 28 }} onClick={() => quitar(key)}>−</button>
-                    <span style={{ fontWeight: 900 }}>{cant}</span>
-                    <button className="btn" style={{ background: "#f97316", color: "#fff", width: 28, height: 28 }} onClick={() => agregar(info, info.variaciones?.find(v => key.includes(v.nombre)))}>+</button>
-                  </div>
-                </div>
-              );
-            })}
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0", borderTop: "2px solid #f97316", marginTop: 8 }}>
-              <span style={{ fontWeight: 900 }}>Total</span>
-              <span style={{ fontWeight: 900, fontSize: 20, color: "#f97316" }}>S/. {totalPrecio.toFixed(2)}</span>
+                );
+              })}
             </div>
-            <input className="inp2" placeholder="Tu nombre..." value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} style={{ marginBottom: 16 }} />
-            <button className="btn" style={{ width: "100%", background: "#25D366", color: "#fff", padding: 15, borderRadius: 12 }} onClick={enviarPedido}>
-              📱 Enviar por WhatsApp
+
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0", borderTop: "2px solid #f97316", marginTop: 8, marginBottom: 15 }}>
+              <span style={{ fontWeight: 900, fontSize: 16 }}>Total a pagar</span>
+              <span style={{ fontWeight: 900, fontSize: 22, color: "#f97316" }}>S/. {totalPrecio.toFixed(2)}</span>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 11, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", marginLeft: 4 }}>Tu nombre</label>
+              <input className="inp2" placeholder="Ej: Juan Pérez" value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} style={{ marginTop: 4 }} />
+            </div>
+
+            <button className="btn" style={{ width: "100%", background: "#25D366", color: "#fff", padding: "16px", fontSize: 16, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 4px 12px rgba(37,211,102,0.3)" }} onClick={enviarPedido}>
+              <span style={{ fontSize: 20 }}>📱</span> Enviar por WhatsApp
             </button>
           </div>
         </div>
