@@ -904,32 +904,35 @@ function CatalogoCliente({ kiosko, onSalir }) {
 
   const categorias = ["Todos", ...new Set(kiosko.productos.map(p => p.categoria))];
 
-  // Nueva función agregar que considera la variación
-  const agregar = (p, variacion) => {
-    const key = variacion ? `${p.id}-${variacion.nombre}` : `${p.id}-unica`;
-    setCarrito(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
-    mostrarToast(`✅ ${p.nombre} agregado`);
-  };
+ // 1. ESTA SIRVE PARA AGREGAR (METER AL CARRITO)
+const agregar = (p, variacion) => {
+  const key = variacion ? `${p.id}-${variacion.nombre}` : `${p.id}-unica`;
+  setCarrito(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
+  mostrarToast(`✅ ${p.nombre} agregado`);
+};
 
-  const quitar = (key) => setCarrito(prev => {
-    const n = { ...prev };
-    if (n[key] > 1) n[key]--;
-    else delete n[key];
-    return n;
-  });
+// 2. ESTA SIRVE PARA QUITAR
+const quitar = (key) => setCarrito(prev => {
+  const n = { ...prev };
+  if (n[key] > 1) n[key]--;
+  else delete n[key];
+  return n;
+});
 
-  // Función auxiliar para obtener datos reales del item en el carrito
-  const obtenerDatosItem = (key) => {
-    const [id, nombreVar] = key.split("-");
-    const p = kiosko.productos.find(prod => String(prod.id) === String(id));
-    if (!p) return null;
-    const varInfo = p.variaciones?.find(v => v.nombre === nombreVar);
-    return { 
-      ...p, 
-      nombreFinal: varInfo ? `${p.nombre} (${nombreVar})` : p.nombre, 
-      precioFinal: varInfo ? varInfo.precio : p.precio 
-    };
+// 3. ESTA SIRVE PARA LEER (CALCULAR PRECIOS Y NOMBRES)
+const obtenerDatosItem = (key) => {
+  const [id, nombreVar] = key.split("-");
+  const p = kiosko.productos.find(prod => String(prod.id) === String(id));
+  if (!p) return null;
+  
+  const varInfo = p.variaciones?.find(v => v.nombre === nombreVar);
+  
+  return { 
+    ...p, 
+    nombreFinal: varInfo ? `${p.nombre} (${nombreVar})` : p.nombre, 
+    precioFinal: varInfo ? varInfo.precio : p.precio 
   };
+};
 
   const totalItems = Object.values(carrito).reduce((s, v) => s + v, 0);
   const totalPrecio = Object.entries(carrito).reduce((s, [key, cant]) => {
