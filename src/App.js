@@ -892,112 +892,97 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
 }
 
 function CatalogoCliente({ kiosko, onSalir }) {
-  const [carrito, setCarrito] = useState({}); 
+  const [carrito, setCarrito] = useState([]); // Ahora el carrito es una LISTA de objetos
   const [categoria, setCategoria] = useState("Todos");
   const [busqueda, setBusqueda] = useState("");
   const [nombreCliente, setNombreCliente] = useState("");
   const [verCarrito, setVerCarrito] = useState(false);
-  const [toast, setToast] = useState(null);
 
-  const mostrarToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2000); };
-  const categorias = ["Todos", ...new Set(kiosko.productos.map(p => p.categoria))];
-
+  // 1. AGREGAR: Guardamos el objeto completo para que no se pierda el precio
   const agregar = (p, variacion) => {
-    // Forzamos el ID a String para que la llave sea consistente
-    const key = variacion ? `${p.id}-${variacion.nombre}` : `${p.id}-unica`;
-    setCarrito(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
-    mostrarToast(`✅ ${p.nombre} añadido`);
-  };
-
-  const quitar = (key) => setCarrito(prev => {
-    const n = { ...prev };
-    if (n[key] > 1) n[key]--;
-    else delete n[key];
-    return n;
-  });
-
-  // --- FUNCIÓN REPARADA ---
-  const obtenerDatosItem = (key) => {
-    if (!key) return null;
-    const partes = key.split("-");
-    const idBuscado = partes[0];
-    const nombreVar = partes[1];
-    
-    // Buscamos el producto probando ambas comparaciones (Número y String)
-    const p = kiosko.productos.find(prod => 
-      String(prod.id) === String(idBuscado) || Number(prod.id) === Number(idBuscado)
-    );
-
-    if (!p) return null;
-
-    const varInfo = (nombreVar && nombreVar !== "unica") 
-      ? p.variaciones?.find(v => v.nombre === nombreVar) 
-      : null;
-    
-    return { 
-      ...p, 
-      nombreFinal: varInfo ? `${p.nombre} (${nombreVar})` : p.nombre, 
-      precioFinal: varInfo ? Number(varInfo.precio) : Number(p.precio),
-      variacionOriginal: varInfo
+    const nuevoItem = {
+      idUnico: Date.now() + Math.random(), // Para que cada fila sea única
+      idProducto: p.id,
+      nombre: variacion ? `${p.nombre} (${variacion.nombre})` : p.nombre,
+      precio: variacion ? Number(variacion.precio) : Number(p.precio),
+      emoji: p.emoji || "📦",
+      variacionNombre: variacion ? variacion.nombre : "unica"
     };
+    setCarrito([...carrito, nuevoItem]);
   };
 
-  const totalItems = Object.values(carrito).reduce((s, v) => s + v, 0);
-  
-  // Calculamos el precio total asegurando que sean números
-  const totalPrecio = Object.entries(carrito).reduce((s, [key, cant]) => {
-    const info = obtenerDatosItem(key);
-    return s + (info ? info.precioFinal * cant : 0);
-  }, 0);
+  // 2. QUITAR: Eliminamos por su ID único de fila
+  const quitar = (idUnico) => {
+    setCarrito(carrito.filter(item => item.idUnico !== idUnico));
+  };
+
+  // 3. CALCULOS: Directos del estado del carrito
+  const totalPrecio = carrito.reduce((s, item) => s + item.precio, 0);
+  const totalItems = carrito.length;
 
   const enviarPedido = async () => {
-    const lineasArr = Object.entries(carrito).map(([key, cant]) => {
-      const info = obtenerDatosItem(key);
-      return info ? `${info.nombreFinal} x${cant} — S/. ${(info.precioFinal * cant).toFixed(2)}` : "";
-    }).filter(Boolean);
-
-    if (lineasArr.length === 0) return alert("El carrito parece estar vacío");
-
-    const lineas = lineasArr.join("\n");
-    const msg = encodeURIComponent(`*Pedido de:* ${nombreCliente || "Cliente"}\n\n${lineas}\n\n*Total:* S/. ${totalPrecio.toFixed(2)}`);
+    if (carrito.length === 0) return;
     
-    try {
-      await supabase.from("pedidos").insert([{
-        kiosko_id: kiosko.id,
-        nombre_cliente: nombreCliente || "Sin nombre",
-        detalle: lineas,
-        total: totalPrecio,
-      }]);
-      window.open(`https://wa.me/51${kiosko.whatsapp}?text=${msg}`, "_blank");
-    } catch (e) {
-      console.error(e);
-    }
+    // Agrupamos para el mensaje de WhatsApp (ej: "2x Gaseosa")
+    const resumen = carrito.reduce((acc, item) => {
+      acc[item.nombre] = (acc[item.nombre] || 0) + 1;
+      return acc;
+    }, {});
+
+    const lineas = Object.entries(resumen)
+      .map(([nom, cant]) => `• ${nom} x${cant}`)
+      .join("\n");
+
+    const msg = encodeURIComponent(
+      `*Nuevo Pedido*\n\n${lineas}\n\n*Total: S/. ${totalPrecio.toFixed(2)}*\n*Cliente:* ${nombreCliente || "No indicado"}`
+    );
+    
+    await supabase.from("pedidos").insert([{
+      kiosko_id: kiosko.id,
+      nombre_cliente: nombreCliente || "Sin nombre",
+      detalle: lineas,
+      total: totalPrecio,
+    }]);
+
+    window.open(`https://wa.me/51${kiosko.whatsapp}?text=${msg}`, "_blank");
   };
 
+  // --- COMPONENTE DE PRODUCTO ---
   const ProductoCard = ({ p }) => {
     const [varSel, setVarSel] = useState(p.variaciones?.length > 0 ? p.variaciones[0] : null);
-    const precioActual = varSel ? Number(varSel.precio) : Number(p.precio);
+    const precioDisplay = varSel ? Number(varSel.precio) : Number(p.precio);
 
     return (
-      <div className="prod-card" style={{ opacity: p.stock ? 1 : 0.5 }}>
-        <div style={{ height: 140, display: "flex", alignItems: "center", justifyContent: "center", background: "#fff" }}>
-          {p.foto ? <img src={p.foto} style={{ maxWidth: "100%", maxHeight: "100%" }} /> : <span style={{fontSize:40}}>🛒</span>}
+      <div className="prod-card" style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
+        <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40, background: "#f9f9f9" }}>
+          {p.foto ? <img src={p.foto} style={{width:"100%", height:"100%", objectFit:"cover"}} /> : (p.emoji || "🍔")}
         </div>
         <div style={{ padding: 12 }}>
-          <p style={{ fontWeight: 800, fontSize: 13 }}>{p.nombre}</p>
+          <p style={{ fontWeight: 800, fontSize: 13, margin: 0 }}>{p.nombre}</p>
+          
           {p.variaciones?.length > 0 && (
-            <div style={{ display: "flex", gap: 4, margin: "8px 0", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 5, margin: "8px 0", flexWrap: "wrap" }}>
               {p.variaciones.map((v, i) => (
-                <button key={i} className="btn" 
-                  style={{ fontSize: 10, padding: "4px 8px", background: varSel?.nombre === v.nombre ? "#f97316" : "#f3f4f6", color: varSel?.nombre === v.nombre ? "#fff" : "#6b7280" }}
+                <button key={i} 
                   onClick={() => setVarSel(v)}
-                > {v.nombre} </button>
+                  style={{ 
+                    fontSize: 10, padding: "4px 8px", borderRadius: 6, border: "none", cursor: "pointer",
+                    background: varSel?.nombre === v.nombre ? "#f97316" : "#eee",
+                    color: varSel?.nombre === v.nombre ? "#fff" : "#666"
+                  }}>
+                  {v.nombre}
+                </button>
               ))}
             </div>
           )}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-            <span style={{ fontWeight: 900, color: "#f97316" }}>S/. {precioActual.toFixed(2)}</span>
-            <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "6px 12px" }} onClick={() => agregar(p, varSel)}>+ Agregar</button>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
+            <span style={{ fontWeight: 900, color: "#f97316" }}>S/. {precioDisplay.toFixed(2)}</span>
+            <button 
+              onClick={() => agregar(p, varSel)}
+              style={{ background: "#f97316", color: "#fff", border: "none", padding: "6px 12px", borderRadius: 8, fontWeight: 800, cursor: "pointer" }}>
+              + Agregar
+            </button>
           </div>
         </div>
       </div>
@@ -1005,64 +990,69 @@ function CatalogoCliente({ kiosko, onSalir }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#fff7ed", fontFamily: "Nunito" }}>
-      <style>{`.btn { border: none; cursor: pointer; font-weight: 800; border-radius: 8px; } .prod-card { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }`}</style>
-      
-      <div style={{ background: "#f97316", color: "#fff", padding: 20, display: "flex", justifyContent: "space-between" }}>
-        <h2 style={{margin:0}}>{kiosko.nombre}</h2>
-        <button className="btn" onClick={onSalir} style={{background:"rgba(255,255,255,0.2)", color:"#fff", padding:"5px 10px"}}>Salir</button>
+    <div style={{ minHeight: "100vh", background: "#fff7ed", fontFamily: "Nunito, sans-serif" }}>
+      {/* Header */}
+      <div style={{ background: "#f97316", padding: 20, color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h2 style={{ margin: 0 }}>{kiosko.nombre}</h2>
+        <button onClick={onSalir} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 8 }}>Salir</button>
       </div>
 
+      {/* Grid */}
       <div style={{ padding: 15, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         {kiosko.productos.map(p => <ProductoCard key={p.id} p={p} />)}
       </div>
 
+      {/* Botón Flotante */}
       {totalItems > 0 && (
-        <div style={{ position: "fixed", bottom: 20, left: 0, right: 0, padding: "0 20px" }}>
-          <button className="btn" onClick={() => setVerCarrito(true)} style={{ width: "100%", background: "#f97316", color: "#fff", padding: 18, display: "flex", justifyContent: "space-between" }}>
-            <span>🛒 Ver pedido ({totalItems})</span>
-            <span>S/. {totalPrecio.toFixed(2)}</span>
-          </button>
-        </div>
+        <button 
+          onClick={() => setVerCarrito(true)}
+          style={{ position: "fixed", bottom: 20, left: 20, right: 20, background: "#f97316", color: "#fff", padding: 18, borderRadius: 15, border: "none", fontWeight: 800, display: "flex", justifyContent: "space-between", fontSize: 16, boxShadow: "0 8px 20px rgba(249,115,22,0.3)" }}>
+          <span>🛒 Mi Pedido ({totalItems})</span>
+          <span>S/. {totalPrecio.toFixed(2)}</span>
+        </button>
       )}
 
+      {/* Modal del Carrito */}
       {verCarrito && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", zIndex: 100 }}>
-          <div style={{ background: "#fff", width: "100%", padding: 25, borderTopLeftRadius: 25, borderTopRightRadius: 25 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+          <div style={{ background: "#fff", width: "100%", padding: 25, borderTopLeftRadius: 25, borderTopRightRadius: 25, maxHeight: "80vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <h3 style={{ margin: 0 }}>Tu pedido</h3>
-              <button onClick={() => setVerCarrito(false)} style={{ border: "none", background: "none", fontSize: 20 }}>✕</button>
+              <button onClick={() => setVerCarrito(false)} style={{ border: "none", background: "none", fontSize: 24 }}>✕</button>
             </div>
 
-            {/* Renderizado de la lista */}
-            <div style={{ maxHeight: "40vh", overflowY: "auto" }}>
-              {Object.entries(carrito).map(([key, cant]) => {
-                const info = obtenerDatosItem(key);
-                if (!info) return null;
-                return (
-                  <div key={key} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid #eee" }}>
-                    <div>
-                      <p style={{ margin: 0, fontWeight: 700 }}>{info.nombreFinal}</p>
-                      <p style={{ margin: 0, color: "#f97316", fontSize: 13 }}>S/. {info.precioFinal.toFixed(2)}</p>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <button className="btn" style={{ width: 30, height: 30 }} onClick={() => quitar(key)}>−</button>
-                      <span style={{ fontWeight: 800 }}>{cant}</span>
-                      <button className="btn" style={{ width: 30, height: 30, background: "#f97316", color: "#fff" }} onClick={() => agregar(info, info.variacionOriginal)}>+</button>
-                    </div>
+            {/* AQUI SE MUESTRA LA LISTA - AHORA SI O SI SALDRÁ */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 15 }}>
+              {carrito.map((item) => (
+                <div key={item.idUnico} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 10, borderBottom: "1px solid #eee" }}>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 700 }}>{item.nombre}</p>
+                    <p style={{ margin: 0, color: "#f97316", fontSize: 13, fontWeight: 800 }}>S/. {item.precio.toFixed(2)}</p>
                   </div>
-                );
-              })}
+                  <button 
+                    onClick={() => quitar(item.idUnico)}
+                    style={{ background: "#fee2e2", color: "#ef4444", border: "none", padding: "5px 10px", borderRadius: 8, fontWeight: 800 }}>
+                    Quitar
+                  </button>
+                </div>
+              ))}
             </div>
 
-            <div style={{ marginTop: 20, paddingTop: 15, borderTop: "2px solid #f97316", display: "flex", justifyContent: "space-between" }}>
+            <div style={{ margin: "20px 0", paddingTop: 15, borderTop: "2px solid #f97316", display: "flex", justifyContent: "space-between" }}>
               <span style={{ fontWeight: 800 }}>Total:</span>
               <span style={{ fontWeight: 900, color: "#f97316", fontSize: 22 }}>S/. {totalPrecio.toFixed(2)}</span>
             </div>
 
-            <input style={{ width: "100%", padding: 12, borderRadius: 10, border: "1px solid #ddd", margin: "15px 0" }} placeholder="Tu nombre" value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} />
+            <input 
+              style={{ width: "100%", padding: 12, borderRadius: 10, border: "1px solid #ddd", marginBottom: 15, boxSizing: "border-box" }} 
+              placeholder="Tu nombre" 
+              value={nombreCliente} 
+              onChange={e => setNombreCliente(e.target.value)} 
+            />
             
-            <button onClick={enviarPedido} style={{ width: "100%", background: "#25D366", color: "#fff", padding: 16, borderRadius: 12, border: "none", fontWeight: 800 }}>
+            <button 
+              onClick={enviarPedido}
+              style={{ width: "100%", background: "#25D366", color: "#fff", padding: 16, borderRadius: 12, border: "none", fontWeight: 800, fontSize: 16 }}>
               📱 Enviar por WhatsApp
             </button>
           </div>
