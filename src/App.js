@@ -1089,8 +1089,21 @@ function CatalogoCliente({ kiosko, onSalir }) {
                     
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <button className="btn" style={{ background: "#fff7ed", color: "#f97316", width: 32, height: 32, border: "1.5px solid #fed7aa", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => quitar(key)}>−</button>
+                      
                       <span style={{ fontWeight: 900, fontSize: 15, minWidth: 20, textAlign: "center" }}>{cant}</span>
-                      <button className="btn" style={{ background: "#f97316", color: "#fff", width: 32, height: 32, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => agregar(info, info.variaciones?.find(v => key.includes(v.nombre)))}>+</button>
+                      
+                      <button 
+                        className="btn" 
+                        style={{ background: "#f97316", color: "#fff", width: 32, height: 32, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }} 
+                        onClick={() => {
+                          // Extraemos el nombre de la variación directamente de la llave (key)
+                          const [id, nombreVar] = key.split("-");
+                          const v = info.variaciones?.find(varItem => varItem.nombre === nombreVar);
+                          agregar(info, v);
+                        }}
+                      >
+                        +
+                      </button>
                     </div>
                   </div>
                 );
@@ -1116,6 +1129,8 @@ function CatalogoCliente({ kiosko, onSalir }) {
     </div>
   );
 }
+
+// ─── APP PRINCIPAL ───
 
 // ─── APP PRINCIPAL ───
 export default function App() {
