@@ -891,9 +891,8 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
   );
 }
 
-// ─── SOLO REEMPLAZA ESTA FUNCIÓN EN TU ARCHIVO ───
 function CatalogoCliente({ kiosko, onSalir }) {
-  const [carrito, setCarrito] = useState({}); // La llave ahora es "ID-VARIACION"
+  const [carrito, setCarrito] = useState({}); 
   const [categoria, setCategoria] = useState("Todos");
   const [busqueda, setBusqueda] = useState("");
   const [nombreCliente, setNombreCliente] = useState("");
@@ -903,14 +902,14 @@ function CatalogoCliente({ kiosko, onSalir }) {
   const mostrarToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2000); };
   const categorias = ["Todos", ...new Set(kiosko.productos.map(p => p.categoria))];
 
-  // 1. AGREGAR (Crea una llave única para cada combinación de producto y talla/sabor)
+  // Lógica de agregar mejorada para detectar variaciones
   const agregar = (p, variacion) => {
+    // Si no hay variación, usamos "unica". Aseguramos que el ID sea string para comparar bien.
     const key = variacion ? `${p.id}-${variacion.nombre}` : `${p.id}-unica`;
     setCarrito(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
     mostrarToast(`✅ ${p.nombre} agregado`);
   };
 
-  // 2. QUITAR
   const quitar = (key) => setCarrito(prev => {
     const n = { ...prev };
     if (n[key] > 1) n[key]--;
@@ -918,44 +917,38 @@ function CatalogoCliente({ kiosko, onSalir }) {
     return n;
   });
 
-  // 3. LEER DATOS (Busca el precio correcto según la variación guardada en la llave)
+  // ESTA ES LA FUNCIÓN CLAVE: Si esto falla, el carrito sale en S/. 0.00
   const obtenerDatosItem = (key) => {
     const [id, nombreVar] = key.split("-");
+    // Buscamos el producto comparando IDs como strings por seguridad
     const p = kiosko.productos.find(prod => String(prod.id) === String(id));
     if (!p) return null;
     
-    const varInfo = p.variaciones?.find(v => v.nombre === nombreVar);
+    // Si la llave dice "unica", no hay variación. Si no, buscamos la variación por nombre.
+    const varInfo = nombreVar === "unica" ? null : p.variaciones?.find(v => v.nombre === nombreVar);
     
     return { 
       ...p, 
       nombreFinal: varInfo ? `${p.nombre} (${nombreVar})` : p.nombre, 
-      precioFinal: varInfo ? varInfo.precio : p.precio,
-      variacionOriginal: varInfo // Útil para el botón "+" del carrito
+      precioFinal: varInfo ? parseFloat(varInfo.precio) : parseFloat(p.precio),
+      variacionOriginal: varInfo
     };
   };
 
   const totalItems = Object.values(carrito).reduce((s, v) => s + v, 0);
-  
   const totalPrecio = Object.entries(carrito).reduce((s, [key, cant]) => {
     const info = obtenerDatosItem(key);
     return s + (info ? info.precioFinal * cant : 0);
   }, 0);
 
   const enviarPedido = async () => {
-    if (totalItems === 0) return;
-
     const lineas = Object.entries(carrito).map(([key, cant]) => {
       const info = obtenerDatosItem(key);
       if (!info) return "";
-      return `${info.emoji || "🛒"} ${info.nombreFinal} x${cant} — S/. ${(info.precioFinal * cant).toFixed(2)}`;
+      return `${info.emoji || "📦"} ${info.nombreFinal} x${cant} — S/. ${(info.precioFinal * cant).toFixed(2)}`;
     }).filter(Boolean).join("\n");
 
-    const msg = encodeURIComponent(
-      `Hola ${kiosko.nombre}! 👋\n\n` +
-      `*Mi pedido:*\n${lineas}\n\n` +
-      `*💰 Total: S/. ${totalPrecio.toFixed(2)}*\n` +
-      `👤 Cliente: ${nombreCliente || "Sin nombre"}`
-    );
+    const msg = encodeURIComponent(`Hola ${kiosko.nombre}! 👋\n\nMi pedido:\n${lineas}\n\n💰 Total: S/. ${totalPrecio.toFixed(2)}\n👤 ${nombreCliente || "Sin nombre"}`);
     
     await supabase.from("pedidos").insert([{
       kiosko_id: kiosko.id,
@@ -969,25 +962,30 @@ function CatalogoCliente({ kiosko, onSalir }) {
     setVerCarrito(false);
   };
 
-  // Componente de la Tarjeta de Producto
   const ProductoCard = ({ p }) => {
-    const [varSel, setVarSel] = useState(p.variaciones?.length > 0 ? p.variaciones[0] : null);
-    const precioActual = varSel ? varSel.precio : p.precio;
+    // Si el producto tiene variaciones, seleccionamos la primera por defecto
+    const [varSel, setVarSel] = useState(p.variaciones && p.variaciones.length > 0 ? p.variaciones[0] : null);
+    const precioActual = varSel ? parseFloat(varSel.precio) : parseFloat(p.precio);
 
     return (
-      <div className="prod-card" style={{ background: "#fff", borderRadius: 16, overflow: "hidden", opacity: p.stock ? 1 : 0.5, display: "flex", flexDirection: "column" }}>
-        <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 45, background: "#fdfdfd" }}>
-          {p.emoji || "📦"}
+      <div className="prod-card" style={{ opacity: p.stock ? 1 : 0.5, display: "flex", flexDirection: "column" }}>
+        <div style={{ background: "#fff", height: 140, display: "flex", alignItems: "center", justifyContent: "center", padding: 10, borderBottom: "1px solid #f3f4f6" }}>
+          {p.foto ? (
+            <img src={p.foto} alt={p.nombre} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+          ) : (
+            <span style={{ fontSize: 48 }}>{p.emoji || "📦"}</span>
+          )}
         </div>
-        <div style={{ padding: 12, flex: 1, display: "flex", flexDirection: "column" }}>
-          <p style={{ fontWeight: 800, fontSize: 13, marginBottom: 4 }}>{p.nombre}</p>
+        <div style={{ padding: "12px 14px", flex: 1, display: "flex", flexDirection: "column" }}>
+          <p style={{ fontWeight: 800, fontSize: 13, marginBottom: 2 }}>{p.nombre}</p>
+          <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8 }}>{p.categoria}</p>
           
-          {p.variaciones?.length > 0 && (
+          {p.variaciones && p.variaciones.length > 0 && (
             <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
               {p.variaciones.map((v, i) => (
                 <button key={i} className="btn" 
                   style={{ 
-                    fontSize: 10, padding: "4px 8px", borderRadius: 6,
+                    fontSize: 10, padding: "4px 8px", borderRadius: "6px",
                     background: varSel?.nombre === v.nombre ? "#f97316" : "#f3f4f6",
                     color: varSel?.nombre === v.nombre ? "#fff" : "#6b7280"
                   }}
@@ -1000,8 +998,8 @@ function CatalogoCliente({ kiosko, onSalir }) {
           )}
 
           <div style={{ marginTop: "auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontWeight: 900, fontSize: 15, color: "#f97316" }}>S/. {precioActual.toFixed(2)}</span>
-            <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "6px 12px", borderRadius: 8, fontSize: 11 }} onClick={() => agregar(p, varSel)}>
+            <span style={{ fontWeight: 900, fontSize: 16, color: "#f97316" }}>S/. {precioActual.toFixed(2)}</span>
+            <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "7px 14px", fontSize: 12 }} onClick={() => agregar(p, varSel)}>
               + Agregar
             </button>
           </div>
@@ -1010,67 +1008,91 @@ function CatalogoCliente({ kiosko, onSalir }) {
     );
   };
 
-  return (
-    <div style={{ minHeight: "100vh", background: "#fff7ed", fontFamily: "Nunito", paddingBottom: 100 }}>
-      <style>{`.btn { border: none; cursor: pointer; font-family: inherit; font-weight: 800; } .prod-card { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }`}</style>
-      
-      {toast && <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "#059669", color: "#fff", padding: "10px 20px", borderRadius: 20, zIndex: 1000, fontWeight: 700 }}>{toast}</div>}
+  const filtrados = kiosko.productos.filter(p =>
+    (categoria === "Todos" || p.categoria === categoria) &&
+    (busqueda === "" || p.nombre.toLowerCase().includes(busqueda.toLowerCase()))
+  );
 
-      <div style={{ background: "#f97316", padding: 20, color: "#fff" }}>
-        <h2 style={{ margin: 0, fontSize: 20 }}>{kiosko.nombre}</h2>
-        <button onClick={onSalir} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "4px 10px", borderRadius: 6, marginTop: 8, cursor: "pointer", fontSize: 11 }}>← Salir</button>
+  return (
+    <div style={{ minHeight: "100vh", background: "#fff7ed", fontFamily: "'Nunito', sans-serif", color: "#1c1917", paddingBottom: 100 }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        .btn { border: none; border-radius: 10px; font-family: inherit; cursor: pointer; font-weight: 800; transition: all 0.15s; }
+        .prod-card { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+        .cat-btn { padding: 8px 18px; border-radius: 999px; font-size: 12px; font-weight: 800; cursor: pointer; border: none; font-family: inherit; }
+        .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
+        .modal-carrito { background: #fff; border-radius: 24px 24px 0 0; padding: 28px 20px; width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto; }
+        .inp2 { width: 100%; background: #fff7ed; border: 1.5px solid #fed7aa; border-radius: 10px; padding: 11px 14px; font-size: 14px; outline: none; }
+      `}</style>
+
+      {/* Header Naranja */}
+      <div style={{ background: "#f97316", padding: "16px 20px", display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontWeight: 900, fontSize: 17, color: "#fff" }}>{kiosko.nombre}</p>
+        </div>
+        <button className="btn" style={{ background: "rgba(255,255,255,0.2)", color: "#fff", padding: "7px 14px", fontSize: 11 }} onClick={onSalir}>← Salir</button>
       </div>
 
-      <div style={{ padding: 15 }}>
-        <input style={{ width: "100%", padding: 12, borderRadius: 10, border: "1px solid #fed7aa", marginBottom: 15 }} placeholder="Buscar producto..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
-        
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          {kiosko.productos
-            .filter(p => (categoria === "Todos" || p.categoria === categoria) && p.nombre.toLowerCase().includes(busqueda.toLowerCase()))
-            .map(p => <ProductoCard key={p.id} p={p} />)
-          }
-        </div>
+      <div style={{ padding: "14px 20px 8px" }}>
+        <input className="inp2" placeholder="🔍 Buscar producto..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+      </div>
+
+      <div style={{ display: "flex", gap: 8, padding: "8px 20px 16px", overflowX: "auto" }}>
+        {categorias.map(c => (
+          <button key={c} className="cat-btn" style={{ background: categoria === c ? "#f97316" : "#fff", color: categoria === c ? "#fff" : "#6b7280" }} onClick={() => setCategoria(c)}>
+            {c}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, padding: "0 15px" }}>
+        {filtrados.map(p => <ProductoCard key={p.id} p={p} />)}
       </div>
 
       {totalItems > 0 && (
-        <button onClick={() => setVerCarrito(true)} style={{ position: "fixed", bottom: 20, left: 15, right: 15, background: "#f97316", color: "#fff", padding: 18, borderRadius: 15, border: "none", fontWeight: 800, display: "flex", justifyContent: "space-between", boxShadow: "0 10px 20px rgba(249,115,22,0.3)" }}>
-          <span>🛒 Pedido ({totalItems})</span>
-          <span>S/. {totalPrecio.toFixed(2)}</span>
-        </button>
+        <div style={{ position: "fixed", bottom: 20, left: 0, right: 0, padding: "0 20px", zIndex: 50 }}>
+          <button className="btn" style={{ width: "100%", background: "#f97316", color: "#fff", padding: "16px 24px", display: "flex", justifyContent: "space-between", boxShadow: "0 8px 24px rgba(249,115,22,0.4)" }} onClick={() => setVerCarrito(true)}>
+            <span>🛒 Ver pedido ({totalItems})</span>
+            <span>S/. {totalPrecio.toFixed(2)}</span>
+          </button>
+        </div>
       )}
 
       {verCarrito && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", zIndex: 100 }}>
-          <div style={{ background: "#fff", width: "100%", padding: 25, borderTopLeftRadius: 25, borderTopRightRadius: 25, maxHeight: "85vh", overflowY: "auto" }}>
+        <div className="modal-bg" onClick={() => setVerCarrito(false)}>
+          <div className="modal-carrito" onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
-              <h3 style={{ margin: 0 }}>Tu Pedido</h3>
-              <button onClick={() => setVerCarrito(false)} style={{ border: "none", background: "none", fontSize: 18 }}>✕</button>
+              <span style={{ fontWeight: 900, fontSize: 18 }}>🛒 Tu pedido</span>
+              <button className="btn" onClick={() => setVerCarrito(false)}>✕</button>
             </div>
-
+            
             {Object.entries(carrito).map(([key, cant]) => {
               const info = obtenerDatosItem(key);
               if (!info) return null;
               return (
-                <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #f3f3f3" }}>
+                <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
                   <div style={{ flex: 1 }}>
-                    <p style={{ margin: 0, fontWeight: 700, fontSize: 14 }}>{info.nombreFinal}</p>
-                    <p style={{ margin: 0, color: "#f97316", fontWeight: 800, fontSize: 13 }}>S/. {info.precioFinal.toFixed(2)}</p>
+                    <p style={{ fontSize: 14, fontWeight: 800 }}>{info.nombreFinal}</p>
+                    <p style={{ fontSize: 12, color: "#f97316", fontWeight: 700 }}>S/. {info.precioFinal.toFixed(2)}</p>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <button className="btn" style={{ background: "#eee", width: 28, height: 28, borderRadius: 6 }} onClick={() => quitar(key)}>−</button>
-                    <span style={{ fontWeight: 800 }}>{cant}</span>
-                    <button className="btn" style={{ background: "#f97316", color: "#fff", width: 28, height: 28, borderRadius: 6 }} onClick={() => agregar(info, info.variacionOriginal)}>+</button>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <button className="btn" style={{ background: "#f3f4f6", width: 30, height: 30 }} onClick={() => quitar(key)}>−</button>
+                    <span style={{ fontWeight: 900 }}>{cant}</span>
+                    <button className="btn" style={{ background: "#f97316", color: "#fff", width: 30, height: 30 }} onClick={() => agregar(info, info.variacionOriginal)}>+</button>
                   </div>
                 </div>
               );
             })}
 
-            <div style={{ marginTop: 20 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: "#666" }}>Tu nombre:</label>
-              <input style={{ width: "100%", padding: 12, marginTop: 5, borderRadius: 10, border: "1px solid #ddd" }} placeholder="Ej: Maria Lopez" value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} />
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0", borderTop: "2px solid #f97316", marginTop: 15 }}>
+              <span style={{ fontWeight: 900 }}>Total a pagar</span>
+              <span style={{ fontWeight: 900, fontSize: 22, color: "#f97316" }}>S/. {totalPrecio.toFixed(2)}</span>
             </div>
 
-            <button onClick={enviarPedido} style={{ width: "100%", background: "#25D366", color: "#fff", padding: 16, borderRadius: 12, border: "none", marginTop: 20, fontWeight: 800, fontSize: 16 }}>
+            <input className="inp2" placeholder="Tu nombre" value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} style={{ marginBottom: 15 }} />
+
+            <button className="btn" style={{ width: "100%", background: "#25D366", color: "#fff", padding: "16px", fontSize: 16 }} onClick={enviarPedido}>
               📱 Enviar por WhatsApp
             </button>
           </div>
