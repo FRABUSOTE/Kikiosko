@@ -893,7 +893,7 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
 
 // ─── CATÁLOGO CLIENTE ───
 function CatalogoCliente({ kiosko, onSalir }) {
-  const [carrito, setCarrito] = useState({});
+  const [carrito, setCarrito] = useState({}); // Ahora la llave es "ID-VARIACION"
   const [categoria, setCategoria] = useState("Todos");
   const [busqueda, setBusqueda] = useState("");
   const [nombreCliente, setNombreCliente] = useState("");
@@ -904,38 +904,110 @@ function CatalogoCliente({ kiosko, onSalir }) {
 
   const categorias = ["Todos", ...new Set(kiosko.productos.map(p => p.categoria))];
 
-  const agregar = (id) => setCarrito(prev => ({ ...prev, [String(id)]: (prev[String(id)] || 0) + 1 }));
-  const quitar = (id) => setCarrito(prev => {
+  // Nueva función agregar que considera la variación
+  const agregar = (p, variacion) => {
+    const key = variacion ? `${p.id}-${variacion.nombre}` : `${p.id}-unica`;
+    setCarrito(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
+    mostrarToast(`✅ ${p.nombre} agregado`);
+  };
+
+  const quitar = (key) => setCarrito(prev => {
     const n = { ...prev };
-    if (n[String(id)] > 1) n[String(id)]--;
-    else delete n[String(id)];
+    if (n[key] > 1) n[key]--;
+    else delete n[key];
     return n;
   });
 
+  // Función auxiliar para obtener datos reales del item en el carrito
+  const obtenerDatosItem = (key) => {
+    const [id, nombreVar] = key.split("-");
+    const p = kiosko.productos.find(prod => String(prod.id) === String(id));
+    if (!p) return null;
+    const varInfo = p.variaciones?.find(v => v.nombre === nombreVar);
+    return { 
+      ...p, 
+      nombreFinal: varInfo ? `${p.nombre} (${nombreVar})` : p.nombre, 
+      precioFinal: varInfo ? varInfo.precio : p.precio 
+    };
+  };
+
   const totalItems = Object.values(carrito).reduce((s, v) => s + v, 0);
-  const totalPrecio = Object.entries(carrito).reduce((s, [id, cant]) => {
-    const p = kiosko.productos.find(p => String(p.id) === String(id));
-    return s + (p ? p.precio * cant : 0);
+  const totalPrecio = Object.entries(carrito).reduce((s, [key, cant]) => {
+    const info = obtenerDatosItem(key);
+    return s + (info ? info.precioFinal * cant : 0);
   }, 0);
 
   const enviarPedido = async () => {
-    const lineas = Object.entries(carrito).map(([id, cant]) => {
-      const p = kiosko.productos.find(p => String(p.id) === String(id));
-      if (!p) return "";
-      return `${p.emoji} ${p.nombre} x${cant} — S/. ${(p.precio * cant).toFixed(2)}`;
+    const lineas = Object.entries(carrito).map(([key, cant]) => {
+      const info = obtenerDatosItem(key);
+      if (!info) return "";
+      return `${info.emoji} ${info.nombreFinal} x${cant} — S/. ${(info.precioFinal * cant).toFixed(2)}`;
     }).filter(Boolean).join("\n");
+
     const msg = encodeURIComponent(`Hola ${kiosko.nombre}! 👋\n\nMi pedido:\n${lineas}\n\n💰 Total: S/. ${totalPrecio.toFixed(2)}\n👤 ${nombreCliente || "Sin nombre"}\n\n¡Gracias! 😊`);
-    // Guardar pedido en Supabase
+    
     await supabase.from("pedidos").insert([{
       kiosko_id: kiosko.id,
       nombre_cliente: nombreCliente || "Sin nombre",
       detalle: lineas,
       total: totalPrecio,
     }]);
+
     window.open(`https://wa.me/51${kiosko.whatsapp}?text=${msg}`, "_blank");
     setCarrito({});
     setVerCarrito(false);
     mostrarToast("✅ Pedido enviado");
+  };
+
+  // Componente interno para manejar la selección de variación en cada tarjeta
+  const ProductoCard = ({ p }) => {
+    const [varSel, setVarSel] = useState(p.variaciones?.length > 0 ? p.variaciones[0] : null);
+    const precioActual = varSel ? varSel.precio : p.precio;
+
+    return (
+      <div className="prod-card" style={{ opacity: p.stock ? 1 : 0.5, display: "flex", flexDirection: "column" }}>
+        <div style={{ background: "#fff", height: 140, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", padding: 10, borderBottom: "1px solid #f3f4f6" }}>
+          {p.foto ? (
+            <img src={p.foto} alt={p.nombre} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+          ) : (
+            <span style={{ fontSize: 48 }}>{p.emoji}</span>
+          )}
+        </div>
+        <div style={{ padding: "12px 14px", flex: 1, display: "flex", flexDirection: "column" }}>
+          <p style={{ fontWeight: 800, fontSize: 13, marginBottom: 2 }}>{p.nombre}</p>
+          <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8 }}>{p.categoria}</p>
+          
+          {/* Selector de Variaciones (Si existen) */}
+          {p.variaciones?.length > 0 && (
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
+              {p.variaciones.map((v, i) => (
+                <button key={i} className="btn" 
+                  style={{ 
+                    fontSize: 10, padding: "4px 8px", borderRadius: "6px",
+                    background: varSel?.nombre === v.nombre ? "#f97316" : "#f3f4f6",
+                    color: varSel?.nombre === v.nombre ? "#fff" : "#6b7280"
+                  }}
+                  onClick={() => setVarSel(v)}
+                >
+                  {v.nombre}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div style={{ marginTop: "auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontWeight: 900, fontSize: 16, color: "#f97316" }}>S/. {precioActual.toFixed(2)}</span>
+            {p.stock ? (
+              <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "7px 14px", fontSize: 12 }} onClick={() => agregar(p, varSel)}>
+                + Agregar
+              </button>
+            ) : (
+              <span style={{ fontSize: 11, color: "#dc2626", fontWeight: 700 }}>Sin stock</span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const filtrados = kiosko.productos.filter(p =>
@@ -950,7 +1022,6 @@ function CatalogoCliente({ kiosko, onSalir }) {
         * { box-sizing: border-box; margin: 0; padding: 0; }
         .btn { border: none; border-radius: 10px; font-family: inherit; cursor: pointer; font-weight: 800; transition: all 0.15s; }
         .prod-card { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06); transition: transform 0.15s; }
-        .prod-card:hover { transform: translateY(-2px); }
         .cat-btn { padding: 8px 18px; border-radius: 999px; font-size: 12px; font-weight: 800; cursor: pointer; border: none; font-family: inherit; transition: all 0.15s; white-space: nowrap; }
         .toast-fixed { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); padding: 10px 22px; border-radius: 999px; font-size: 13px; font-weight: 700; z-index: 200; white-space: nowrap; background: #059669; color: #fff; }
         .fade { animation: fade 0.3s ease both; }
@@ -959,7 +1030,6 @@ function CatalogoCliente({ kiosko, onSalir }) {
         .modal-carrito { background: #fff; border-radius: 24px 24px 0 0; padding: 28px 20px; width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto; }
         .inp2 { width: 100%; background: #fff7ed; border: 1.5px solid #fed7aa; border-radius: 10px; padding: 11px 14px; font-size: 14px; color: #1c1917; font-family: inherit; outline: none; }
         .inp2:focus { border-color: #f97316; }
-        ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: #fed7aa; border-radius: 2px; }
       `}</style>
 
       {toast && <div className="toast-fixed">{toast}</div>}
@@ -985,77 +1055,13 @@ function CatalogoCliente({ kiosko, onSalir }) {
         ))}
       </div>
 
-      {filtrados.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "40px 20px", color: "#9ca3af" }}>
-          <p style={{ fontSize: 32, marginBottom: 8 }}>📦</p>
-          <p style={{ fontSize: 14 }}>Sin productos aún</p>
-        </div>
-      ) : (
-        <div style={{
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
-  gap: 10,
-  padding: "0 15px"
-}}>
-          {filtrados.map(p => (
-            <div key={p.id} className="prod-card" style={{ opacity: p.stock ? 1 : 0.5 }}>
-              <div style={{
-  background: "#fff", // 👈 blanco para que no se note el fondo
-  height: 140,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  overflow: "hidden",
-  padding: 10, // 👈 espacio interno (clave)
-  borderBottom: "1px solid #f3f4f6" // 👈 línea suave (opcional pero PRO)
-}}>
-  {p.foto ? (
-    <img
-  src={p.foto}
-  alt={p.nombre}
-  loading="lazy"
-  decoding="async"
-  style={{
-    maxWidth: "100%",
-    maxHeight: "100%",
-    objectFit: "contain"
-  }}
-/>
-                ) : (
-                  <span style={{ fontSize: 48 }}>{p.emoji}</span>
-                )}
-              </div>
-              <div style={{ padding: "12px 14px" }}>
-                <p style={{ fontWeight: 800, fontSize: 13, marginBottom: 2 }}>{p.nombre}</p>
-                <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8 }}>{p.categoria}</p>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontWeight: 900, fontSize: 16, color: "#f97316" }}>S/. {p.precio.toFixed(2)}</span>
-                  {p.stock ? (
-                    carrito[String(p.id)] ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <button className="btn" style={{ background: "#fff7ed", color: "#f97316", width: 28, height: 28, fontSize: 16, padding: 0, border: "1.5px solid #fed7aa", borderRadius: 8 }} onClick={() => quitar(p.id)}>−</button>
-                        <span style={{ fontWeight: 900, fontSize: 14, minWidth: 16, textAlign: "center" }}>{carrito[String(p.id)]}</span>
-                        <button className="btn" style={{ background: "#f97316", color: "#fff", width: 28, height: 28, fontSize: 16, padding: 0, borderRadius: 8 }} onClick={() => agregar(p.id)}>+</button>
-                      </div>
-                    ) : (
-                      <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "7px 14px", fontSize: 12 }} onClick={() => { agregar(p.id); mostrarToast(`✅ ${p.nombre} agregado`); }}>
-                        + Agregar
-                      </button>
-                    )
-                  ) : (
-                    <span style={{ fontSize: 11, color: "#dc2626", fontWeight: 700 }}>Sin stock</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, padding: "0 15px" }}>
+        {filtrados.map(p => <ProductoCard key={p.id} p={p} />)}
+      </div>
 
       {totalItems > 0 && (
         <div style={{ position: "fixed", bottom: 20, left: 0, right: 0, padding: "0 20px", zIndex: 50 }}>
-          <button className="btn fade" style={{ width: "100%", background: "#f97316", color: "#fff", padding: "16px 24px", fontSize: 15, display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 8px 24px rgba(249,115,22,0.4)" }}
-            onClick={() => setVerCarrito(true)}>
+          <button className="btn fade" style={{ width: "100%", background: "#f97316", color: "#fff", padding: "16px 24px", fontSize: 15, display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 8px 24px rgba(249,115,22,0.4)" }} onClick={() => setVerCarrito(true)}>
             <span>🛒 Ver pedido ({totalItems})</span>
             <span style={{ fontWeight: 900 }}>S/. {totalPrecio.toFixed(2)}</span>
           </button>
@@ -1069,37 +1075,33 @@ function CatalogoCliente({ kiosko, onSalir }) {
               <span style={{ fontWeight: 900, fontSize: 18 }}>🛒 Tu pedido</span>
               <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "6px 12px", fontSize: 11, border: "1px solid #e5e7eb", borderRadius: 8 }} onClick={() => setVerCarrito(false)}>✕</button>
             </div>
-            {Object.entries(carrito).map(([id, cant]) => {
-              const p = kiosko.productos.find(p => String(p.id) === String(id));
-              if (!p) return null;
+            {Object.entries(carrito).map(([key, cant]) => {
+              const info = obtenerDatosItem(key);
+              if (!info) return null;
               return (
-                <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
+                <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 22 }}>{p.emoji}</span>
+                    <span style={{ fontSize: 22 }}>{info.emoji}</span>
                     <div>
-                      <p style={{ fontSize: 13, fontWeight: 700 }}>{p.nombre}</p>
-                      <p style={{ fontSize: 11, color: "#9ca3af" }}>S/. {p.precio.toFixed(2)} c/u</p>
+                      <p style={{ fontSize: 13, fontWeight: 700 }}>{info.nombreFinal}</p>
+                      <p style={{ fontSize: 11, color: "#9ca3af" }}>S/. {info.precioFinal.toFixed(2)} c/u</p>
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <button className="btn" style={{ background: "#fff7ed", color: "#f97316", width: 28, height: 28, fontSize: 16, padding: 0, border: "1.5px solid #fed7aa", borderRadius: 8 }} onClick={() => quitar(p.id)}>−</button>
-                    <span style={{ fontWeight: 900, fontSize: 14, minWidth: 16, textAlign: "center" }}>{cant}</span>
-                    <button className="btn" style={{ background: "#f97316", color: "#fff", width: 28, height: 28, fontSize: 16, padding: 0, borderRadius: 8 }} onClick={() => agregar(p.id)}>+</button>
-                    <span style={{ fontWeight: 900, fontSize: 13, color: "#f97316", minWidth: 52, textAlign: "right" }}>S/. {(p.precio * cant).toFixed(2)}</span>
+                    <button className="btn" style={{ background: "#fff7ed", color: "#f97316", width: 28, height: 28 }} onClick={() => quitar(key)}>−</button>
+                    <span style={{ fontWeight: 900 }}>{cant}</span>
+                    <button className="btn" style={{ background: "#f97316", color: "#fff", width: 28, height: 28 }} onClick={() => agregar(info, info.variaciones?.find(v => key.includes(v.nombre)))}>+</button>
                   </div>
                 </div>
               );
             })}
             <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0", borderTop: "2px solid #f97316", marginTop: 8 }}>
-              <span style={{ fontWeight: 900, fontSize: 16 }}>Total</span>
+              <span style={{ fontWeight: 900 }}>Total</span>
               <span style={{ fontWeight: 900, fontSize: 20, color: "#f97316" }}>S/. {totalPrecio.toFixed(2)}</span>
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 6 }}>Tu nombre (opcional)</label>
-              <input className="inp2" placeholder="Ej: Ana García" value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} />
-            </div>
-            <button className="btn" style={{ width: "100%", background: "#25D366", color: "#fff", padding: 15, fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 12 }} onClick={enviarPedido}>
-              <span style={{ fontSize: 18 }}>📱</span> Enviar pedido por WhatsApp
+            <input className="inp2" placeholder="Tu nombre..." value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} style={{ marginBottom: 16 }} />
+            <button className="btn" style={{ width: "100%", background: "#25D366", color: "#fff", padding: 15, borderRadius: 12 }} onClick={enviarPedido}>
+              📱 Enviar por WhatsApp
             </button>
           </div>
         </div>
