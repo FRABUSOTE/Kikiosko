@@ -900,14 +900,15 @@ function CatalogoCliente({ kiosko, onSalir }) {
   const [toast, setToast] = useState(null);
 
   const mostrarToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2000); };
+  
+  // Categorías dinámicas
   const categorias = ["Todos", ...new Set(kiosko.productos.map(p => p.categoria))];
 
-  // Lógica de agregar mejorada para detectar variaciones
+  // Función para agregar: Crea una combinación única de ID y Variación
   const agregar = (p, variacion) => {
-    // Si no hay variación, usamos "unica". Aseguramos que el ID sea string para comparar bien.
     const key = variacion ? `${p.id}-${variacion.nombre}` : `${p.id}-unica`;
     setCarrito(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
-    mostrarToast(`✅ ${p.nombre} agregado`);
+    mostrarToast(`✅ ${p.nombre} añadido`);
   };
 
   const quitar = (key) => setCarrito(prev => {
@@ -917,15 +918,16 @@ function CatalogoCliente({ kiosko, onSalir }) {
     return n;
   });
 
-  // ESTA ES LA FUNCIÓN CLAVE: Si esto falla, el carrito sale en S/. 0.00
+  // ESTA FUNCIÓN ES LA QUE ESTABA FALLANDO: Ahora es mucho más robusta
   const obtenerDatosItem = (key) => {
-    const [id, nombreVar] = key.split("-");
-    // Buscamos el producto comparando IDs como strings por seguridad
+    const partes = key.split("-");
+    const id = partes[0];
+    const nombreVar = partes[1];
+    
     const p = kiosko.productos.find(prod => String(prod.id) === String(id));
     if (!p) return null;
-    
-    // Si la llave dice "unica", no hay variación. Si no, buscamos la variación por nombre.
-    const varInfo = nombreVar === "unica" ? null : p.variaciones?.find(v => v.nombre === nombreVar);
+
+    const varInfo = nombreVar !== "unica" ? p.variaciones?.find(v => v.nombre === nombreVar) : null;
     
     return { 
       ...p, 
@@ -944,11 +946,10 @@ function CatalogoCliente({ kiosko, onSalir }) {
   const enviarPedido = async () => {
     const lineas = Object.entries(carrito).map(([key, cant]) => {
       const info = obtenerDatosItem(key);
-      if (!info) return "";
-      return `${info.emoji || "📦"} ${info.nombreFinal} x${cant} — S/. ${(info.precioFinal * cant).toFixed(2)}`;
+      return info ? `${info.nombreFinal} x${cant} — S/. ${(info.precioFinal * cant).toFixed(2)}` : "";
     }).filter(Boolean).join("\n");
 
-    const msg = encodeURIComponent(`Hola ${kiosko.nombre}! 👋\n\nMi pedido:\n${lineas}\n\n💰 Total: S/. ${totalPrecio.toFixed(2)}\n👤 ${nombreCliente || "Sin nombre"}`);
+    const msg = encodeURIComponent(`*Pedido de:* ${nombreCliente || "Cliente"}\n\n${lineas}\n\n*Total:* S/. ${totalPrecio.toFixed(2)}`);
     
     await supabase.from("pedidos").insert([{
       kiosko_id: kiosko.id,
@@ -962,9 +963,9 @@ function CatalogoCliente({ kiosko, onSalir }) {
     setVerCarrito(false);
   };
 
+  // --- DISEÑO DE LA TARJETA (TAL CUAL TUS FOTOS) ---
   const ProductoCard = ({ p }) => {
-    // Si el producto tiene variaciones, seleccionamos la primera por defecto
-    const [varSel, setVarSel] = useState(p.variaciones && p.variaciones.length > 0 ? p.variaciones[0] : null);
+    const [varSel, setVarSel] = useState(p.variaciones?.length > 0 ? p.variaciones[0] : null);
     const precioActual = varSel ? parseFloat(varSel.precio) : parseFloat(p.precio);
 
     return (
@@ -973,14 +974,14 @@ function CatalogoCliente({ kiosko, onSalir }) {
           {p.foto ? (
             <img src={p.foto} alt={p.nombre} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
           ) : (
-            <span style={{ fontSize: 48 }}>{p.emoji || "📦"}</span>
+            <span style={{ fontSize: 48 }}>🛒</span>
           )}
         </div>
         <div style={{ padding: "12px 14px", flex: 1, display: "flex", flexDirection: "column" }}>
           <p style={{ fontWeight: 800, fontSize: 13, marginBottom: 2 }}>{p.nombre}</p>
           <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8 }}>{p.categoria}</p>
           
-          {p.variaciones && p.variaciones.length > 0 && (
+          {p.variaciones?.length > 0 && (
             <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
               {p.variaciones.map((v, i) => (
                 <button key={i} className="btn" 
@@ -1016,24 +1017,21 @@ function CatalogoCliente({ kiosko, onSalir }) {
   return (
     <div style={{ minHeight: "100vh", background: "#fff7ed", fontFamily: "'Nunito', sans-serif", color: "#1c1917", paddingBottom: 100 }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        .btn { border: none; border-radius: 10px; font-family: inherit; cursor: pointer; font-weight: 800; transition: all 0.15s; }
+        .btn { border: none; border-radius: 10px; font-family: inherit; cursor: pointer; font-weight: 800; }
         .prod-card { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
-        .cat-btn { padding: 8px 18px; border-radius: 999px; font-size: 12px; font-weight: 800; cursor: pointer; border: none; font-family: inherit; }
+        .cat-btn { padding: 8px 18px; border-radius: 999px; font-size: 12px; font-weight: 800; cursor: pointer; border: none; }
         .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
         .modal-carrito { background: #fff; border-radius: 24px 24px 0 0; padding: 28px 20px; width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto; }
         .inp2 { width: 100%; background: #fff7ed; border: 1.5px solid #fed7aa; border-radius: 10px; padding: 11px 14px; font-size: 14px; outline: none; }
       `}</style>
 
-      {/* Header Naranja */}
-      <div style={{ background: "#f97316", padding: "16px 20px", display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ flex: 1 }}>
-          <p style={{ fontWeight: 900, fontSize: 17, color: "#fff" }}>{kiosko.nombre}</p>
-        </div>
+      {/* Header */}
+      <div style={{ background: "#f97316", padding: "16px 20px", display: "flex", alignItems: "center", gap: 10, color: "#fff" }}>
+        <p style={{ fontWeight: 900, fontSize: 17, flex: 1 }}>{kiosko.nombre}</p>
         <button className="btn" style={{ background: "rgba(255,255,255,0.2)", color: "#fff", padding: "7px 14px", fontSize: 11 }} onClick={onSalir}>← Salir</button>
       </div>
 
+      {/* Buscador y Categorías */}
       <div style={{ padding: "14px 20px 8px" }}>
         <input className="inp2" placeholder="🔍 Buscar producto..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
       </div>
@@ -1046,10 +1044,12 @@ function CatalogoCliente({ kiosko, onSalir }) {
         ))}
       </div>
 
+      {/* Grid de Productos */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, padding: "0 15px" }}>
         {filtrados.map(p => <ProductoCard key={p.id} p={p} />)}
       </div>
 
+      {/* Barra Inferior (Ver Pedido) */}
       {totalItems > 0 && (
         <div style={{ position: "fixed", bottom: 20, left: 0, right: 0, padding: "0 20px", zIndex: 50 }}>
           <button className="btn" style={{ width: "100%", background: "#f97316", color: "#fff", padding: "16px 24px", display: "flex", justifyContent: "space-between", boxShadow: "0 8px 24px rgba(249,115,22,0.4)" }} onClick={() => setVerCarrito(true)}>
@@ -1059,40 +1059,48 @@ function CatalogoCliente({ kiosko, onSalir }) {
         </div>
       )}
 
+      {/* MODAL DEL CARRITO (EL QUE SALE EN BLANCO) */}
       {verCarrito && (
         <div className="modal-bg" onClick={() => setVerCarrito(false)}>
           <div className="modal-carrito" onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
               <span style={{ fontWeight: 900, fontSize: 18 }}>🛒 Tu pedido</span>
-              <button className="btn" onClick={() => setVerCarrito(false)}>✕</button>
+              <button className="btn" onClick={() => setVerCarrito(false)} style={{ background: "#f3f4f6", width: 32, height: 32 }}>✕</button>
             </div>
-            
-            {Object.entries(carrito).map(([key, cant]) => {
-              const info = obtenerDatosItem(key);
-              if (!info) return null;
-              return (
-                <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 14, fontWeight: 800 }}>{info.nombreFinal}</p>
-                    <p style={{ fontSize: 12, color: "#f97316", fontWeight: 700 }}>S/. {info.precioFinal.toFixed(2)}</p>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <button className="btn" style={{ background: "#f3f4f6", width: 30, height: 30 }} onClick={() => quitar(key)}>−</button>
-                    <span style={{ fontWeight: 900 }}>{cant}</span>
-                    <button className="btn" style={{ background: "#f97316", color: "#fff", width: 30, height: 30 }} onClick={() => agregar(info, info.variacionOriginal)}>+</button>
-                  </div>
-                </div>
-              );
-            })}
 
+            {/* LISTA DE PRODUCTOS (Aquí estaba el error) */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {Object.entries(carrito).map(([key, cant]) => {
+                const info = obtenerDatosItem(key);
+                if (!info) return null; // Si no lo encuentra, no dibuja nada
+                return (
+                  <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 14, fontWeight: 800 }}>{info.nombreFinal}</p>
+                      <p style={{ fontSize: 12, color: "#f97316", fontWeight: 700 }}>S/. {info.precioFinal.toFixed(2)}</p>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <button className="btn" style={{ background: "#f3f4f6", width: 30, height: 30 }} onClick={() => quitar(key)}>−</button>
+                      <span style={{ fontWeight: 900 }}>{cant}</span>
+                      <button className="btn" style={{ background: "#f97316", color: "#fff", width: 30, height: 30 }} onClick={() => agregar(info, info.variacionOriginal)}>+</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Total y Nombre */}
             <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0", borderTop: "2px solid #f97316", marginTop: 15 }}>
               <span style={{ fontWeight: 900 }}>Total a pagar</span>
               <span style={{ fontWeight: 900, fontSize: 22, color: "#f97316" }}>S/. {totalPrecio.toFixed(2)}</span>
             </div>
 
-            <input className="inp2" placeholder="Tu nombre" value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} style={{ marginBottom: 15 }} />
+            <div style={{ marginBottom: 15 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af" }}>TU NOMBRE</label>
+              <input className="inp2" placeholder="Ej: Juan Pérez" value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} />
+            </div>
 
-            <button className="btn" style={{ width: "100%", background: "#25D366", color: "#fff", padding: "16px", fontSize: 16 }} onClick={enviarPedido}>
+            <button className="btn" style={{ width: "100%", background: "#25D366", color: "#fff", padding: "16px", fontSize: 16, boxShadow: "0 4px 12px rgba(37,211,102,0.3)" }} onClick={enviarPedido}>
               📱 Enviar por WhatsApp
             </button>
           </div>
@@ -1101,7 +1109,6 @@ function CatalogoCliente({ kiosko, onSalir }) {
     </div>
   );
 }
-
 // ─── APP PRINCIPAL ───
 export default function App() {
   const [pantalla, setPantalla] = useState("login");
