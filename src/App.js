@@ -900,12 +900,10 @@ function CatalogoCliente({ kiosko, onSalir }) {
   const [toast, setToast] = useState(null);
 
   const mostrarToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2000); };
-  
-  // Categorías dinámicas
   const categorias = ["Todos", ...new Set(kiosko.productos.map(p => p.categoria))];
 
-  // Función para agregar: Crea una combinación única de ID y Variación
   const agregar = (p, variacion) => {
+    // Forzamos el ID a String para que la llave sea consistente
     const key = variacion ? `${p.id}-${variacion.nombre}` : `${p.id}-unica`;
     setCarrito(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
     mostrarToast(`✅ ${p.nombre} añadido`);
@@ -918,189 +916,153 @@ function CatalogoCliente({ kiosko, onSalir }) {
     return n;
   });
 
-  // ESTA FUNCIÓN ES LA QUE ESTABA FALLANDO: Ahora es mucho más robusta
+  // --- FUNCIÓN REPARADA ---
   const obtenerDatosItem = (key) => {
+    if (!key) return null;
     const partes = key.split("-");
-    const id = partes[0];
+    const idBuscado = partes[0];
     const nombreVar = partes[1];
     
-    const p = kiosko.productos.find(prod => String(prod.id) === String(id));
+    // Buscamos el producto probando ambas comparaciones (Número y String)
+    const p = kiosko.productos.find(prod => 
+      String(prod.id) === String(idBuscado) || Number(prod.id) === Number(idBuscado)
+    );
+
     if (!p) return null;
 
-    const varInfo = nombreVar !== "unica" ? p.variaciones?.find(v => v.nombre === nombreVar) : null;
+    const varInfo = (nombreVar && nombreVar !== "unica") 
+      ? p.variaciones?.find(v => v.nombre === nombreVar) 
+      : null;
     
     return { 
       ...p, 
       nombreFinal: varInfo ? `${p.nombre} (${nombreVar})` : p.nombre, 
-      precioFinal: varInfo ? parseFloat(varInfo.precio) : parseFloat(p.precio),
+      precioFinal: varInfo ? Number(varInfo.precio) : Number(p.precio),
       variacionOriginal: varInfo
     };
   };
 
   const totalItems = Object.values(carrito).reduce((s, v) => s + v, 0);
+  
+  // Calculamos el precio total asegurando que sean números
   const totalPrecio = Object.entries(carrito).reduce((s, [key, cant]) => {
     const info = obtenerDatosItem(key);
     return s + (info ? info.precioFinal * cant : 0);
   }, 0);
 
   const enviarPedido = async () => {
-    const lineas = Object.entries(carrito).map(([key, cant]) => {
+    const lineasArr = Object.entries(carrito).map(([key, cant]) => {
       const info = obtenerDatosItem(key);
       return info ? `${info.nombreFinal} x${cant} — S/. ${(info.precioFinal * cant).toFixed(2)}` : "";
-    }).filter(Boolean).join("\n");
+    }).filter(Boolean);
 
+    if (lineasArr.length === 0) return alert("El carrito parece estar vacío");
+
+    const lineas = lineasArr.join("\n");
     const msg = encodeURIComponent(`*Pedido de:* ${nombreCliente || "Cliente"}\n\n${lineas}\n\n*Total:* S/. ${totalPrecio.toFixed(2)}`);
     
-    await supabase.from("pedidos").insert([{
-      kiosko_id: kiosko.id,
-      nombre_cliente: nombreCliente || "Sin nombre",
-      detalle: lineas,
-      total: totalPrecio,
-    }]);
-
-    window.open(`https://wa.me/51${kiosko.whatsapp}?text=${msg}`, "_blank");
-    setCarrito({});
-    setVerCarrito(false);
+    try {
+      await supabase.from("pedidos").insert([{
+        kiosko_id: kiosko.id,
+        nombre_cliente: nombreCliente || "Sin nombre",
+        detalle: lineas,
+        total: totalPrecio,
+      }]);
+      window.open(`https://wa.me/51${kiosko.whatsapp}?text=${msg}`, "_blank");
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  // --- DISEÑO DE LA TARJETA (TAL CUAL TUS FOTOS) ---
   const ProductoCard = ({ p }) => {
     const [varSel, setVarSel] = useState(p.variaciones?.length > 0 ? p.variaciones[0] : null);
-    const precioActual = varSel ? parseFloat(varSel.precio) : parseFloat(p.precio);
+    const precioActual = varSel ? Number(varSel.precio) : Number(p.precio);
 
     return (
-      <div className="prod-card" style={{ opacity: p.stock ? 1 : 0.5, display: "flex", flexDirection: "column" }}>
-        <div style={{ background: "#fff", height: 140, display: "flex", alignItems: "center", justifyContent: "center", padding: 10, borderBottom: "1px solid #f3f4f6" }}>
-          {p.foto ? (
-            <img src={p.foto} alt={p.nombre} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
-          ) : (
-            <span style={{ fontSize: 48 }}>🛒</span>
-          )}
+      <div className="prod-card" style={{ opacity: p.stock ? 1 : 0.5 }}>
+        <div style={{ height: 140, display: "flex", alignItems: "center", justifyContent: "center", background: "#fff" }}>
+          {p.foto ? <img src={p.foto} style={{ maxWidth: "100%", maxHeight: "100%" }} /> : <span style={{fontSize:40}}>🛒</span>}
         </div>
-        <div style={{ padding: "12px 14px", flex: 1, display: "flex", flexDirection: "column" }}>
-          <p style={{ fontWeight: 800, fontSize: 13, marginBottom: 2 }}>{p.nombre}</p>
-          <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8 }}>{p.categoria}</p>
-          
+        <div style={{ padding: 12 }}>
+          <p style={{ fontWeight: 800, fontSize: 13 }}>{p.nombre}</p>
           {p.variaciones?.length > 0 && (
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
+            <div style={{ display: "flex", gap: 4, margin: "8px 0", flexWrap: "wrap" }}>
               {p.variaciones.map((v, i) => (
                 <button key={i} className="btn" 
-                  style={{ 
-                    fontSize: 10, padding: "4px 8px", borderRadius: "6px",
-                    background: varSel?.nombre === v.nombre ? "#f97316" : "#f3f4f6",
-                    color: varSel?.nombre === v.nombre ? "#fff" : "#6b7280"
-                  }}
+                  style={{ fontSize: 10, padding: "4px 8px", background: varSel?.nombre === v.nombre ? "#f97316" : "#f3f4f6", color: varSel?.nombre === v.nombre ? "#fff" : "#6b7280" }}
                   onClick={() => setVarSel(v)}
-                >
-                  {v.nombre}
-                </button>
+                > {v.nombre} </button>
               ))}
             </div>
           )}
-
-          <div style={{ marginTop: "auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontWeight: 900, fontSize: 16, color: "#f97316" }}>S/. {precioActual.toFixed(2)}</span>
-            <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "7px 14px", fontSize: 12 }} onClick={() => agregar(p, varSel)}>
-              + Agregar
-            </button>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+            <span style={{ fontWeight: 900, color: "#f97316" }}>S/. {precioActual.toFixed(2)}</span>
+            <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "6px 12px" }} onClick={() => agregar(p, varSel)}>+ Agregar</button>
           </div>
         </div>
       </div>
     );
   };
 
-  const filtrados = kiosko.productos.filter(p =>
-    (categoria === "Todos" || p.categoria === categoria) &&
-    (busqueda === "" || p.nombre.toLowerCase().includes(busqueda.toLowerCase()))
-  );
-
   return (
-    <div style={{ minHeight: "100vh", background: "#fff7ed", fontFamily: "'Nunito', sans-serif", color: "#1c1917", paddingBottom: 100 }}>
-      <style>{`
-        .btn { border: none; border-radius: 10px; font-family: inherit; cursor: pointer; font-weight: 800; }
-        .prod-card { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
-        .cat-btn { padding: 8px 18px; border-radius: 999px; font-size: 12px; font-weight: 800; cursor: pointer; border: none; }
-        .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
-        .modal-carrito { background: #fff; border-radius: 24px 24px 0 0; padding: 28px 20px; width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto; }
-        .inp2 { width: 100%; background: #fff7ed; border: 1.5px solid #fed7aa; border-radius: 10px; padding: 11px 14px; font-size: 14px; outline: none; }
-      `}</style>
-
-      {/* Header */}
-      <div style={{ background: "#f97316", padding: "16px 20px", display: "flex", alignItems: "center", gap: 10, color: "#fff" }}>
-        <p style={{ fontWeight: 900, fontSize: 17, flex: 1 }}>{kiosko.nombre}</p>
-        <button className="btn" style={{ background: "rgba(255,255,255,0.2)", color: "#fff", padding: "7px 14px", fontSize: 11 }} onClick={onSalir}>← Salir</button>
+    <div style={{ minHeight: "100vh", background: "#fff7ed", fontFamily: "Nunito" }}>
+      <style>{`.btn { border: none; cursor: pointer; font-weight: 800; border-radius: 8px; } .prod-card { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }`}</style>
+      
+      <div style={{ background: "#f97316", color: "#fff", padding: 20, display: "flex", justifyContent: "space-between" }}>
+        <h2 style={{margin:0}}>{kiosko.nombre}</h2>
+        <button className="btn" onClick={onSalir} style={{background:"rgba(255,255,255,0.2)", color:"#fff", padding:"5px 10px"}}>Salir</button>
       </div>
 
-      {/* Buscador y Categorías */}
-      <div style={{ padding: "14px 20px 8px" }}>
-        <input className="inp2" placeholder="🔍 Buscar producto..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+      <div style={{ padding: 15, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        {kiosko.productos.map(p => <ProductoCard key={p.id} p={p} />)}
       </div>
 
-      <div style={{ display: "flex", gap: 8, padding: "8px 20px 16px", overflowX: "auto" }}>
-        {categorias.map(c => (
-          <button key={c} className="cat-btn" style={{ background: categoria === c ? "#f97316" : "#fff", color: categoria === c ? "#fff" : "#6b7280" }} onClick={() => setCategoria(c)}>
-            {c}
-          </button>
-        ))}
-      </div>
-
-      {/* Grid de Productos */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, padding: "0 15px" }}>
-        {filtrados.map(p => <ProductoCard key={p.id} p={p} />)}
-      </div>
-
-      {/* Barra Inferior (Ver Pedido) */}
       {totalItems > 0 && (
-        <div style={{ position: "fixed", bottom: 20, left: 0, right: 0, padding: "0 20px", zIndex: 50 }}>
-          <button className="btn" style={{ width: "100%", background: "#f97316", color: "#fff", padding: "16px 24px", display: "flex", justifyContent: "space-between", boxShadow: "0 8px 24px rgba(249,115,22,0.4)" }} onClick={() => setVerCarrito(true)}>
+        <div style={{ position: "fixed", bottom: 20, left: 0, right: 0, padding: "0 20px" }}>
+          <button className="btn" onClick={() => setVerCarrito(true)} style={{ width: "100%", background: "#f97316", color: "#fff", padding: 18, display: "flex", justifyContent: "space-between" }}>
             <span>🛒 Ver pedido ({totalItems})</span>
             <span>S/. {totalPrecio.toFixed(2)}</span>
           </button>
         </div>
       )}
 
-      {/* MODAL DEL CARRITO (EL QUE SALE EN BLANCO) */}
       {verCarrito && (
-        <div className="modal-bg" onClick={() => setVerCarrito(false)}>
-          <div className="modal-carrito" onClick={e => e.stopPropagation()}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", zIndex: 100 }}>
+          <div style={{ background: "#fff", width: "100%", padding: 25, borderTopLeftRadius: 25, borderTopRightRadius: 25 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
-              <span style={{ fontWeight: 900, fontSize: 18 }}>🛒 Tu pedido</span>
-              <button className="btn" onClick={() => setVerCarrito(false)} style={{ background: "#f3f4f6", width: 32, height: 32 }}>✕</button>
+              <h3 style={{ margin: 0 }}>Tu pedido</h3>
+              <button onClick={() => setVerCarrito(false)} style={{ border: "none", background: "none", fontSize: 20 }}>✕</button>
             </div>
 
-            {/* LISTA DE PRODUCTOS (Aquí estaba el error) */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {/* Renderizado de la lista */}
+            <div style={{ maxHeight: "40vh", overflowY: "auto" }}>
               {Object.entries(carrito).map(([key, cant]) => {
                 const info = obtenerDatosItem(key);
-                if (!info) return null; // Si no lo encuentra, no dibuja nada
+                if (!info) return null;
                 return (
-                  <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: 14, fontWeight: 800 }}>{info.nombreFinal}</p>
-                      <p style={{ fontSize: 12, color: "#f97316", fontWeight: 700 }}>S/. {info.precioFinal.toFixed(2)}</p>
+                  <div key={key} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid #eee" }}>
+                    <div>
+                      <p style={{ margin: 0, fontWeight: 700 }}>{info.nombreFinal}</p>
+                      <p style={{ margin: 0, color: "#f97316", fontSize: 13 }}>S/. {info.precioFinal.toFixed(2)}</p>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <button className="btn" style={{ background: "#f3f4f6", width: 30, height: 30 }} onClick={() => quitar(key)}>−</button>
-                      <span style={{ fontWeight: 900 }}>{cant}</span>
-                      <button className="btn" style={{ background: "#f97316", color: "#fff", width: 30, height: 30 }} onClick={() => agregar(info, info.variacionOriginal)}>+</button>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <button className="btn" style={{ width: 30, height: 30 }} onClick={() => quitar(key)}>−</button>
+                      <span style={{ fontWeight: 800 }}>{cant}</span>
+                      <button className="btn" style={{ width: 30, height: 30, background: "#f97316", color: "#fff" }} onClick={() => agregar(info, info.variacionOriginal)}>+</button>
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            {/* Total y Nombre */}
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0", borderTop: "2px solid #f97316", marginTop: 15 }}>
-              <span style={{ fontWeight: 900 }}>Total a pagar</span>
-              <span style={{ fontWeight: 900, fontSize: 22, color: "#f97316" }}>S/. {totalPrecio.toFixed(2)}</span>
+            <div style={{ marginTop: 20, paddingTop: 15, borderTop: "2px solid #f97316", display: "flex", justifyContent: "space-between" }}>
+              <span style={{ fontWeight: 800 }}>Total:</span>
+              <span style={{ fontWeight: 900, color: "#f97316", fontSize: 22 }}>S/. {totalPrecio.toFixed(2)}</span>
             </div>
 
-            <div style={{ marginBottom: 15 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af" }}>TU NOMBRE</label>
-              <input className="inp2" placeholder="Ej: Juan Pérez" value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} />
-            </div>
-
-            <button className="btn" style={{ width: "100%", background: "#25D366", color: "#fff", padding: "16px", fontSize: 16, boxShadow: "0 4px 12px rgba(37,211,102,0.3)" }} onClick={enviarPedido}>
+            <input style={{ width: "100%", padding: 12, borderRadius: 10, border: "1px solid #ddd", margin: "15px 0" }} placeholder="Tu nombre" value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} />
+            
+            <button onClick={enviarPedido} style={{ width: "100%", background: "#25D366", color: "#fff", padding: 16, borderRadius: 12, border: "none", fontWeight: 800 }}>
               📱 Enviar por WhatsApp
             </button>
           </div>
