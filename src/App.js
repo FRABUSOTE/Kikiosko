@@ -129,6 +129,16 @@ const subirExcel = async (kioskoid, e) => {
         };
         const stockVal = get(["stock"]);
         const stock = stockVal === true || stockVal === 1 || String(stockVal).toLowerCase() === "true" || String(stockVal).toLowerCase() === "si" || String(stockVal).toLowerCase() === "sí" || stockVal === "";
+        // --- NUEVA LÓGICA PARA VARIACIONES ---
+        const variacionesTexto = get(["variaciones", "tallas", "sabores", "colores"]);
+        const variaciones = variacionesTexto 
+          ? String(variacionesTexto).split(',').map(v => ({ 
+              nombre: v.trim(), 
+              precio: 0 
+            })) 
+          : [];
+        // -------------------------------------
+
         return {
           nombre: String(get(["nombre", "name", "producto"]) || "").trim(),
           precio: parseFloat(get(["precio", "price", "costo"])) || 0,
@@ -138,6 +148,7 @@ const subirExcel = async (kioskoid, e) => {
           cantidad: parseInt(get(["cantidad", "stock", "quantity"])) || 0,
           kiosko_id: kioskoid,
           foto: null,
+          variaciones: variaciones, // <--- AGREGAMOS ESTO
         };
       }).filter(p => p.nombre);
 
