@@ -119,39 +119,56 @@ const subirExcel = async (kioskoid, e) => {
         return;
       }
 
-      const productos = filas.map(fila => {
-        const get = (keys) => {
-          for (const k of keys) {
-            const found = Object.keys(fila).find(f => f.toLowerCase().trim() === k.toLowerCase());
-            if (found) return fila[found];
-          }
-          return "";
-        };
-        const stockVal = get(["stock"]);
-        const stock = stockVal === true || stockVal === 1 || String(stockVal).toLowerCase() === "true" || String(stockVal).toLowerCase() === "si" || String(stockVal).toLowerCase() === "sí" || stockVal === "";
-        // --- NUEVA LÓGICA PARA VARIACIONES ---
-        const variacionesTexto = get(["variaciones", "tallas", "sabores", "colores"]);
-        const variaciones = variacionesTexto 
-          ? String(variacionesTexto).split(',').map(v => ({ 
-              nombre: v.trim(), 
-              precio: 0 
-            })) 
-          : [];
-        // -------------------------------------
+     const productos = filas.map(fila => {
+  const get = (keys) => {
+    for (const k of keys) {
+      const found = Object.keys(fila).find(f => f.toLowerCase().trim() === k.toLowerCase());
+      if (found) return fila[found];
+    }
+    return "";
+  };
 
-        return {
-          nombre: String(get(["nombre", "name", "producto"]) || "").trim(),
-          precio: parseFloat(get(["precio", "price", "costo"])) || 0,
-          categoria: String(get(["categoria", "category", "categoría"]) || "Otros").trim(),
-          emoji: String(get(["emoji"]) || "🛒").trim(),
-          stock: stock,
-          cantidad: parseInt(get(["cantidad", "stock", "quantity"])) || 0,
-          kiosko_id: kioskoid,
-          foto: null,
-          variaciones: variaciones, // <--- AGREGAMOS ESTO
-        };
-      }).filter(p => p.nombre);
+  // 1. Capturamos los datos básicos
+  const precioBaseExcel = parseFloat(get(["precio", "costo"])) || 0;
+  const variacionesTexto = get(["variaciones", "tallas", "sabores", "presentacion"]);
+  
+  let variacionesFinales = [];
+  let precioParaCatalogo = precioBaseExcel;
 
+  // 2. Procesamos las variaciones si existen
+  if (variacionesTexto && String(variacionesTexto).trim() !== "") {
+    variacionesFinales = String(variacionesTexto).split(',').map(v => {
+      const partes = v.split(':');
+      const nombre = partes[0].trim();
+      
+      // REGLA: Si pusiste "Familiar:45" usa 45. Si solo pusiste "Familiar" usa el precio base.
+      const precioV = partes[1] ? parseFloat(partes[1]) : precioBaseExcel;
+      
+      return { 
+        nombre: nombre, 
+        precio: precioV 
+      };
+    });
+
+    // REGLA DE ORO: El precio que ve el cliente en el catálogo 
+    // será siempre el más bajo de todas las variaciones.
+    const todosLosPrecios = variacionesFinales.map(v => v.precio);
+    precioParaCatalogo = Math.min(...todosLosPrecios);
+  }
+
+  // 3. Retornamos el objeto listo para Supabase
+  return {
+    nombre: String(get(["nombre", "producto", "name"]) || "").trim(),
+    precio: precioParaCatalogo, // Este es el que usa el contenedor del catálogo
+    categoria: String(get(["categoria", "tipo"]) || "Otros").trim(),
+    emoji: String(get(["emoji", "icono"]) || "🛒").trim(),
+    stock: true, // Por defecto activamos el stock al subir
+    cantidad: parseInt(get(["cantidad", "stock_actual"])) || 0,
+    kiosko_id: kioskoid, // El ID de tu kiosko actual
+    foto: null,
+    variaciones: variacionesFinales // Aquí se guarda el JSON [{nombre, precio}, ...]
+  };
+}).filter(p => p.nombre); // Evita subir filas vacías del Excel
       if (productos.length === 0) {
         mostrarToast("❌ No se encontraron productos con nombre", "error");
         return;
