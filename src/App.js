@@ -892,50 +892,61 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
 }
 
 function CatalogoCliente({ kiosko, onSalir }) {
-  const [carrito, setCarrito] = useState([]); // Ahora el carrito es una LISTA de objetos
+  const [carrito, setCarrito] = useState({}); // Volvemos a objeto para manejar cantidades fácilmente
   const [categoria, setCategoria] = useState("Todos");
   const [busqueda, setBusqueda] = useState("");
   const [nombreCliente, setNombreCliente] = useState("");
   const [verCarrito, setVerCarrito] = useState(false);
 
-  // 1. AGREGAR: Guardamos el objeto completo para que no se pierda el precio
+  // 1. AGREGAR: Usamos una llave única para agrupar (ID + Nombre de Variación)
   const agregar = (p, variacion) => {
-    const nuevoItem = {
-      idUnico: Date.now() + Math.random(), // Para que cada fila sea única
-      idProducto: p.id,
-      nombre: variacion ? `${p.nombre} (${variacion.nombre})` : p.nombre,
-      precio: variacion ? Number(variacion.precio) : Number(p.precio),
-      emoji: p.emoji || "📦",
-      variacionNombre: variacion ? variacion.nombre : "unica"
-    };
-    setCarrito([...carrito, nuevoItem]);
+    const key = variacion ? `${p.id}-${variacion.nombre}` : `${p.id}-unica`;
+    
+    setCarrito(prev => {
+      const existente = prev[key];
+      if (existente) {
+        return { ...prev, [key]: { ...existente, cantidad: existente.cantidad + 1 } };
+      } else {
+        return {
+          ...prev,
+          [key]: {
+            id: p.id,
+            nombre: variacion ? `${p.nombre} (${variacion.nombre})` : p.nombre,
+            precio: variacion ? Number(variacion.precio) : Number(p.precio),
+            cantidad: 1,
+            variacionObj: variacion // Guardamos la referencia por si acaso
+          }
+        };
+      }
+    });
   };
 
-  // 2. QUITAR: Eliminamos por su ID único de fila
-  const quitar = (idUnico) => {
-    setCarrito(carrito.filter(item => item.idUnico !== idUnico));
+  // 2. QUITAR (REDUCIR): Si llega a 0, se elimina del objeto
+  const quitar = (key) => {
+    setCarrito(prev => {
+      const nuevo = { ...prev };
+      if (nuevo[key].cantidad > 1) {
+        nuevo[key] = { ...nuevo[key], cantidad: nuevo[key].cantidad - 1 };
+      } else {
+        delete nuevo[key];
+      }
+      return nuevo;
+    });
   };
 
-  // 3. CALCULOS: Directos del estado del carrito
-  const totalPrecio = carrito.reduce((s, item) => s + item.precio, 0);
-  const totalItems = carrito.length;
+  // 3. CÁLCULOS
+  const listaCarrito = Object.entries(carrito);
+  const totalPrecio = listaCarrito.reduce((s, [_, item]) => s + (item.precio * item.cantidad), 0);
+  const totalItems = listaCarrito.reduce((s, [_, item]) => s + item.cantidad, 0);
 
   const enviarPedido = async () => {
-    if (carrito.length === 0) return;
-    
-    // Agrupamos para el mensaje de WhatsApp (ej: "2x Gaseosa")
-    const resumen = carrito.reduce((acc, item) => {
-      acc[item.nombre] = (acc[item.nombre] || 0) + 1;
-      return acc;
-    }, {});
+    if (listaCarrito.length === 0) return;
 
-    const lineas = Object.entries(resumen)
-      .map(([nom, cant]) => `• ${nom} x${cant}`)
+    const lineas = listaCarrito
+      .map(([_, item]) => `• ${item.nombre} x${item.cantidad} — S/. ${(item.precio * item.cantidad).toFixed(2)}`)
       .join("\n");
 
-    const msg = encodeURIComponent(
-      `*Nuevo Pedido*\n\n${lineas}\n\n*Total: S/. ${totalPrecio.toFixed(2)}*\n*Cliente:* ${nombreCliente || "No indicado"}`
-    );
+    const msg = encodeURIComponent(`*Nuevo Pedido*\n\n${lineas}\n\n*Total: S/. ${totalPrecio.toFixed(2)}*\n*Cliente:* ${nombreCliente || "No indicado"}`);
     
     await supabase.from("pedidos").insert([{
       kiosko_id: kiosko.id,
@@ -947,39 +958,33 @@ function CatalogoCliente({ kiosko, onSalir }) {
     window.open(`https://wa.me/51${kiosko.whatsapp}?text=${msg}`, "_blank");
   };
 
-  // --- COMPONENTE DE PRODUCTO ---
+  // --- COMPONENTE DE PRODUCTO (CATÁLOGO) ---
   const ProductoCard = ({ p }) => {
     const [varSel, setVarSel] = useState(p.variaciones?.length > 0 ? p.variaciones[0] : null);
     const precioDisplay = varSel ? Number(varSel.precio) : Number(p.precio);
 
     return (
       <div className="prod-card" style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-        <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40, background: "#f9f9f9" }}>
-          {p.foto ? <img src={p.foto} style={{width:"100%", height:"100%", objectFit:"cover"}} /> : (p.emoji || "🍔")}
+        <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", background: "#f9f9f9" }}>
+          {p.foto ? <img src={p.foto} style={{width:"100%", height:"100%", objectFit:"cover"}} /> : <span style={{fontSize:40}}>{p.emoji || "📦"}</span>}
         </div>
         <div style={{ padding: 12 }}>
           <p style={{ fontWeight: 800, fontSize: 13, margin: 0 }}>{p.nombre}</p>
-          
           {p.variaciones?.length > 0 && (
             <div style={{ display: "flex", gap: 5, margin: "8px 0", flexWrap: "wrap" }}>
               {p.variaciones.map((v, i) => (
-                <button key={i} 
-                  onClick={() => setVarSel(v)}
+                <button key={i} onClick={() => setVarSel(v)}
                   style={{ 
                     fontSize: 10, padding: "4px 8px", borderRadius: 6, border: "none", cursor: "pointer",
                     background: varSel?.nombre === v.nombre ? "#f97316" : "#eee",
                     color: varSel?.nombre === v.nombre ? "#fff" : "#666"
-                  }}>
-                  {v.nombre}
-                </button>
+                  }}> {v.nombre} </button>
               ))}
             </div>
           )}
-
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
             <span style={{ fontWeight: 900, color: "#f97316" }}>S/. {precioDisplay.toFixed(2)}</span>
-            <button 
-              onClick={() => agregar(p, varSel)}
+            <button onClick={() => agregar(p, varSel)}
               style={{ background: "#f97316", color: "#fff", border: "none", padding: "6px 12px", borderRadius: 8, fontWeight: 800, cursor: "pointer" }}>
               + Agregar
             </button>
@@ -994,65 +999,66 @@ function CatalogoCliente({ kiosko, onSalir }) {
       {/* Header */}
       <div style={{ background: "#f97316", padding: 20, color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h2 style={{ margin: 0 }}>{kiosko.nombre}</h2>
-        <button onClick={onSalir} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 8 }}>Salir</button>
+        <button onClick={onSalir} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 8, fontWeight: 700 }}>Salir</button>
       </div>
 
-      {/* Grid */}
+      {/* Grid de Productos */}
       <div style={{ padding: 15, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         {kiosko.productos.map(p => <ProductoCard key={p.id} p={p} />)}
       </div>
 
-      {/* Botón Flotante */}
+      {/* Botón Flotante de Ver Pedido */}
       {totalItems > 0 && (
-        <button 
-          onClick={() => setVerCarrito(true)}
-          style={{ position: "fixed", bottom: 20, left: 20, right: 20, background: "#f97316", color: "#fff", padding: 18, borderRadius: 15, border: "none", fontWeight: 800, display: "flex", justifyContent: "space-between", fontSize: 16, boxShadow: "0 8px 20px rgba(249,115,22,0.3)" }}>
-          <span>🛒 Mi Pedido ({totalItems})</span>
+        <button onClick={() => setVerCarrito(true)}
+          style={{ position: "fixed", bottom: 20, left: 20, right: 20, background: "#f97316", color: "#fff", padding: 18, borderRadius: 15, border: "none", fontWeight: 800, display: "flex", justifyContent: "space-between", fontSize: 16, boxShadow: "0 8px 20px rgba(249,115,22,0.3)", zIndex: 50 }}>
+          <span>🛒 Pedido ({totalItems})</span>
           <span>S/. {totalPrecio.toFixed(2)}</span>
         </button>
       )}
 
-      {/* Modal del Carrito */}
+      {/* Modal del Carrito con [+] y [-] */}
       {verCarrito && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", zIndex: 100 }}>
-          <div style={{ background: "#fff", width: "100%", padding: 25, borderTopLeftRadius: 25, borderTopRightRadius: 25, maxHeight: "80vh", overflowY: "auto" }}>
+          <div style={{ background: "#fff", width: "100%", padding: "25px 20px", borderTopLeftRadius: 25, borderTopRightRadius: 25, maxHeight: "85vh", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ margin: 0 }}>Tu pedido</h3>
-              <button onClick={() => setVerCarrito(false)} style={{ border: "none", background: "none", fontSize: 24 }}>✕</button>
+              <h3 style={{ margin: 0, fontWeight: 900 }}>🛒 Tu pedido</h3>
+              <button onClick={() => setVerCarrito(false)} style={{ border: "none", background: "#f3f4f6", width: 35, height: 35, borderRadius: "50%", fontSize: 18 }}>✕</button>
             </div>
 
-            {/* AQUI SE MUESTRA LA LISTA - AHORA SI O SI SALDRÁ */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 15 }}>
-              {carrito.map((item) => (
-                <div key={item.idUnico} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 10, borderBottom: "1px solid #eee" }}>
-                  <div>
-                    <p style={{ margin: 0, fontWeight: 700 }}>{item.nombre}</p>
-                    <p style={{ margin: 0, color: "#f97316", fontSize: 13, fontWeight: 800 }}>S/. {item.precio.toFixed(2)}</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {listaCarrito.map(([key, item]) => (
+                <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ margin: 0, fontWeight: 800, fontSize: 14 }}>{item.nombre}</p>
+                    <p style={{ margin: 0, color: "#f97316", fontSize: 13, fontWeight: 700 }}>S/. {(item.precio * item.cantidad).toFixed(2)}</p>
                   </div>
-                  <button 
-                    onClick={() => quitar(item.idUnico)}
-                    style={{ background: "#fee2e2", color: "#ef4444", border: "none", padding: "5px 10px", borderRadius: 8, fontWeight: 800 }}>
-                    Quitar
-                  </button>
+                  
+                  {/* BOTONES DE CONTROL DE CANTIDAD */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#f8fafc", padding: "4px 8px", borderRadius: 10 }}>
+                    <button onClick={() => quitar(key)}
+                      style={{ border: "none", background: "#e2e8f0", width: 28, height: 28, borderRadius: 6, fontWeight: 900, cursor: "pointer" }}>-</button>
+                    <span style={{ fontWeight: 900, minWidth: 20, textAlign: "center" }}>{item.cantidad}</span>
+                    <button onClick={() => agregar({id: item.id, nombre: item.nombre.split(' (')[0]}, item.variacionObj)}
+                      style={{ border: "none", background: "#f97316", color: "#fff", width: 28, height: 28, borderRadius: 6, fontWeight: 900, cursor: "pointer" }}>+</button>
+                  </div>
                 </div>
               ))}
             </div>
 
-            <div style={{ margin: "20px 0", paddingTop: 15, borderTop: "2px solid #f97316", display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontWeight: 800 }}>Total:</span>
-              <span style={{ fontWeight: 900, color: "#f97316", fontSize: 22 }}>S/. {totalPrecio.toFixed(2)}</span>
+            <div style={{ margin: "20px 0", padding: "15px 0", borderTop: "2px solid #f97316", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontWeight: 800, fontSize: 16 }}>Total a pagar:</span>
+              <span style={{ fontWeight: 900, color: "#f97316", fontSize: 24 }}>S/. {totalPrecio.toFixed(2)}</span>
             </div>
 
             <input 
-              style={{ width: "100%", padding: 12, borderRadius: 10, border: "1px solid #ddd", marginBottom: 15, boxSizing: "border-box" }} 
-              placeholder="Tu nombre" 
+              style={{ width: "100%", padding: 14, borderRadius: 12, border: "1.5px solid #fed7aa", marginBottom: 15, boxSizing: "border-box", outline: "none", fontSize: 14, background: "#fff7ed" }} 
+              placeholder="Escribe tu nombre aquí..." 
               value={nombreCliente} 
               onChange={e => setNombreCliente(e.target.value)} 
             />
             
-            <button 
-              onClick={enviarPedido}
-              style={{ width: "100%", background: "#25D366", color: "#fff", padding: 16, borderRadius: 12, border: "none", fontWeight: 800, fontSize: 16 }}>
+            <button onClick={enviarPedido}
+              style={{ width: "100%", background: "#25D366", color: "#fff", padding: 18, borderRadius: 15, border: "none", fontWeight: 800, fontSize: 16, boxShadow: "0 4px 15px rgba(37,211,102,0.3)" }}>
               📱 Enviar por WhatsApp
             </button>
           </div>
