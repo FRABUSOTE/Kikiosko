@@ -174,13 +174,25 @@ const subirExcel = async (kioskoid, e) => {
         return;
       }
 
-      const { data, error } = await supabase.from("productos").insert(productos).select();
+      const { data, error } = await supabase
+  .from("productos")
+  .upsert(productos, { onConflict: 'nombre' }) 
+  .select();
       if (error) { mostrarToast("❌ Error guardando: " + error.message, "error"); return; }
 
-      setKioskos(prev => prev.map(k => k.id === kioskoid
-        ? { ...k, productos: [...k.productos, ...data] }
-        : k
-      ));
+     setKioskos(prev => prev.map(k => {
+  if (k.id === kioskoid) {
+    // 1. Sacamos los nombres de los productos que acabamos de subir
+    const nombresNuevos = data.map(d => d.nombre);
+    
+    // 2. Filtramos la lista actual para quitar los que ya existen y se van a actualizar
+    const productosSinCambios = k.productos.filter(p => !nombresNuevos.includes(p.nombre));
+    
+    // 3. Devolvemos la unión de los que no cambiaron + la nueva data limpia
+    return { ...k, productos: [...productosSinCambios, ...data] };
+  }
+  return k;
+}));
       mostrarToast(`✅ ${data.length} productos cargados desde Excel`);
     } catch (err) {
       mostrarToast("❌ Error leyendo Excel: " + err.message, "error");
