@@ -485,7 +485,7 @@ const subirExcel = async (kioskoid, e) => {
         </div>
       )}
 
-      {/* Modal gestión productos */}
+{/* Modal gestión productos */}
       {vistaProductos && (
         <div className="modal-bg" onClick={() => setVistaProductos(null)}>
           <div className="modal fade" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
@@ -493,21 +493,44 @@ const subirExcel = async (kioskoid, e) => {
               <span style={{ fontWeight: 900, fontSize: 16 }}>📦 Productos — {vistaProductos.nombre}</span>
               <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "6px 12px", fontSize: 11, border: "1px solid #e5e7eb" }} onClick={() => setVistaProductos(null)}>✕</button>
             </div>
+
             {vistaProductos.productos.length === 0 ? (
               <p style={{ fontSize: 13, color: "#9ca3af", textAlign: "center", padding: "20px 0" }}>Sin productos aún — sube un Excel desde el detalle</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {vistaProductos.productos.map(p => (
-                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb" }}>
-                    <span style={{ fontSize: 22 }}>{p.emoji}</span>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: 13, fontWeight: 700 }}>{p.nombre}</p>
-                      <p style={{ fontSize: 11, color: "#9ca3af" }}>{p.categoria}</p>
+                  <div key={p.id} style={{ display: "flex", flexDirection: "column", gap: 10, padding: "14px", background: "#f9fafb", borderRadius: 12, border: "1px solid #e5e7eb" }}>
+                    
+                    {/* CABECERA: Emoji, Nombre y Stock */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <span style={{ fontSize: 24 }}>{p.emoji}</span>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>{p.nombre}</p>
+                        <p style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase" }}>{p.categoria}</p>
+                      </div>
+                      <span style={{ fontSize: 10, padding: "4px 10px", borderRadius: 999, background: p.stock ? "#dcfce7" : "#fee2e2", color: p.stock ? "#059669" : "#dc2626", fontWeight: 800 }}>
+                        {p.stock ? "✅" : "❌"}
+                      </span>
                     </div>
-                    <span style={{ fontWeight: 900, color: "#f97316", fontSize: 14 }}>S/. {p.precio.toFixed(2)}</span>
-                    <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 999, background: p.stock ? "#dcfce7" : "#fee2e2", color: p.stock ? "#059669" : "#dc2626", fontWeight: 700 }}>
-                      {p.stock ? "✅" : "❌"}
-                    </span>
+
+                    {/* CUERPO: Precios o Variaciones */}
+                    <div style={{ background: "#fff", borderRadius: 8, padding: "10px", border: "1px solid #f3f4f6" }}>
+                      {p.variaciones && p.variaciones.length > 0 ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          {p.variaciones.map((v, idx) => (
+                            <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: idx !== p.variaciones.length - 1 ? 6 : 0, borderBottom: idx !== p.variaciones.length - 1 ? "1px dashed #f3f4f6" : "none" }}>
+                              <span style={{ fontSize: 12, color: "#4b5563", fontWeight: 600 }}>{v.nombre}</span>
+                              <span style={{ fontWeight: 900, color: "#f97316", fontSize: 13 }}>S/. {parseFloat(v.precio).toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: 12, color: "#9ca3af", fontStyle: "italic" }}>Precio único</span>
+                          <span style={{ fontWeight: 900, color: "#f97316", fontSize: 15 }}>S/. {parseFloat(p.precio).toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -515,9 +538,6 @@ const subirExcel = async (kioskoid, e) => {
           </div>
         </div>
       )}
-    </div>
-  );
-}
 
 // ─── PANEL ADMIN KIOSKO ───
 function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
