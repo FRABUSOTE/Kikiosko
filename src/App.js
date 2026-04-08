@@ -501,7 +501,6 @@ const subirExcel = async (kioskoid, e) => {
                 {vistaProductos.productos.map(p => (
                   <div key={p.id} style={{ display: "flex", flexDirection: "column", gap: 10, padding: "14px", background: "#f9fafb", borderRadius: 12, border: "1px solid #e5e7eb" }}>
                     
-                    {/* CABECERA: Emoji, Nombre y Stock */}
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <span style={{ fontSize: 24 }}>{p.emoji}</span>
                       <div style={{ flex: 1 }}>
@@ -513,7 +512,6 @@ const subirExcel = async (kioskoid, e) => {
                       </span>
                     </div>
 
-                    {/* CUERPO: Precios o Variaciones */}
                     <div style={{ background: "#fff", borderRadius: 8, padding: "10px", border: "1px solid #f3f4f6" }}>
                       {p.variaciones && p.variaciones.length > 0 ? (
                         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -538,6 +536,9 @@ const subirExcel = async (kioskoid, e) => {
           </div>
         </div>
       )}
+    </div>
+  );
+}
 
 // ─── PANEL ADMIN KIOSKO ───
 function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
