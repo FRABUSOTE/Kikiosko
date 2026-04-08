@@ -721,34 +721,66 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
             <div style={{ padding: "32px", textAlign: "center", color: "#9ca3af", fontSize: 13 }}>
               Sin productos — agrega el primero con el botón de arriba
             </div>
-          ) : productos.map(p => (
-            <div key={p.id} style={{ borderBottom: "1px solid #f3f4f6", padding: "12px 16px", background: p.stock ? "#fff" : "#fafafa", opacity: p.stock ? 1 : 0.6 }}>
-              {/* Fila 1: check + foto/emoji + nombre + acciones */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                <input
-                  type="checkbox"
-                  checked={p.stock}
-                  onChange={() => toggleStock(p.id)}
-                  style={{ width: 18, height: 18, accentColor: "#f97316", cursor: "pointer", flexShrink: 0 }}
-                />
-                <div style={{ width: 36, height: 36, borderRadius: 8, background: "#fff7ed", display: "grid", placeItems: "center", overflow: "hidden", flexShrink: 0 }}>
-                  {p.foto ? (
-                    <img src={p.foto} alt={p.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  ) : (
-                    <span style={{ fontSize: 20 }}>{p.emoji}</span>
-                  )}
-                </div>
-                <span style={{ fontSize: 13, fontWeight: 800, flex: 1, color: p.stock ? "#111827" : "#9ca3af" }}>{p.nombre}</span>
-                <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                  <button className="btn" style={{ background: "#fff7ed", color: "#f97316", padding: "5px 10px", fontSize: 11, border: "1px solid #fed7aa" }}
-                    onClick={() => { setModalProducto(p); setNuevoProducto({ nombre: p.nombre, precio: p.precio, categoria: p.categoria, emoji: p.emoji, stock: p.stock, cantidad: p.cantidad || 0, foto: p.foto || null }); }}>
-                    ✏️
-                  </button>
-                  <button className="btn" style={{ background: "#fee2e2", color: "#dc2626", padding: "5px 10px", fontSize: 11, border: "1px solid #fecaca" }}
-                    onClick={() => eliminar(p.id)}>
-                    🗑
-                  </button>
-                </div>
+         // --- LÍNEA 724 ---
+) : productos.map(p => (
+  // AQUÍ COMIENZA EL REEMPLAZO
+  <div key={p.id} className="product-card" style={{ background: 'white', borderRadius: '15px', padding: '15px', marginBottom: '15px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+    
+    {/* Cabecera del Producto (Emoji, Nombre, Categoría y Botones) */}
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+      <span style={{ fontSize: '24px' }}>{p.emoji}</span>
+      <div style={{ flex: 1 }}>
+        <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>{p.nombre}</h4>
+        <span style={{ fontSize: '11px', color: '#9ca3af' }}>{p.categoria}</span>
+      </div>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        {/* Usamos tus funciones existentes para editar y eliminar */}
+        <button className="btn" onClick={() => { setModalProducto(p); setNuevoProducto(p); }} style={{ background: "#fff7ed", color: "#f97316", padding: "5px 10px" }}>
+          ✏️
+        </button>
+        <button className="btn" onClick={() => eliminar(p.id)} style={{ background: "#fee2e2", color: "#dc2626", padding: "5px 10px" }}>
+          🗑️
+        </button>
+      </div>
+    </div>
+
+    {/* Lista de Variaciones Editables */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      {p.variaciones && p.variaciones.length > 0 ? (
+        p.variaciones.map((v, idx) => (
+          <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fef2f2', padding: '8px 12px', borderRadius: '10px', gap: '10px' }}>
+            <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: '#4b5563' }}>{v.nombre}</span>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <button className="btn-stock" style={{ width: 25, height: 25 }}>-</button>
+              <input type="number" value={v.stock || 0} style={{ width: 40, textAlign: 'center', border: '1px solid #ddd' }} />
+              <button className="btn-stock" style={{ width: 25, height: 25 }}>+</button>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#f97316' }}>S/.</span>
+              <input 
+                type="number" 
+                value={v.precio} 
+                style={{ width: 60, padding: '4px', borderRadius: '5px', border: '1px solid #f97316' }}
+                onChange={(e) => handleUpdatePrice(p.id, idx, e.target.value)} 
+              />
+            </div>
+          </div>
+        ))
+      ) : (
+        /* Caso: Producto Simple */
+        <div style={{ display: 'flex', alignItems: 'center', background: '#f9fafb', padding: '8px 12px', borderRadius: '10px', gap: '10px' }}>
+          <span style={{ flex: 1, fontSize: '12px', color: '#9ca3af', fontStyle: 'italic' }}>Precio único</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#f97316' }}>S/.</span>
+            <input type="number" value={p.precio} style={{ width: 60, padding: '4px', border: '1px solid #ddd' }} />
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+))
               </div>
               {/* Fila 2: categoría + precio editable + stock */}
               <div style={{ display: "flex", alignItems: "center", gap: 10, paddingLeft: 28 }}>
