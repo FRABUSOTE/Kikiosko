@@ -1018,11 +1018,26 @@ function CatalogoCliente({ kiosko, onSalir }) {
 
   return (
     <div style={{ minHeight: "100vh", background: "#fff7ed", fontFamily: "Nunito, sans-serif" }}>
+      
+      {/* --- ESTILOS PARA LAS 2 COLUMNAS Y RESPONSIVE --- */}
+      <style>{`
+        @media (min-width: 600px) {
+          .productos-grid {
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
+          }
+        }
+        .prod-card img {
+          height: 120px !important; 
+        }
+      `}</style>
+
       {/* Header */}
       <div style={{ background: "#f97316", padding: 20, color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h2 style={{ margin: 0 }}>{kiosko.nombre}</h2>
         <button onClick={onSalir} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 8, fontWeight: 700 }}>Salir</button>
       </div>
+      
+      {/* ... sigue el resto de tu código (filtros y el div con className="productos-grid") ... */}
 
       {/* Filtro de categorías */}
       <div style={{ display: "flex", gap: 8, padding: "12px 15px", overflowX: "auto", background: "#fff", borderBottom: "1px solid #fed7aa" }}>
