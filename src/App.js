@@ -1033,9 +1033,9 @@ function CatalogoCliente({ kiosko, onSalir }) {
 
       {/* Header */}
       <div style={{ background: "#f97316", padding: 20, color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h2 style={{ margin: 0 }}>{kiosko.nombre}</h2>
-        <button onClick={onSalir} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 8, fontWeight: 700 }}>Salir</button>
-      </div>
+  <h2 style={{ margin: 0 }}>{kiosko.nombre}</h2>
+  {onSalir && <button onClick={onSalir} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 8, fontWeight: 700 }}>Salir</button>}
+</div>
       
       {/* ... sigue el resto de tu código (filtros y el div con className="productos-grid") ... */}
 
