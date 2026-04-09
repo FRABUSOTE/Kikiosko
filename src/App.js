@@ -982,7 +982,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
       <div className="prod-card" style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
         <div style={{ height: 140, overflow: "hidden", borderRadius: "16px 16px 0 0", background: "#f9f9f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
   {p.foto 
-    ? <img src={p.foto} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} /> 
+    ? <img src={p.foto} style={{ width: "100%", height: "140px", objectFit: "cover", objectPosition: "center", display: "block" }} /> 
     : <span style={{ fontSize: 40 }}>{p.emoji || "📦"}</span>
   }
 </div>
