@@ -980,10 +980,10 @@ function CatalogoCliente({ kiosko, onSalir }) {
 
     return (
       <div className="prod-card" style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-        <div style={{ height: 140, overflow: "hidden", borderRadius: "16px 16px 0 0", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ height: 140, overflow: "hidden", borderRadius: "16px 16px 0 0", background: "#fff" }}>
   {p.foto 
-    ? <img src={p.foto} style={{ width: "100%", height: "140px", objectFit: "contain", objectPosition: "center top", background: "#f9f9f9", display: "block", maxWidth: "100%" }} /> 
-    : <span style={{ fontSize: 40 }}>{p.emoji || "📦"}</span>
+    ? <img src={p.foto} style={{ width: "100%", height: "140px", objectFit: "contain", background: "#fff", display: "block" }} /> 
+    : <span style={{ fontSize: 40, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>{p.emoji || "📦"}</span>
   }
 </div>
         <div style={{ padding: 12 }}>
