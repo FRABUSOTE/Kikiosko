@@ -1039,9 +1039,15 @@ function CatalogoCliente({ kiosko, onSalir }) {
       </div>
 
       {/* Grid de Productos */}
-      <div style={{ padding: 15, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
-        {productosFiltrados.map(p => <ProductoCard key={p.id} p={p} />)}
-      </div>
+<div className="productos-grid" style={{ 
+  padding: 15, 
+  display: "grid", 
+  // Esto crea 2 columnas por defecto en celular
+  gridTemplateColumns: "repeat(2, 1fr)", 
+  gap: 12 
+}}>
+  {productosFiltrados.map(p => <ProductoCard key={p.id} p={p} />)}
+</div>
 
       {/* Botón Flotante de Ver Pedido */}
       {totalItems > 0 && (
