@@ -723,132 +723,54 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
             </div>
          // --- LÍNEA 724 ---
 ) : productos.map(p => (
-  // AQUÍ COMIENZA EL REEMPLAZO
-  <div key={p.id} className="product-card" style={{ background: 'white', borderRadius: '15px', padding: '15px', marginBottom: '15px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+  <div key={p.id} className="row" style={{ display: "flex", flexDirection: "column", gap: 6, padding: "12px 16px", borderBottom: "1px solid #f3f4f6" }}>
     
-    {/* Cabecera del Producto (Emoji, Nombre, Categoría y Botones) */}
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-      <span style={{ fontSize: '24px' }}>{p.emoji}</span>
-      <div style={{ flex: 1 }}>
-        <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>{p.nombre}</h4>
-        <span style={{ fontSize: '11px', color: '#9ca3af' }}>{p.categoria}</span>
-      </div>
-      <div style={{ display: 'flex', gap: '8px' }}>
-        {/* Usamos tus funciones existentes para editar y eliminar */}
-        <button className="btn" onClick={() => { setModalProducto(p); setNuevoProducto(p); }} style={{ background: "#fff7ed", color: "#f97316", padding: "5px 10px" }}>
-          ✏️
-        </button>
-        <button className="btn" onClick={() => eliminar(p.id)} style={{ background: "#fee2e2", color: "#dc2626", padding: "5px 10px" }}>
-          🗑️
-        </button>
-      </div>
+    {/* Fila 1: emoji + nombre + botones */}
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <span style={{ fontSize: 22 }}>{p.emoji}</span>
+      <span style={{ fontWeight: 800, fontSize: 13, flex: 1 }}>{p.nombre}</span>
+      <button className="btn" onClick={() => { setModalProducto(p); setNuevoProducto(p); }}
+        style={{ background: "#fff7ed", color: "#f97316", padding: "5px 10px", fontSize: 12, border: "1px solid #fed7aa" }}>✏️</button>
+      <button className="btn" onClick={() => eliminar(p.id)}
+        style={{ background: "#fee2e2", color: "#dc2626", padding: "5px 10px", fontSize: 12, border: "1px solid #fecaca" }}>🗑</button>
     </div>
 
-    {/* Lista de Variaciones Editables */}
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      {p.variaciones && p.variaciones.length > 0 ? (
-        p.variaciones.map((v, idx) => (
-          <div key={idx} style={{ display: 'flex', alignItems: 'center', background: '#fef2f2', padding: '8px 12px', borderRadius: '10px', gap: '10px' }}>
-            <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: '#4b5563' }}>{v.nombre}</span>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <button className="btn-stock" style={{ width: 25, height: 25 }}>-</button>
-              <input type="number" value={v.stock || 0} style={{ width: 40, textAlign: 'center', border: '1px solid #ddd' }} />
-              <button className="btn-stock" style={{ width: 25, height: 25 }}>+</button>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#f97316' }}>S/.</span>
-              <input 
-                type="number" 
-                value={v.precio} 
-                style={{ width: 60, padding: '4px', borderRadius: '5px', border: '1px solid #f97316' }}
-                onChange={(e) => handleUpdatePrice(p.id, idx, e.target.value)} 
-              />
-            </div>
-          </div>
-        ))
-      ) : (
-        /* Caso: Producto Simple */
-        <div style={{ display: 'flex', alignItems: 'center', background: '#f9fafb', padding: '8px 12px', borderRadius: '10px', gap: '10px' }}>
-          <span style={{ flex: 1, fontSize: '12px', color: '#9ca3af', fontStyle: 'italic' }}>Precio único</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#f97316' }}>S/.</span>
-            <input type="number" value={p.precio} style={{ width: 60, padding: '4px', border: '1px solid #ddd' }} />
-          </div>
+    {/* Fila 2: categoría + stock + precio */}
+    <div style={{ display: "flex", alignItems: "center", gap: 10, paddingLeft: 28 }}>
+      <span style={{ fontSize: 11, background: "#fff7ed", color: "#f97316", padding: "3px 10px", borderRadius: 999, fontWeight: 700 }}>{p.categoria}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: "auto" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginRight: 8 }}>
+          <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 700 }}>Stock:</span>
+          <button className="btn" style={{ width: 24, height: 24, background: "#fff7ed", color: "#f97316", fontSize: 14, border: "1px solid #fed7aa", borderRadius: 6, padding: 0, lineHeight: 1 }}
+            onClick={async () => {
+              const nuevaCantidad = Math.max(0, (parseInt(p.cantidad) || 0) - 1);
+              await supabase.from("productos").update({ cantidad: nuevaCantidad, stock: nuevaCantidad > 0 }).eq("id", p.id);
+              actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, cantidad: nuevaCantidad, stock: nuevaCantidad > 0 } : pr));
+            }}>−</button>
+          <input type="number" min="0" value={p.cantidad ?? 0}
+            onChange={e => { const val = parseInt(e.target.value) || 0; actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, cantidad: val, stock: val > 0 } : pr)); }}
+            onBlur={async e => { const val = parseInt(e.target.value) || 0; await supabase.from("productos").update({ cantidad: val, stock: val > 0 }).eq("id", p.id); }}
+            style={{ width: 44, background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 6, padding: "3px 4px", fontSize: 12, fontWeight: 900, color: "#f97316", fontFamily: "inherit", outline: "none", textAlign: "center" }} />
+          <button className="btn" style={{ width: 24, height: 24, background: "#f97316", color: "#fff", fontSize: 14, borderRadius: 6, padding: 0, lineHeight: 1 }}
+            onClick={async () => {
+              const nuevaCantidad = (parseInt(p.cantidad) || 0) + 1;
+              await supabase.from("productos").update({ cantidad: nuevaCantidad, stock: true }).eq("id", p.id);
+              actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, cantidad: nuevaCantidad, stock: true } : pr));
+            }}>+</button>
         </div>
-      )}
+        <span style={{ fontSize: 12, fontWeight: 700, color: "#9ca3af" }}>S/.</span>
+        <input type="text" value={isNaN(p.precio) ? "" : Number(p.precio).toFixed(2)}
+          onChange={e => { const val = e.target.value.replace(",", "."); actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, precio: parseFloat(val) || 0 } : pr)); }}
+          onFocus={e => { e.target.style.borderColor = "#f97316"; e.target.select(); }}
+          onBlur={async e => { e.target.style.borderColor = "#fed7aa"; const val = parseFloat(e.target.value.replace(",", ".")) || 0; await supabase.from("productos").update({ precio: val }).eq("id", p.id); mostrarToast("✅ Precio actualizado"); }}
+          style={{ width: 70, background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 7, padding: "6px 8px", fontSize: 14, fontWeight: 900, color: "#f97316", fontFamily: "inherit", outline: "none", textAlign: "center" }} />
+      </div>
     </div>
+
   </div>
-))
-              </div>
-              {/* Fila 2: categoría + precio editable + stock */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10, paddingLeft: 28 }}>
-                <span style={{ fontSize: 11, background: "#fff7ed", color: "#f97316", padding: "3px 10px", borderRadius: 999, fontWeight: 700 }}>{p.categoria}</span>
-                <div style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: "auto" }}>
-                  {/* Stock cantidad */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginRight: 8 }}>
-                    <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 700 }}>Stock:</span>
-                    <button className="btn" style={{ width: 24, height: 24, background: "#fff7ed", color: "#f97316", fontSize: 14, border: "1px solid #fed7aa", borderRadius: 6, padding: 0, lineHeight: 1 }}
-                      onClick={async () => {
-                        const nuevaCantidad = Math.max(0, (parseInt(p.cantidad) || 0) - 1);
-                        await supabase.from("productos").update({ cantidad: nuevaCantidad, stock: nuevaCantidad > 0 }).eq("id", p.id);
-                        const nuevos = productos.map(pr => pr.id === p.id ? { ...pr, cantidad: nuevaCantidad, stock: nuevaCantidad > 0 } : pr);
-                        actualizarProductos(nuevos);
-                      }}>
-                      −
-                    </button>
-                    <input
-                      type="number"
-                      min="0"
-                      value={p.cantidad ?? 0}
-                      onChange={e => {
-                        const val = parseInt(e.target.value) || 0;
-                        const nuevos = productos.map(pr => pr.id === p.id ? { ...pr, cantidad: val, stock: val > 0 } : pr);
-                        actualizarProductos(nuevos);
-                      }}
-                      onBlur={async e => {
-                        const val = parseInt(e.target.value) || 0;
-                        await supabase.from("productos").update({ cantidad: val, stock: val > 0 }).eq("id", p.id);
-                      }}
-                      style={{ width: 44, background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 6, padding: "3px 4px", fontSize: 12, fontWeight: 900, color: "#f97316", fontFamily: "inherit", outline: "none", textAlign: "center" }}
-                    />
-                    <button className="btn" style={{ width: 24, height: 24, background: "#f97316", color: "#fff", fontSize: 14, borderRadius: 6, padding: 0, lineHeight: 1 }}
-                      onClick={async () => {
-                        const nuevaCantidad = (parseInt(p.cantidad) || 0) + 1;
-                        await supabase.from("productos").update({ cantidad: nuevaCantidad, stock: true }).eq("id", p.id);
-                        const nuevos = productos.map(pr => pr.id === p.id ? { ...pr, cantidad: nuevaCantidad, stock: true } : pr);
-                        actualizarProductos(nuevos);
-                      }}>
-                      +
-                    </button>
-                  </div>
-                  {/* Precio */}
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "#9ca3af" }}>S/.</span>
-                  <input
-                    type="text"
-                    value={isNaN(p.precio) ? "" : Number(p.precio).toFixed(2)}
-                    onChange={e => {
-                      const val = e.target.value.replace(",", ".");
-                      const nuevos = productos.map(pr => pr.id === p.id ? { ...pr, precio: parseFloat(val) || 0 } : pr);
-                      actualizarProductos(nuevos);
-                    }}
-                    onFocus={e => { e.target.style.borderColor = "#f97316"; e.target.select(); }}
-                    onBlur={async e => {
-                      e.target.style.borderColor = "#fed7aa";
-                      const val = parseFloat(e.target.value.replace(",", ".")) || 0;
-                      await supabase.from("productos").update({ precio: val }).eq("id", p.id);
-                      mostrarToast("✅ Precio actualizado");
-                    }}
-                    style={{ width: 70, background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 7, padding: "6px 8px", fontSize: 14, fontWeight: 900, color: "#f97316", fontFamily: "inherit", outline: "none", textAlign: "center" }}
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
+))}
         </div>
       </div>
-
       {/* Modal agregar/editar */}
       {modalProducto !== null && (
         <div className="modal-bg" onClick={() => setModalProducto(null)}>
