@@ -1009,6 +1009,10 @@ function CatalogoCliente({ kiosko, onSalir }) {
     );
   };
 
+ // Categorías únicas de los productos
+  const categorias = ["Todos", ...new Set(kiosko.productos.map(p => p.categoria).filter(Boolean))];
+  const productosFiltrados = categoria === "Todos" ? kiosko.productos : kiosko.productos.filter(p => p.categoria === categoria);
+
   return (
     <div style={{ minHeight: "100vh", background: "#fff7ed", fontFamily: "Nunito, sans-serif" }}>
       {/* Header */}
@@ -1017,9 +1021,23 @@ function CatalogoCliente({ kiosko, onSalir }) {
         <button onClick={onSalir} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 8, fontWeight: 700 }}>Salir</button>
       </div>
 
+      {/* Filtro de categorías */}
+      <div style={{ display: "flex", gap: 8, padding: "12px 15px", overflowX: "auto", background: "#fff", borderBottom: "1px solid #fed7aa" }}>
+        {categorias.map(cat => (
+          <button key={cat} onClick={() => setCategoria(cat)}
+            style={{ flexShrink: 0, padding: "7px 16px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: 13,
+              background: categoria === cat ? "#f97316" : "#fff7ed",
+              color: categoria === cat ? "#fff" : "#f97316",
+              boxShadow: categoria === cat ? "0 2px 8px rgba(249,115,22,0.3)" : "none"
+            }}>
+            {cat}
+          </button>
+        ))}
+      </div>
+
       {/* Grid de Productos */}
       <div style={{ padding: 15, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        {kiosko.productos.map(p => <ProductoCard key={p.id} p={p} />)}
+        {productosFiltrados.map(p => <ProductoCard key={p.id} p={p} />)}
       </div>
 
       {/* Botón Flotante de Ver Pedido */}
