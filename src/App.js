@@ -733,9 +733,22 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
         <span style={{ fontSize: '11px', color: '#9ca3af' }}>{p.categoria}</span>
       </div>
       <div style={{ display: 'flex', gap: '8px' }}>
-        <button className="btn" onClick={() => { setModalProducto(p); setNuevoProducto(p); }} style={{ background: "#fff7ed", color: "#f97316", padding: "5px 10px" }}>✏️</button>
-        <button className="btn" onClick={() => eliminar(p.id)} style={{ background: "#fee2e2", color: "#dc2626", padding: "5px 10px" }}>🗑️</button>
-      </div>
+  {kiosko.plan !== "Básico" && (
+    <button
+      className="btn"
+      onClick={async () => {
+        const nuevaOferta = !p.oferta;
+        await supabase.from("productos").update({ oferta: nuevaOferta }).eq("id", p.id);
+        actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, oferta: nuevaOferta } : pr));
+        mostrarToast(nuevaOferta ? "🔥 Marcado como oferta" : "✅ Oferta desactivada");
+      }}
+      style={{ background: p.oferta ? "#fef3c7" : "#f3f4f6", color: p.oferta ? "#d97706" : "#9ca3af", padding: "5px 10px", border: `1px solid ${p.oferta ? "#fde68a" : "#e5e7eb"}` }}>
+      🔥
+    </button>
+  )}
+  <button className="btn" onClick={() => { setModalProducto(p); setNuevoProducto(p); }} style={{ background: "#fff7ed", color: "#f97316", padding: "5px 10px" }}>✏️</button>
+  <button className="btn" onClick={() => eliminar(p.id)} style={{ background: "#fee2e2", color: "#dc2626", padding: "5px 10px" }}>🗑️</button>
+</div>
     </div>
 
     {/* Fila 2: stock + precio o variaciones */}
@@ -980,11 +993,18 @@ function CatalogoCliente({ kiosko, onSalir }) {
 
     return (
       <div className="prod-card" style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-        <div style={{ height: 140, overflow: "hidden", borderRadius: "16px 16px 0 0", background: "#fff" }}>
-  {p.foto 
-    ? <img src={p.foto} style={{ width: "100%", height: "140px", objectFit: "contain", background: "#fff", display: "block" }} /> 
-    : <span style={{ fontSize: 40, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>{p.emoji || "📦"}</span>
-  }
+        <div style={{ position: "relative" }}>
+  {p.oferta && (
+    <span style={{ position: "absolute", top: 8, left: 8, background: "#f97316", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 999, zIndex: 1 }}>
+      🔥 Oferta
+    </span>
+  )}
+  <div style={{ height: 140, overflow: "hidden", borderRadius: "16px 16px 0 0", background: "#fff" }}>
+    {p.foto
+      ? <img src={p.foto} style={{ width: "100%", height: "140px", objectFit: "contain", background: "#fff", display: "block" }} />
+      : <span style={{ fontSize: 40, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>{p.emoji || "📦"}</span>
+    }
+  </div>
 </div>
         <div style={{ padding: 12 }}>
           <p style={{ fontWeight: 800, fontSize: 13, margin: 0 }}>{p.nombre}</p>
