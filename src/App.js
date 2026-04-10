@@ -1,7 +1,7 @@
 /* eslint-disable */
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "./supabase";
-import QRCode from "qrcode.react";
+import { QRCodeSVG as QRCode } from "qrcode.react";
 
 // ─── DATOS INICIALES ───
 const SUPERADMIN = { email: "admin@kikiosko.pe", clave: "admin123" };
