@@ -1,6 +1,7 @@
 /* eslint-disable */
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "./supabase";
+import QRCode from "qrcode.react";
 
 // ─── DATOS INICIALES ───
 const SUPERADMIN = { email: "admin@kikiosko.pe", clave: "admin123" };
@@ -703,17 +704,31 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
           ))}
         </div>
 
-        {/* Link público */}
-        <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 16px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <p style={{ fontSize: 11, color: "#059669", fontWeight: 700, marginBottom: 2 }}>🛒 Link para tus compradores</p>
-            <p style={{ fontSize: 13, fontWeight: 800 }}>kikiosko-vyvv.vercel.app/#/{kiosko.slug}</p>
-          </div>
-          <button className="btn" style={{ background: "#059669", color: "#fff", padding: "8px 14px", fontSize: 11 }}
-            onClick={() => { navigator.clipboard?.writeText(`kikiosko-vyvv.vercel.app/#/${kiosko.slug}`); mostrarToast("📋 Link copiado"); }}>
-            📋 Copiar
-          </button>
-        </div>
+        {/* Link público + QR */}
+<div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 16px", marginBottom: 16 }}>
+  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div>
+      <p style={{ fontSize: 11, color: "#059669", fontWeight: 700, marginBottom: 2 }}>🛒 Link para tus compradores</p>
+      <p style={{ fontSize: 13, fontWeight: 800 }}>kikiosko-vyvv.vercel.app/#/{kiosko.slug}</p>
+    </div>
+    <button className="btn" style={{ background: "#059669", color: "#fff", padding: "8px 14px", fontSize: 11 }}
+      onClick={() => { navigator.clipboard?.writeText(`kikiosko-vyvv.vercel.app/#/${kiosko.slug}`); mostrarToast("📋 Link copiado"); }}>
+      📋 Copiar
+    </button>
+  </div>
+  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 16, gap: 8 }}>
+    <QRCode
+      value={`https://kikiosko-vyvv.vercel.app/#/${kiosko.slug}`}
+      size={160}
+      bgColor="#ffffff"
+      fgColor="#111827"
+      level="H"
+    />
+    <p style={{ fontSize: 11, color: "#9ca3af", textAlign: "center" }}>
+      📲 Tus clientes escanean este QR y llegan directo a tu tienda
+    </p>
+  </div>
+</div>
 
         {/* Tabla productos */}
         <div className="card" style={{ overflow: "hidden" }}>
