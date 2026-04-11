@@ -369,6 +369,60 @@ const subirExcel = async (kioskoid, e) => {
               <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>Comparte este link con tus clientes — sin usuario ni clave</p>
             </div>
 
+            {/* Banner del kiosko */}
+<div style={{ padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
+  <p style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Banner del catálogo</p>
+  
+  {/* Preview del banner */}
+  {detalle.banner && (
+    <div style={{ marginBottom: 10, borderRadius: 8, overflow: "hidden", height: 120 }}>
+      <img src={detalle.banner} alt="banner" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+    </div>
+  )}
+
+  <input
+    type="file"
+    accept="image/jpeg,image/png,image/webp"
+    id="banner-upload"
+    style={{ display: "none" }}
+    onChange={async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) { mostrarToast("❌ La imagen no debe superar 2MB", "error"); return; }
+      mostrarToast("⏳ Subiendo banner...", "ok");
+      const ext = file.name.split(".").pop();
+      const fileName = `banner_${detalle.id}_${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("fotos-productos")
+        .upload(fileName, file, { upsert: true });
+      if (uploadError) { mostrarToast("❌ Error subiendo banner", "error"); return; }
+      const { data: urlData } = supabase.storage.from("fotos-productos").getPublicUrl(fileName);
+      const bannerUrl = urlData.publicUrl;
+      await supabase.from("kioskos").update({ banner: bannerUrl }).eq("id", detalle.id);
+      setKioskos(prev => prev.map(k => k.id === detalle.id ? { ...k, banner: bannerUrl } : k));
+      setDetalle(prev => ({ ...prev, banner: bannerUrl }));
+      mostrarToast("✅ Banner actualizado");
+      e.target.value = "";
+    }}
+  />
+  <div style={{ display: "flex", gap: 8 }}>
+    <button className="btn" style={{ flex: 1, background: "#fff7ed", color: "#f97316", padding: "10px", fontSize: 12, border: "1.5px dashed #fed7aa", borderRadius: 8 }}
+      onClick={() => document.getElementById("banner-upload").click()}>
+      🖼️ {detalle.banner ? "Cambiar banner" : "Subir banner"}
+    </button>
+    {detalle.banner && (
+      <button className="btn" style={{ background: "#fee2e2", color: "#dc2626", padding: "10px 14px", fontSize: 12, border: "1px solid #fecaca" }}
+        onClick={async () => {
+          await supabase.from("kioskos").update({ banner: null }).eq("id", detalle.id);
+          setKioskos(prev => prev.map(k => k.id === detalle.id ? { ...k, banner: null } : k));
+          setDetalle(prev => ({ ...prev, banner: null }));
+          mostrarToast("🗑 Banner eliminado");
+        }}>
+        🗑
+      </button>
+    )}
+  </div>
+</div>
             {/* Datos editables */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 4 }}>
               {[
