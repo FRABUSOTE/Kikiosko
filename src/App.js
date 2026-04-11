@@ -1183,7 +1183,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
       {/* Botón Flotante de Ver Pedido */}
       {totalItems > 0 && (
         <button onClick={() => setVerCarrito(true)}
-  style={{ position: "fixed", bottom: 16, left: 16, right: 16, background: "#f97316", color: "#fff", padding: "10px 16px", borderRadius: 12, border: "none", fontWeight: 800, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14, boxShadow: "0 4px 12px rgba(249,115,22,0.3)", zIndex: 50 }}>
+  style={{ position: "fixed", bottom: 16, left: 16, right: 16, background: "#f97316", color: "#fff", padding: "14px 16px", borderRadius: 12, border: "none", fontWeight: 800, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14, boxShadow: "0 4px 12px rgba(249,115,22,0.3)", zIndex: 50 }}>
   <span>🛒 Pedido ({totalItems})</span>
   <span>S/. {totalPrecio.toFixed(2)}</span>
 </button>
