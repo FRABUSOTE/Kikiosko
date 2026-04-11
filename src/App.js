@@ -1089,13 +1089,28 @@ function CatalogoCliente({ kiosko, onSalir }) {
               ))}
             </div>
           )}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-            <span style={{ fontWeight: 900, color: "#f97316" }}>S/. {precioDisplay.toFixed(2)}</span>
-            <button onClick={() => agregar(p, varSel)}
-              style={{ background: "#f97316", color: "#fff", border: "none", padding: "6px 12px", borderRadius: 8, fontWeight: 800, cursor: "pointer" }}>
-              + Agregar
-            </button>
-          </div>
+          <div style={{ marginTop: 10 }}>
+  <span style={{ fontWeight: 900, color: "#f97316", fontSize: 15 }}>S/. {precioDisplay.toFixed(2)}</span>
+  
+  {(() => {
+    const key = varSel ? `${p.id}-${varSel.nombre}` : `${p.id}-unica`;
+    const cantidad = carrito[key]?.cantidad || 0;
+    return cantidad === 0 ? (
+      <button onClick={() => agregar(p, varSel)}
+        style={{ width: "100%", marginTop: 8, background: "#f97316", color: "#fff", border: "none", padding: "10px", borderRadius: 8, fontWeight: 800, cursor: "pointer", fontSize: 13 }}>
+        🛒 Agregar al carrito
+      </button>
+    ) : (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, background: "#fff7ed", borderRadius: 8, padding: "4px" }}>
+        <button onClick={() => quitar(key)}
+          style={{ width: 32, height: 32, border: "none", background: "#f97316", color: "#fff", borderRadius: 6, fontWeight: 900, cursor: "pointer", fontSize: 16 }}>−</button>
+        <span style={{ fontWeight: 900, fontSize: 16, color: "#f97316" }}>{cantidad}</span>
+        <button onClick={() => agregar(p, varSel)}
+          style={{ width: 32, height: 32, border: "none", background: "#f97316", color: "#fff", borderRadius: 6, fontWeight: 900, cursor: "pointer", fontSize: 16 }}>+</button>
+      </div>
+    );
+  })()}
+</div>
         </div>
       </div>
     );
