@@ -1121,9 +1121,16 @@ function CatalogoCliente({ kiosko, onSalir }) {
       `}</style>
 
       {/* Header */}
-      <div style={{ background: "#f97316", padding: 20, color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-  <h2 style={{ margin: 0 }}>{kiosko.nombre}</h2>
-  {onSalir && <button onClick={onSalir} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 8, fontWeight: 700 }}>Salir</button>}
+<div>
+  {kiosko.banner && (
+    <div style={{ width: "100%", height: 160, overflow: "hidden" }}>
+      <img src={kiosko.banner} alt="banner" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+    </div>
+  )}
+  <div style={{ background: "#f97316", padding: 20, color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <h2 style={{ margin: 0 }}>{kiosko.nombre}</h2>
+    {onSalir && <button onClick={onSalir} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 8, fontWeight: 700 }}>Salir</button>}
+  </div>
 </div>
       
       {/* ... sigue el resto de tu código (filtros y el div con className="productos-grid") ... */}
