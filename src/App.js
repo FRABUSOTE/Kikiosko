@@ -1072,10 +1072,10 @@ function CatalogoCliente({ kiosko, onSalir }) {
   {p.foto ? (
     <img
       src={p.foto}
-      className="max-w-full max-h-full object-contain transition-transform duration-300 hover:scale-105"
+      className="max-w-full max-h-full object-contain mx-auto block"
     />
   ) : (
-    <span className="text-4xl">{p.emoji || "📦"}</span>
+    <span className="text-4xl opacity-60">{p.emoji || "📦"}</span>
   )}
 </div>
 </div>
