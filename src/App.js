@@ -1073,12 +1073,12 @@ function CatalogoCliente({ kiosko, onSalir }) {
     <div style={{ 
       width: "100%", 
       aspectRatio: "1 / 1",    // Obliga a que siempre mida lo mismo, haya foto o no
-      background: "#f3f4f6",   // Color gris suave si no hay foto
+      background: "#ffffff",   // Color blanco 
       display: "flex", 
       alignItems: "center", 
       justifyContent: "center", 
       overflow: "hidden",
-      padding: "10px" 
+      padding: "0px" 
     }}>
       {p.foto ? (
         <img
