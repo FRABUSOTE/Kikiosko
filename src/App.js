@@ -1068,7 +1068,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
       🔥 Oferta
     </span>
   )}
-  <div style={{ height: 140, overflow: "hidden", borderRadius: "16px 16px 0 0", background: "#fff" }}>
+  <div style={{ width: "100%", aspectRatio: "4/3", overflow: "hidden", borderRadius: "16px 16px 0 0", background: "#fff" }}>
     {p.foto
       ? <img src={p.foto} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
       : <span style={{ fontSize: 40, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>{p.emoji || "📦"}</span>
