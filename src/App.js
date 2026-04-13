@@ -1062,22 +1062,39 @@ function CatalogoCliente({ kiosko, onSalir }) {
 
     return (
       <div className="prod-card" style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-        <div style={{ position: "relative" }}>
-  {p.oferta && (
-    <span style={{ position: "absolute", top: 8, left: 8, background: "#f97316", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 999, zIndex: 1 }}>
-      🔥 Oferta
-    </span>
-  )}
- <div className="w-full h-[140px] bg-gray-100 flex items-center justify-center overflow-hidden">
-  {p.foto ? (
-    <img
-      src={p.foto}
-      className="max-w-full max-h-full object-contain mx-auto block"
-    />
-  ) : (
-    <span className="text-4xl opacity-60">{p.emoji || "📦"}</span>
-  )}
-</div>
+  <div style={{ position: "relative" }}>
+    {p.oferta && (
+      <span style={{ position: "absolute", top: 8, left: 8, background: "#f97316", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 999, zIndex: 1 }}>
+        🔥 Oferta
+      </span>
+    )}
+
+    {/* ESTE ES EL CONTENEDOR QUE ARREGLA TODO */}
+    <div style={{ 
+      width: "100%", 
+      aspectRatio: "1 / 1",    // Obliga a que siempre mida lo mismo, haya foto o no
+      background: "#f3f4f6",   // Color gris suave si no hay foto
+      display: "flex", 
+      alignItems: "center", 
+      justifyContent: "center", 
+      overflow: "hidden",
+      padding: "10px" 
+    }}>
+      {p.foto ? (
+        <img
+          src={p.foto}
+          style={{ 
+            maxWidth: "100%", 
+            maxHeight: "100%", 
+            objectFit: "contain", // Se ve completa como en "Editar"
+            display: "block" 
+          }}
+        />
+      ) : (
+        /* El emoji ahora también se centra gracias al flex de arriba */
+        <span style={{ fontSize: "40px", opacity: 0.6 }}>{p.emoji || "📦"}</span>
+      )}
+    </div>
 </div>
         <div style={{ padding: 12 }}>
           <p style={{ fontWeight: 800, fontSize: 13, margin: 0 }}>{p.nombre}</p>
