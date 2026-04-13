@@ -1070,7 +1070,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
   )}
   <div style={{ height: 140, overflow: "hidden", borderRadius: "16px 16px 0 0", background: "#fff" }}>
     {p.foto
-      ? <img src={p.foto} style={{ width: "100%", height: "140px", objectFit: "contain", background: "#fff", display: "block" }} />
+      ? <img src={p.foto} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
       : <span style={{ fontSize: 40, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>{p.emoji || "📦"}</span>
     }
   </div>
@@ -1098,7 +1098,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
     return cantidad === 0 ? (
       <button onClick={() => agregar(p, varSel)}
         style={{ width: "100%", marginTop: 8, background: "#f97316", color: "#fff", border: "none", padding: "10px", borderRadius: 8, fontWeight: 800, cursor: "pointer", fontSize: 13 }}>
-        Agregar al carrito
+        + Agregar 
       </button>
     ) : (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, background: "#fff7ed", borderRadius: 8, padding: "4px" }}>
