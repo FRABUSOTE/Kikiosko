@@ -1070,14 +1070,14 @@ function CatalogoCliente({ kiosko, onSalir }) {
   )}
   <div style={{ 
   width: "100%", 
-  aspectRatio: "1 / 1", // Esto lo hace un cuadrado perfecto automáticamente
+  aspectRatio: "1 / 0.8", // Esto lo hace un cuadrado perfecto automáticamente
   overflow: "hidden", 
   borderRadius: "16px 16px 0 0", 
   background: "#fff", 
   display: "flex",          // Importante para centrar
   alignItems: "center",      // Centra verticalmente
   justifyContent: "center",   // Centra horizontalmente
-  padding: "12px"            // Evita que el producto toque los bordes
+  padding: "4px"            // Evita que el producto toque los bordes
 }}>
   {p.foto ? (
     <img 
