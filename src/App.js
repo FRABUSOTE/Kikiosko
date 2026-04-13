@@ -1068,29 +1068,14 @@ function CatalogoCliente({ kiosko, onSalir }) {
       🔥 Oferta
     </span>
   )}
-  <div style={{ 
-  width: "100%", 
-  aspectRatio: "1 / 0.8", // Esto lo hace un cuadrado perfecto automáticamente
-  overflow: "hidden", 
-  borderRadius: "16px 16px 0 0", 
-  background: "#fff", 
-  display: "flex",          // Importante para centrar
-  alignItems: "center",      // Centra verticalmente
-  justifyContent: "center",   // Centra horizontalmente
-  padding: "4px"            // Evita que el producto toque los bordes
-}}>
+ <div className="w-full aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden p-2">
   {p.foto ? (
-    <img 
-      src={p.foto} 
-      style={{ 
-        maxWidth: "100%", 
-        maxHeight: "100%", 
-        objectFit: "contain", // Muestra el producto COMPLETO siempre
-        display: "block" 
-      }} 
+    <img
+      src={p.foto}
+      className="max-w-full max-h-full object-contain transition-transform duration-300 hover:scale-105"
     />
   ) : (
-    <span style={{ fontSize: 40 }}>{p.emoji || "📦"}</span>
+    <span className="text-4xl">{p.emoji || "📦"}</span>
   )}
 </div>
 </div>
