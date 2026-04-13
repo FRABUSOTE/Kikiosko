@@ -1068,7 +1068,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
       🔥 Oferta
     </span>
   )}
- <div className="w-full aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden p-2">
+ <div className="w-full h-[140px] bg-gray-100 flex items-center justify-center overflow-hidden">
   {p.foto ? (
     <img
       src={p.foto}
