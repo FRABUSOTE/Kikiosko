@@ -1069,11 +1069,11 @@ function CatalogoCliente({ kiosko, onSalir }) {
     </span>
   )}
   <div style={{ width: "100%", height: 160, overflow: "hidden", borderRadius: "16px 16px 0 0", background: "#fff" }}>
-    {p.foto
-      ? <img src={p.foto} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", display: "block" }} />
-      : <span style={{ fontSize: 40, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>{p.emoji || "📦"}</span>
-    }
-  </div>
+  {p.foto
+    ? <img src={p.foto} style={{ width: "100%", height: "160px", objectFit: "cover", objectPosition: "center", display: "block" }} />
+    : <span style={{ fontSize: 40, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>{p.emoji || "📦"}</span>
+  }
+</div>
 </div>
         <div style={{ padding: 12 }}>
           <p style={{ fontWeight: 800, fontSize: 13, margin: 0 }}>{p.nombre}</p>
