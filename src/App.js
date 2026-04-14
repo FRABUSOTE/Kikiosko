@@ -1159,7 +1159,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
 
       {/* Header */}
 <div style={{ position: "relative" }}>
-  {kiosko.banner ? (
+    {kiosko.banner && kiosko.plan !== "Básico" ? (
     <div style={{ 
       width: "100%", 
       height: "clamp(180px, 25vw, 320px)",  // 👈 responsivo: mín 180, ideal 25vw, máx 320
