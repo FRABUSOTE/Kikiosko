@@ -1082,15 +1082,15 @@ function CatalogoCliente({ kiosko, onSalir }) {
     }}>
       {p.foto ? (
         <img
-          src={p.foto}
-          style={{ 
-            maxWidth: "100%", 
-            maxHeight: "100%", 
-            objectFit: "contain", // Se ve completa como en "Editar"
-            display: "block" 
-            borderRadius: "12px", //
-          }}
-        />
+  src={p.foto}
+  style={{ 
+    maxWidth: "100%", 
+    maxHeight: "100%", 
+    objectFit: "contain",
+    display: "block",      // <--- COMA AGREGADA
+    borderRadius: "20px",  // <--- Te sugiero subirlo a 20px para que se note más
+  }}
+/>
       ) : (
         /* El emoji ahora también se centra gracias al flex de arriba */
         <span style={{ fontSize: "40px", opacity: 0.6 }}>{p.emoji || "📦"}</span>
