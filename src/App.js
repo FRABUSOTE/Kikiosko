@@ -690,7 +690,7 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
     }
     actualizarProductos(nuevos);
     setModalProducto(null);
-    setNuevoProducto({ nombre: "", precio: "", categoria: "Bebidas", emoji: "🛒", stock: true, cantidad: 0, foto: null, fotoFile: null });
+    setNuevoProducto({ nombre: "", precio: "", categoria: categoriasParaMostrar[0], emoji: "🛒", stock: true, cantidad: 0, foto: null, fotoFile: null });
   };
 
   return (
@@ -725,7 +725,7 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
         <div style={{ display: "flex", gap: 8 }}>
           {kiosko.plan !== "Básico" ? (
   <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "8px 14px", fontSize: 12 }}
-    onClick={() => { setModalProducto({}); setNuevoProducto({ nombre: "", precio: "", categoria: "Bebidas", emoji: "🛒", stock: true, cantidad: 0, foto: null, fotoFile: null }); }}>
+    onClick={() => { setModalProducto({}); setNuevoProducto({ nombre: "", precio: "", categoria: categoriasParaMostrar[0], emoji: "🛒", stock: true, cantidad: 0, foto: null, fotoFile: null }); }}>
     + Agregar producto
   </button>
 ) : (
