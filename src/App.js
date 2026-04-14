@@ -1276,57 +1276,115 @@ function CatalogoCliente({ kiosko, onSalir }) {
 </button>
       )}
 
-      {/* Modal del Carrito con [+] y [-] */}
-      {verCarrito && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", zIndex: 100 }}>
-          <div style={{ background: "#fff", width: "100%", padding: "25px 20px", borderTopLeftRadius: 25, borderTopRightRadius: 25, maxHeight: "85vh", overflowY: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontWeight: 900 }}>🛒 Tu pedido</h3>
-              <button onClick={() => setVerCarrito(false)} style={{ border: "none", background: "#f3f4f6", width: 35, height: 35, borderRadius: "50%", fontSize: 18 }}>✕</button>
-            </div>
+      {/* Modal del Carrito MEJORADO */}
+{verCarrito && (
+  <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", zIndex: 100 }}>
+    <div style={{ background: "#fff", width: "100%", borderTopLeftRadius: 25, borderTopRightRadius: 25, maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
+      
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 20px 14px", borderBottom: "1px solid #e5e7eb" }}>
+        <h3 style={{ margin: 0, fontWeight: 900, fontSize: 20 }}>🛒 Tu pedido</h3>
+        <button onClick={() => setVerCarrito(false)} style={{ border: "none", background: "#f3f4f6", width: 35, height: 35, borderRadius: "50%", fontSize: 16, cursor: "pointer" }}>✕</button>
+      </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {listaCarrito.map(([key, item]) => (
-                <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ margin: 0, fontWeight: 800, fontSize: 14 }}>{item.nombre}</p>
-                    <p style={{ margin: 0, color: "#f97316", fontSize: 13, fontWeight: 700 }}>S/. {(item.precio * item.cantidad).toFixed(2)}</p>
-                  </div>
-                  
-                  {/* BOTONES DE CONTROL DE CANTIDAD */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#f8fafc", padding: "4px 8px", borderRadius: 10 }}>
-                    <button onClick={() => quitar(key)}
-                      style={{ border: "none", background: "#e2e8f0", width: 28, height: 28, borderRadius: 6, fontWeight: 900, cursor: "pointer" }}>-</button>
-                    <span style={{ fontWeight: 900, minWidth: 20, textAlign: "center" }}>{item.cantidad}</span>
-                    <button onClick={() => agregar({id: item.id, nombre: item.nombre.split(' (')[0]}, item.variacionObj)}
-                      style={{ border: "none", background: "#f97316", color: "#fff", width: 28, height: 28, borderRadius: 6, fontWeight: 900, cursor: "pointer" }}>+</button>
-                  </div>
-                </div>
-              ))}
-            </div>
+      {/* Scroll area */}
+      <div style={{ overflowY: "auto", flex: 1 }}>
 
-            <div style={{ margin: "20px 0", padding: "15px 0", borderTop: "2px solid #f97316", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontWeight: 800, fontSize: 16 }}>Total a pagar:</span>
-              <span style={{ fontWeight: 900, color: "#f97316", fontSize: 24 }}>S/. {totalPrecio.toFixed(2)}</span>
+        {/* Productos */}
+        <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb" }}>
+          {listaCarrito.map(([key, item]) => (
+            <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontWeight: 800, fontSize: 14 }}>{item.nombre}</p>
+                <p style={{ margin: 0, color: "#f97316", fontSize: 13, fontWeight: 700 }}>S/. {(item.precio * item.cantidad).toFixed(2)}</p>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <button onClick={() => quitar(key)} style={{ border: "1.5px solid #e5e7eb", background: "#f9fafb", width: 30, height: 30, borderRadius: 8, fontWeight: 900, cursor: "pointer", fontSize: 16 }}>−</button>
+                <span style={{ fontWeight: 900, minWidth: 20, textAlign: "center" }}>{item.cantidad}</span>
+                <button onClick={() => agregar({ id: item.id, nombre: item.nombre.split(' (')[0] }, item.variacionObj)} style={{ border: "none", background: "#f97316", color: "#fff", width: 30, height: 30, borderRadius: 8, fontWeight: 900, cursor: "pointer", fontSize: 16 }}>+</button>
+              </div>
             </div>
-
-            <input 
-              style={{ width: "100%", padding: 14, borderRadius: 12, border: "1.5px solid #fed7aa", marginBottom: 15, boxSizing: "border-box", outline: "none", fontSize: 14, background: "#fff7ed" }} 
-              placeholder="Escribe tu nombre aquí..." 
-              value={nombreCliente} 
-              onChange={e => setNombreCliente(e.target.value)} 
-            />
-            
-            <button onClick={enviarPedido}
-              style={{ width: "100%", background: "#25D366", color: "#fff", padding: 18, borderRadius: 15, border: "none", fontWeight: 800, fontSize: 16, boxShadow: "0 4px 15px rgba(37,211,102,0.3)" }}>
-              📱 Enviar por WhatsApp
-            </button>
+          ))}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 16, marginTop: 10, alignItems: "center" }}>
+            <span style={{ fontSize: 13, color: "#6b7280" }}>Subtotal</span>
+            <span style={{ fontSize: 15, fontWeight: 700 }}>S/. {totalPrecio.toFixed(2)}</span>
           </div>
         </div>
-      )}
+
+        {/* Tipo de entrega */}
+        <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 18 }}>🚚</span>
+            <span style={{ fontWeight: 700, fontSize: 15, flex: 1 }}>Tipo de entrega</span>
+            <span style={{ fontSize: 11, fontWeight: 700, background: "#f0fdf4", color: "#16a34a", padding: "2px 8px", borderRadius: 20 }}>Obligatorio</span>
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            {[{ id: "delivery", label: "🚚 Delivery" }, { id: "tienda", label: "🏪 Recojo en tienda" }].map(opt => (
+              <button key={opt.id} onClick={() => setTipoEntrega(opt.id)}
+                style={{ flex: 1, padding: "10px 0", borderRadius: 12, border: `1.5px solid ${tipoEntrega === opt.id ? "#16a34a" : "#e5e7eb"}`, background: tipoEntrega === opt.id ? "#f0fdf4" : "#f9fafb", fontWeight: 600, fontSize: 13, cursor: "pointer", color: tipoEntrega === opt.id ? "#16a34a" : "#6b7280" }}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {tipoEntrega === "delivery" && (
+            <div style={{ display: "flex", alignItems: "center", marginTop: 10, border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "10px 14px", gap: 8, background: "#f9fafb" }}>
+              <span>📍</span>
+              <input style={{ border: "none", outline: "none", fontSize: 14, background: "transparent", flex: 1 }}
+                placeholder="Ingresa tu dirección"
+                value={direccion} onChange={e => setDireccion(e.target.value)} />
+            </div>
+          )}
+        </div>
+
+        {/* Medio de pago */}
+        <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 18 }}>💳</span>
+            <span style={{ fontWeight: 700, fontSize: 15, flex: 1 }}>Medio de pago</span>
+            <span style={{ fontSize: 11, fontWeight: 700, background: "#f0fdf4", color: "#16a34a", padding: "2px 8px", borderRadius: 20 }}>Obligatorio</span>
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            {[{ id: "efectivo", label: "Efectivo", icon: "💵" }, { id: "yape", label: "Yape / Plin", icon: "📱" }, { id: "transferencia", label: "Transferencia", icon: "🏦" }].map(p => (
+              <button key={p.id} onClick={() => setMedioPago(p.id)}
+                style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "12px 4px", borderRadius: 12, border: `1.5px solid ${medioPago === p.id ? "#16a34a" : "#e5e7eb"}`, background: medioPago === p.id ? "#f0fdf4" : "#f9fafb", cursor: "pointer" }}>
+                <span style={{ fontSize: 22, marginBottom: 4 }}>{p.icon}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#111827" }}>{p.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Nota */}
+        <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb" }}>
+          <textarea style={{ width: "100%", boxSizing: "border-box", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "12px 14px", fontSize: 13, background: "#f9fafb", resize: "none", outline: "none", fontFamily: "inherit" }}
+            placeholder="¿Alguna indicación? (opcional)&#10;Ej: sin cebolla, entregar en puerta"
+            rows={3} value={nota} onChange={e => setNota(e.target.value)} />
+        </div>
+
+        {/* Nombre */}
+        <div style={{ padding: "14px 20px" }}>
+          <input style={{ width: "100%", padding: 14, borderRadius: 12, border: "1.5px solid #fed7aa", boxSizing: "border-box", outline: "none", fontSize: 14, background: "#fff7ed" }}
+            placeholder="Escribe tu nombre aquí..."
+            value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} />
+        </div>
+
+      </div>
+
+      {/* Footer fijo */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px 20px", borderTop: "1px solid #e5e7eb", background: "#fff" }}>
+        <div>
+          <div style={{ fontSize: 12, color: "#6b7280", fontWeight: 600 }}>Total a pagar</div>
+          <div style={{ fontSize: 22, fontWeight: 900 }}>S/. {totalPrecio.toFixed(2)}</div>
+        </div>
+        <button onClick={enviarPedido}
+          style={{ display: "flex", alignItems: "center", gap: 8, background: "#25D366", color: "#fff", border: "none", borderRadius: 14, padding: "14px 20px", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
+          📲 Enviar por WhatsApp
+        </button>
+      </div>
+
     </div>
-  );
-}
+  </div>
+)}
 // ─── APP PRINCIPAL ───
 export default function App() {
   const [pantalla, setPantalla] = useState("login");
