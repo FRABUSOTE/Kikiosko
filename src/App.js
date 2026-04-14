@@ -1088,7 +1088,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
             maxHeight: "100%", 
             objectFit: "contain", // Se ve completa como en "Editar"
             display: "block" 
-            borderRadius: "12px" //
+            borderRadius: "12px", //
           }}
         />
       ) : (
