@@ -1394,6 +1394,10 @@ export default function App() {
   const [productosActuales, setProductosActuales] = useState([]);
   const [cargandoPublico, setCargandoPublico] = useState(false);
   const [kioskoPorSlug, setKioskoPorSlug] = useState(null);
+  const [tipoEntrega, setTipoEntrega] = useState("delivery");
+  const [medioPago, setMedioPago] = useState("efectivo");
+  const [direccion, setDireccion] = useState("");
+  const [nota, setNota] = useState("");
 
   // Detectar link público tipo /#/rosita
   const hash = window.location.hash;
