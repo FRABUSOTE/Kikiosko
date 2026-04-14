@@ -996,16 +996,19 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
 }
 
 function CatalogoCliente({ kiosko, onSalir }) {
-  const [carrito, setCarrito] = useState({}); // Volvemos a objeto para manejar cantidades fácilmente
+  const [carrito, setCarrito] = useState({});
   const [categoria, setCategoria] = useState("Todos");
   const [busqueda, setBusqueda] = useState("");
   const [nombreCliente, setNombreCliente] = useState("");
   const [verCarrito, setVerCarrito] = useState(false);
+  // ✅ Estados nuevos AQUÍ dentro, no en App
+  const [tipoEntrega, setTipoEntrega] = useState("delivery");
+  const [medioPago, setMedioPago] = useState("efectivo");
+  const [direccion, setDireccion] = useState("");
+  const [nota, setNota] = useState("");
 
-  // 1. AGREGAR: Usamos una llave única para agrupar (ID + Nombre de Variación)
   const agregar = (p, variacion) => {
     const key = variacion ? `${p.id}-${variacion.nombre}` : `${p.id}-unica`;
-    
     setCarrito(prev => {
       const existente = prev[key];
       if (existente) {
@@ -1018,14 +1021,13 @@ function CatalogoCliente({ kiosko, onSalir }) {
             nombre: variacion ? `${p.nombre} (${variacion.nombre})` : p.nombre,
             precio: variacion ? Number(variacion.precio) : Number(p.precio),
             cantidad: 1,
-            variacionObj: variacion // Guardamos la referencia por si acaso
+            variacionObj: variacion
           }
         };
       }
     });
   };
 
-  // 2. QUITAR (REDUCIR): Si llega a 0, se elimina del objeto
   const quitar = (key) => {
     setCarrito(prev => {
       const nuevo = { ...prev };
@@ -1038,23 +1040,29 @@ function CatalogoCliente({ kiosko, onSalir }) {
     });
   };
 
-  // 3. CÁLCULOS
   const listaCarrito = Object.entries(carrito);
   const totalPrecio = listaCarrito.reduce((s, [_, item]) => s + (item.precio * item.cantidad), 0);
   const totalItems = listaCarrito.reduce((s, [_, item]) => s + item.cantidad, 0);
 
   const enviarPedido = async () => {
     if (listaCarrito.length === 0) return;
+    if (!nombreCliente.trim()) return alert("Por favor escribe tu nombre");
+    if (tipoEntrega === "delivery" && !direccion.trim()) return alert("Ingresa tu dirección de delivery");
 
     const lineas = listaCarrito
       .map(([_, item]) => `• ${item.nombre} x${item.cantidad} — S/. ${(item.precio * item.cantidad).toFixed(2)}`)
       .join("\n");
 
-    const msg = encodeURIComponent(`*Nuevo Pedido*\n\n${lineas}\n\n*Total: S/. ${totalPrecio.toFixed(2)}*\n*Cliente:* ${nombreCliente || "No indicado"}`);
-    
+    const entregaTexto = tipoEntrega === "delivery" ? `Delivery — ${direccion}` : "Recojo en tienda";
+    const pagoTexto = { efectivo: "Efectivo", yape: "Yape / Plin", transferencia: "Transferencia" }[medioPago];
+
+    const msg = encodeURIComponent(
+      `*Nuevo Pedido*\n\n${lineas}\n\n*Total: S/. ${totalPrecio.toFixed(2)}*\n*Cliente:* ${nombreCliente}\n*Entrega:* ${entregaTexto}\n*Pago:* ${pagoTexto}${nota ? `\n*Nota:* ${nota}` : ""}`
+    );
+
     await supabase.from("pedidos").insert([{
       kiosko_id: kiosko.id,
-      nombre_cliente: nombreCliente || "Sin nombre",
+      nombre_cliente: nombreCliente,
       detalle: lineas,
       total: totalPrecio,
     }]);
@@ -1062,187 +1070,94 @@ function CatalogoCliente({ kiosko, onSalir }) {
     window.open(`https://wa.me/51${kiosko.whatsapp}?text=${msg}`, "_blank");
   };
 
-  // --- COMPONENTE DE PRODUCTO (CATÁLOGO) ---
   const ProductoCard = ({ p }) => {
     const [varSel, setVarSel] = useState(p.variaciones?.length > 0 ? p.variaciones[0] : null);
     const precioDisplay = varSel ? Number(varSel.precio) : Number(p.precio);
 
     return (
       <div className="prod-card" style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-  <div style={{ position: "relative" }}>
-    {p.oferta && (
-      <span style={{ position: "absolute", top: 8, left: 8, background: "#f97316", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 999, zIndex: 1 }}>
-        🔥 Oferta
-      </span>
-    )}
-
-    {/* ESTE ES EL CONTENEDOR QUE ARREGLA TODO */}
-    <div style={{ 
-      width: "100%", 
-      aspectRatio: "1 / 1",    // Obliga a que siempre mida lo mismo, haya foto o no
-      background: "#ffffff",   // Color blanco 
-      display: "flex", 
-      alignItems: "center", 
-      justifyContent: "center", 
-      overflow: "hidden",
-      padding: "0px" 
-    }}>
-      {p.foto ? (
-        <img
-  src={p.foto}
-  style={{ 
-    maxWidth: "100%", 
-    maxHeight: "100%", 
-    objectFit: "contain",
-    display: "block",      // <--- COMA AGREGADA
-    borderRadius: "20px",  // <--- Te sugiero subirlo a 20px para que se note más
-  }}
-/>
-      ) : (
-        /* El emoji ahora también se centra gracias al flex de arriba */
-        <span style={{ fontSize: "40px", opacity: 0.6 }}>{p.emoji || "📦"}</span>
-      )}
-    </div>
-</div>
+        <div style={{ position: "relative" }}>
+          {p.oferta && (
+            <span style={{ position: "absolute", top: 8, left: 8, background: "#f97316", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 999, zIndex: 1 }}>
+              🔥 Oferta
+            </span>
+          )}
+          <div style={{ width: "100%", aspectRatio: "1 / 1", background: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", padding: "0px" }}>
+            {p.foto ? (
+              <img src={p.foto} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block", borderRadius: "20px" }} />
+            ) : (
+              <span style={{ fontSize: "40px", opacity: 0.6 }}>{p.emoji || "📦"}</span>
+            )}
+          </div>
+        </div>
         <div style={{ padding: 12 }}>
           <p style={{ fontWeight: 800, fontSize: 13, margin: 0 }}>{p.nombre}</p>
           {p.variaciones?.length > 0 && (
             <div style={{ display: "flex", gap: 5, margin: "8px 0", flexWrap: "wrap" }}>
               {p.variaciones.map((v, i) => (
                 <button key={i} onClick={() => setVarSel(v)}
-                  style={{ 
-                    fontSize: 10, padding: "4px 8px", borderRadius: 6, border: "none", cursor: "pointer",
+                  style={{ fontSize: 10, padding: "4px 8px", borderRadius: 6, border: "none", cursor: "pointer",
                     background: varSel?.nombre === v.nombre ? "#f97316" : "#eee",
                     color: varSel?.nombre === v.nombre ? "#fff" : "#666"
-                  }}> {v.nombre} </button>
+                  }}>{v.nombre}</button>
               ))}
             </div>
           )}
           <div style={{ marginTop: 10 }}>
-  <span style={{ fontWeight: 900, color: "#f97316", fontSize: 15 }}>S/. {precioDisplay.toFixed(2)}</span>
-  
-  {(() => {
-    const key = varSel ? `${p.id}-${varSel.nombre}` : `${p.id}-unica`;
-    const cantidad = carrito[key]?.cantidad || 0;
-    return cantidad === 0 ? (
-      <button onClick={() => agregar(p, varSel)}
-        style={{ width: "100%", marginTop: 8, background: "#f97316", color: "#fff", border: "none", padding: "10px", borderRadius: 8, fontWeight: 800, cursor: "pointer", fontSize: 13 }}>
-        + Agregar 
-      </button>
-    ) : (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, background: "#fff7ed", borderRadius: 8, padding: "4px" }}>
-  <button onClick={() => quitar(key)}
-    style={{ width: 26, height: 26, border: "none", background: "#f97316", color: "#fff", borderRadius: 6, fontWeight: 900, cursor: "pointer", fontSize: 13 }}>−</button>
-  <span style={{ fontWeight: 900, fontSize: 13, color: "#f97316" }}>{cantidad}</span>
-  <button onClick={() => agregar(p, varSel)}
-    style={{ width: 26, height: 26, border: "none", background: "#f97316", color: "#fff", borderRadius: 6, fontWeight: 900, cursor: "pointer", fontSize: 13 }}>+</button>
-</div>
-    );
-  })()}
-</div>
+            <span style={{ fontWeight: 900, color: "#f97316", fontSize: 15 }}>S/. {precioDisplay.toFixed(2)}</span>
+            {(() => {
+              const key = varSel ? `${p.id}-${varSel.nombre}` : `${p.id}-unica`;
+              const cantidad = carrito[key]?.cantidad || 0;
+              return cantidad === 0 ? (
+                <button onClick={() => agregar(p, varSel)}
+                  style={{ width: "100%", marginTop: 8, background: "#f97316", color: "#fff", border: "none", padding: "10px", borderRadius: 8, fontWeight: 800, cursor: "pointer", fontSize: 13 }}>
+                  + Agregar
+                </button>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, background: "#fff7ed", borderRadius: 8, padding: "4px" }}>
+                  <button onClick={() => quitar(key)} style={{ width: 26, height: 26, border: "none", background: "#f97316", color: "#fff", borderRadius: 6, fontWeight: 900, cursor: "pointer", fontSize: 13 }}>−</button>
+                  <span style={{ fontWeight: 900, fontSize: 13, color: "#f97316" }}>{cantidad}</span>
+                  <button onClick={() => agregar(p, varSel)} style={{ width: 26, height: 26, border: "none", background: "#f97316", color: "#fff", borderRadius: 6, fontWeight: 900, cursor: "pointer", fontSize: 13 }}>+</button>
+                </div>
+              );
+            })()}
+          </div>
         </div>
       </div>
     );
   };
 
- // Categorías únicas de los productos
   const categorias = ["Todos", ...new Set(kiosko.productos.map(p => p.categoria).filter(Boolean))];
   const productosFiltrados = categoria === "Todos" ? kiosko.productos : kiosko.productos.filter(p => p.categoria === categoria);
 
   return (
     <div style={{ minHeight: "100vh", background: "#fff7ed", fontFamily: "Nunito, sans-serif" }}>
-      
-      {/* --- ESTILOS PARA LAS 2 COLUMNAS Y RESPONSIVE --- */}
       <style>{`
         @media (min-width: 600px) {
-          .productos-grid {
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
-          }
+          .productos-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; }
         }
-        .prod-card img {
-          height: 120px !important; 
-        }
+        .prod-card img { height: 120px !important; }
       `}</style>
 
       {/* Header */}
-<div style={{ position: "relative" }}>
-    {kiosko.banner && kiosko.plan !== "Básico" ? (
-    <div style={{ 
-      width: "100%", 
-      height: "clamp(180px, 25vw, 320px)",  // 👈 responsivo: mín 180, ideal 25vw, máx 320
-      overflow: "hidden", 
-      position: "relative" 
-    }}>
-      <img 
-        src={kiosko.banner} 
-        alt="banner" 
-        style={{ 
-          width: "100%", 
-          height: "100%", 
-          objectFit: "cover",
-          objectPosition: "center center"  // 👈 centra la imagen en ambos ejes
-        }} 
-      />
-      <div style={{ 
-        position: "absolute", 
-        bottom: 0, left: 0, right: 0, 
-        background: "linear-gradient(transparent, rgba(0,0,0,0.6))", 
-        padding: "30px 20px 14px 20px", 
-        display: "flex", 
-        justifyContent: "space-between", 
-        alignItems: "flex-end" 
-      }}>
-        <h2 style={{ 
-          margin: 0, 
-          color: "#fff", 
-          fontSize: "clamp(16px, 2.5vw, 24px)",  // 👈 texto también responsivo
-          fontWeight: 900, 
-          textShadow: "0 1px 4px rgba(0,0,0,0.4)" 
-        }}>
-          {kiosko.nombre}
-        </h2>
-        {onSalir && (
-          <button onClick={onSalir} style={{ 
-            background: "rgba(255,255,255,0.2)", 
-            border: "none", 
-            color: "#fff", 
-            padding: "6px 12px", 
-            borderRadius: 8, 
-            fontWeight: 700, 
-            fontSize: 12 
-          }}>
-            Salir
-          </button>
+      <div style={{ position: "relative" }}>
+        {kiosko.banner && kiosko.plan !== "Básico" ? (
+          <div style={{ width: "100%", height: "clamp(180px, 25vw, 320px)", overflow: "hidden", position: "relative" }}>
+            <img src={kiosko.banner} alt="banner" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center center" }} />
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(transparent, rgba(0,0,0,0.6))", padding: "30px 20px 14px 20px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+              <h2 style={{ margin: 0, color: "#fff", fontSize: "clamp(16px, 2.5vw, 24px)", fontWeight: 900, textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}>{kiosko.nombre}</h2>
+              {onSalir && <button onClick={onSalir} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 8, fontWeight: 700, fontSize: 12 }}>Salir</button>}
+            </div>
+          </div>
+        ) : (
+          <div style={{ background: "#f97316", padding: 20, color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <h2 style={{ margin: 0 }}>{kiosko.nombre}</h2>
+            {onSalir && <button onClick={onSalir} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 8, fontWeight: 700 }}>Salir</button>}
+          </div>
         )}
       </div>
-    </div>
-  ) : (
-    <div style={{ 
-      background: "#f97316", 
-      padding: 20, 
-      color: "#fff", 
-      display: "flex", 
-      justifyContent: "space-between", 
-      alignItems: "center" 
-    }}>
-      <h2 style={{ margin: 0 }}>{kiosko.nombre}</h2>
-      {onSalir && (
-        <button onClick={onSalir} style={{ 
-          background: "rgba(255,255,255,0.2)", 
-          border: "none", 
-          color: "#fff", 
-          padding: "6px 12px", 
-          borderRadius: 8, 
-          fontWeight: 700 
-        }}>
-          Salir
-        </button>
-      )}
-    </div>
-  )}
-</div>
 
-      {/* Filtro de categorías */}
+      {/* Filtro categorías */}
       <div style={{ display: "flex", gap: 8, padding: "12px 15px", overflowX: "auto", background: "#fff", borderBottom: "1px solid #fed7aa" }}>
         {categorias.map(cat => (
           <button key={cat} onClick={() => setCategoria(cat)}
@@ -1256,135 +1171,133 @@ function CatalogoCliente({ kiosko, onSalir }) {
         ))}
       </div>
 
-      {/* Grid de Productos */}
-<div className="productos-grid" style={{ 
-  padding: 15, 
-  paddingBottom: 100,
-  display: "grid", 
-  gridTemplateColumns: "repeat(2, 1fr)", 
-  gap: 12 
-}}>
-  {productosFiltrados.map(p => <ProductoCard key={p.id} p={p} />)}
-</div>
+      {/* Grid productos */}
+      <div className="productos-grid" style={{ padding: 15, paddingBottom: 100, display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+        {productosFiltrados.map(p => <ProductoCard key={p.id} p={p} />)}
+      </div>
 
-      {/* Botón Flotante de Ver Pedido */}
+      {/* Botón flotante */}
       {totalItems > 0 && (
         <button onClick={() => setVerCarrito(true)}
-  style={{ position: "fixed", bottom: 16, left: 16, right: 16, background: "#f97316", color: "#fff", padding: "14px 16px", borderRadius: 12, border: "none", fontWeight: 800, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14, boxShadow: "0 4px 12px rgba(249,115,22,0.3)", zIndex: 50 }}>
-  <span>🛒 Pedido ({totalItems})</span>
-  <span>S/. {totalPrecio.toFixed(2)}</span>
-</button>
+          style={{ position: "fixed", bottom: 16, left: 16, right: 16, background: "#f97316", color: "#fff", padding: "14px 16px", borderRadius: 12, border: "none", fontWeight: 800, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14, boxShadow: "0 4px 12px rgba(249,115,22,0.3)", zIndex: 50 }}>
+          <span>🛒 Pedido ({totalItems})</span>
+          <span>S/. {totalPrecio.toFixed(2)}</span>
+        </button>
       )}
 
-      {/* Modal del Carrito MEJORADO */}
-{verCarrito && (
-  <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", zIndex: 100 }}>
-    <div style={{ background: "#fff", width: "100%", borderTopLeftRadius: 25, borderTopRightRadius: 25, maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
-      
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 20px 14px", borderBottom: "1px solid #e5e7eb" }}>
-        <h3 style={{ margin: 0, fontWeight: 900, fontSize: 20 }}>🛒 Tu pedido</h3>
-        <button onClick={() => setVerCarrito(false)} style={{ border: "none", background: "#f3f4f6", width: 35, height: 35, borderRadius: "50%", fontSize: 16, cursor: "pointer" }}>✕</button>
-      </div>
+      {/* Modal carrito mejorado */}
+      {verCarrito && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", zIndex: 100 }}>
+          <div style={{ background: "#fff", width: "100%", borderTopLeftRadius: 25, borderTopRightRadius: 25, maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
 
-      {/* Scroll area */}
-      <div style={{ overflowY: "auto", flex: 1 }}>
-
-        {/* Productos */}
-        <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb" }}>
-          {listaCarrito.map(([key, item]) => (
-            <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
-              <div style={{ flex: 1 }}>
-                <p style={{ margin: 0, fontWeight: 800, fontSize: 14 }}>{item.nombre}</p>
-                <p style={{ margin: 0, color: "#f97316", fontSize: 13, fontWeight: 700 }}>S/. {(item.precio * item.cantidad).toFixed(2)}</p>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <button onClick={() => quitar(key)} style={{ border: "1.5px solid #e5e7eb", background: "#f9fafb", width: 30, height: 30, borderRadius: 8, fontWeight: 900, cursor: "pointer", fontSize: 16 }}>−</button>
-                <span style={{ fontWeight: 900, minWidth: 20, textAlign: "center" }}>{item.cantidad}</span>
-                <button onClick={() => agregar({ id: item.id, nombre: item.nombre.split(' (')[0] }, item.variacionObj)} style={{ border: "none", background: "#f97316", color: "#fff", width: 30, height: 30, borderRadius: 8, fontWeight: 900, cursor: "pointer", fontSize: 16 }}>+</button>
-              </div>
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 20px 14px", borderBottom: "1px solid #e5e7eb" }}>
+              <h3 style={{ margin: 0, fontWeight: 900, fontSize: 20 }}>🛒 Tu pedido</h3>
+              <button onClick={() => setVerCarrito(false)} style={{ border: "none", background: "#f3f4f6", width: 35, height: 35, borderRadius: "50%", fontSize: 16, cursor: "pointer" }}>✕</button>
             </div>
-          ))}
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 16, marginTop: 10, alignItems: "center" }}>
-            <span style={{ fontSize: 13, color: "#6b7280" }}>Subtotal</span>
-            <span style={{ fontSize: 15, fontWeight: 700 }}>S/. {totalPrecio.toFixed(2)}</span>
-          </div>
-        </div>
 
-        {/* Tipo de entrega */}
-        <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-            <span style={{ fontSize: 18 }}>🚚</span>
-            <span style={{ fontWeight: 700, fontSize: 15, flex: 1 }}>Tipo de entrega</span>
-            <span style={{ fontSize: 11, fontWeight: 700, background: "#f0fdf4", color: "#16a34a", padding: "2px 8px", borderRadius: 20 }}>Obligatorio</span>
-          </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            {[{ id: "delivery", label: "🚚 Delivery" }, { id: "tienda", label: "🏪 Recojo en tienda" }].map(opt => (
-              <button key={opt.id} onClick={() => setTipoEntrega(opt.id)}
-                style={{ flex: 1, padding: "10px 0", borderRadius: 12, border: `1.5px solid ${tipoEntrega === opt.id ? "#16a34a" : "#e5e7eb"}`, background: tipoEntrega === opt.id ? "#f0fdf4" : "#f9fafb", fontWeight: 600, fontSize: 13, cursor: "pointer", color: tipoEntrega === opt.id ? "#16a34a" : "#6b7280" }}>
-                {opt.label}
-              </button>
-            ))}
-          </div>
-          {tipoEntrega === "delivery" && (
-            <div style={{ display: "flex", alignItems: "center", marginTop: 10, border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "10px 14px", gap: 8, background: "#f9fafb" }}>
-              <span>📍</span>
-              <input style={{ border: "none", outline: "none", fontSize: 14, background: "transparent", flex: 1 }}
-                placeholder="Ingresa tu dirección"
-                value={direccion} onChange={e => setDireccion(e.target.value)} />
+            {/* Scroll area */}
+            <div style={{ overflowY: "auto", flex: 1 }}>
+
+              {/* Productos */}
+              <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb" }}>
+                {listaCarrito.map(([key, item]) => (
+                  <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ margin: 0, fontWeight: 800, fontSize: 14 }}>{item.nombre}</p>
+                      <p style={{ margin: 0, color: "#f97316", fontSize: 13, fontWeight: 700 }}>S/. {(item.precio * item.cantidad).toFixed(2)}</p>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <button onClick={() => quitar(key)} style={{ border: "1.5px solid #e5e7eb", background: "#f9fafb", width: 30, height: 30, borderRadius: 8, fontWeight: 900, cursor: "pointer", fontSize: 16 }}>−</button>
+                      <span style={{ fontWeight: 900, minWidth: 20, textAlign: "center" }}>{item.cantidad}</span>
+                      <button onClick={() => agregar({ id: item.id, nombre: item.nombre.split(' (')[0] }, item.variacionObj)} style={{ border: "none", background: "#f97316", color: "#fff", width: 30, height: 30, borderRadius: 8, fontWeight: 900, cursor: "pointer", fontSize: 16 }}>+</button>
+                    </div>
+                  </div>
+                ))}
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 16, marginTop: 10, alignItems: "center" }}>
+                  <span style={{ fontSize: 13, color: "#6b7280" }}>Subtotal</span>
+                  <span style={{ fontSize: 15, fontWeight: 700 }}>S/. {totalPrecio.toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Tipo de entrega */}
+              <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  <span style={{ fontSize: 18 }}>🚚</span>
+                  <span style={{ fontWeight: 700, fontSize: 15, flex: 1 }}>Tipo de entrega</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, background: "#f0fdf4", color: "#16a34a", padding: "2px 8px", borderRadius: 20 }}>Obligatorio</span>
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  {[{ id: "delivery", label: "🚚 Delivery" }, { id: "tienda", label: "🏪 Recojo en tienda" }].map(opt => (
+                    <button key={opt.id} onClick={() => setTipoEntrega(opt.id)}
+                      style={{ flex: 1, padding: "10px 0", borderRadius: 12, border: `1.5px solid ${tipoEntrega === opt.id ? "#16a34a" : "#e5e7eb"}`, background: tipoEntrega === opt.id ? "#f0fdf4" : "#f9fafb", fontWeight: 600, fontSize: 13, cursor: "pointer", color: tipoEntrega === opt.id ? "#16a34a" : "#6b7280" }}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                {tipoEntrega === "delivery" && (
+                  <div style={{ display: "flex", alignItems: "center", marginTop: 10, border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "10px 14px", gap: 8, background: "#f9fafb" }}>
+                    <span>📍</span>
+                    <input style={{ border: "none", outline: "none", fontSize: 14, background: "transparent", flex: 1 }}
+                      placeholder="Ingresa tu dirección"
+                      value={direccion} onChange={e => setDireccion(e.target.value)} />
+                  </div>
+                )}
+              </div>
+
+              {/* Medio de pago */}
+              <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  <span style={{ fontSize: 18 }}>💳</span>
+                  <span style={{ fontWeight: 700, fontSize: 15, flex: 1 }}>Medio de pago</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, background: "#f0fdf4", color: "#16a34a", padding: "2px 8px", borderRadius: 20 }}>Obligatorio</span>
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  {[{ id: "efectivo", label: "Efectivo", icon: "💵" }, { id: "yape", label: "Yape / Plin", icon: "📱" }, { id: "transferencia", label: "Transferencia", icon: "🏦" }].map(op => (
+                    <button key={op.id} onClick={() => setMedioPago(op.id)}
+                      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "12px 4px", borderRadius: 12, border: `1.5px solid ${medioPago === op.id ? "#16a34a" : "#e5e7eb"}`, background: medioPago === op.id ? "#f0fdf4" : "#f9fafb", cursor: "pointer" }}>
+                      <span style={{ fontSize: 22, marginBottom: 4 }}>{op.icon}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "#111827" }}>{op.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Nota */}
+              <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb" }}>
+                <textarea style={{ width: "100%", boxSizing: "border-box", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "12px 14px", fontSize: 13, background: "#f9fafb", resize: "none", outline: "none", fontFamily: "inherit" }}
+                  placeholder={"¿Alguna indicación? (opcional)\nEj: sin cebolla, entregar en puerta"}
+                  rows={3} value={nota} onChange={e => setNota(e.target.value)} />
+              </div>
+
+              {/* Nombre */}
+              <div style={{ padding: "14px 20px" }}>
+                <input style={{ width: "100%", padding: 14, borderRadius: 12, border: "1.5px solid #fed7aa", boxSizing: "border-box", outline: "none", fontSize: 14, background: "#fff7ed" }}
+                  placeholder="Escribe tu nombre aquí..."
+                  value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} />
+              </div>
+
             </div>
-          )}
-        </div>
 
-        {/* Medio de pago */}
-        <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-            <span style={{ fontSize: 18 }}>💳</span>
-            <span style={{ fontWeight: 700, fontSize: 15, flex: 1 }}>Medio de pago</span>
-            <span style={{ fontSize: 11, fontWeight: 700, background: "#f0fdf4", color: "#16a34a", padding: "2px 8px", borderRadius: 20 }}>Obligatorio</span>
-          </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            {[{ id: "efectivo", label: "Efectivo", icon: "💵" }, { id: "yape", label: "Yape / Plin", icon: "📱" }, { id: "transferencia", label: "Transferencia", icon: "🏦" }].map(p => (
-              <button key={p.id} onClick={() => setMedioPago(p.id)}
-                style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "12px 4px", borderRadius: 12, border: `1.5px solid ${medioPago === p.id ? "#16a34a" : "#e5e7eb"}`, background: medioPago === p.id ? "#f0fdf4" : "#f9fafb", cursor: "pointer" }}>
-                <span style={{ fontSize: 22, marginBottom: 4 }}>{p.icon}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#111827" }}>{p.label}</span>
+            {/* Footer fijo */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px 20px", borderTop: "1px solid #e5e7eb", background: "#fff" }}>
+              <div>
+                <div style={{ fontSize: 12, color: "#6b7280", fontWeight: 600 }}>Total a pagar</div>
+                <div style={{ fontSize: 22, fontWeight: 900 }}>S/. {totalPrecio.toFixed(2)}</div>
+              </div>
+              <button onClick={enviarPedido}
+                style={{ display: "flex", alignItems: "center", gap: 8, background: "#25D366", color: "#fff", border: "none", borderRadius: 14, padding: "14px 20px", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
+                📲 Enviar por WhatsApp
               </button>
-            ))}
+            </div>
+
           </div>
         </div>
-
-        {/* Nota */}
-        <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb" }}>
-          <textarea style={{ width: "100%", boxSizing: "border-box", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "12px 14px", fontSize: 13, background: "#f9fafb", resize: "none", outline: "none", fontFamily: "inherit" }}
-            placeholder="¿Alguna indicación? (opcional)&#10;Ej: sin cebolla, entregar en puerta"
-            rows={3} value={nota} onChange={e => setNota(e.target.value)} />
-        </div>
-
-        {/* Nombre */}
-        <div style={{ padding: "14px 20px" }}>
-          <input style={{ width: "100%", padding: 14, borderRadius: 12, border: "1.5px solid #fed7aa", boxSizing: "border-box", outline: "none", fontSize: 14, background: "#fff7ed" }}
-            placeholder="Escribe tu nombre aquí..."
-            value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} />
-        </div>
-
-      </div>
-
-      {/* Footer fijo */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px 20px", borderTop: "1px solid #e5e7eb", background: "#fff" }}>
-        <div>
-          <div style={{ fontSize: 12, color: "#6b7280", fontWeight: 600 }}>Total a pagar</div>
-          <div style={{ fontSize: 22, fontWeight: 900 }}>S/. {totalPrecio.toFixed(2)}</div>
-        </div>
-        <button onClick={enviarPedido}
-          style={{ display: "flex", alignItems: "center", gap: 8, background: "#25D366", color: "#fff", border: "none", borderRadius: 14, padding: "14px 20px", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
-          📲 Enviar por WhatsApp
-        </button>
-      </div>
+      )}
 
     </div>
-  </div>
-)}
+  );
+}
 // ─── APP PRINCIPAL ───
 export default function App() {
   const [pantalla, setPantalla] = useState("login");
@@ -1394,10 +1307,6 @@ export default function App() {
   const [productosActuales, setProductosActuales] = useState([]);
   const [cargandoPublico, setCargandoPublico] = useState(false);
   const [kioskoPorSlug, setKioskoPorSlug] = useState(null);
-  const [tipoEntrega, setTipoEntrega] = useState("delivery");
-  const [medioPago, setMedioPago] = useState("efectivo");
-  const [direccion, setDireccion] = useState("");
-  const [nota, setNota] = useState("");
 
   // Detectar link público tipo /#/rosita
   const hash = window.location.hash;
