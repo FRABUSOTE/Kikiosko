@@ -1160,22 +1160,80 @@ function CatalogoCliente({ kiosko, onSalir }) {
       {/* Header */}
 <div style={{ position: "relative" }}>
   {kiosko.banner ? (
-    <div style={{ width: "100%", height: 180, overflow: "hidden", position: "relative" }}>
-      <img src={kiosko.banner} alt="banner" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(transparent, rgba(0,0,0,0.6))", padding: "30px 20px 14px 20px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-        <h2 style={{ margin: 0, color: "#fff", fontSize: 20, fontWeight: 900, textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}>{kiosko.nombre}</h2>
-        {onSalir && <button onClick={onSalir} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 8, fontWeight: 700, fontSize: 12 }}>Salir</button>}
+    <div style={{ 
+      width: "100%", 
+      height: "clamp(180px, 25vw, 320px)",  // 👈 responsivo: mín 180, ideal 25vw, máx 320
+      overflow: "hidden", 
+      position: "relative" 
+    }}>
+      <img 
+        src={kiosko.banner} 
+        alt="banner" 
+        style={{ 
+          width: "100%", 
+          height: "100%", 
+          objectFit: "cover",
+          objectPosition: "center center"  // 👈 centra la imagen en ambos ejes
+        }} 
+      />
+      <div style={{ 
+        position: "absolute", 
+        bottom: 0, left: 0, right: 0, 
+        background: "linear-gradient(transparent, rgba(0,0,0,0.6))", 
+        padding: "30px 20px 14px 20px", 
+        display: "flex", 
+        justifyContent: "space-between", 
+        alignItems: "flex-end" 
+      }}>
+        <h2 style={{ 
+          margin: 0, 
+          color: "#fff", 
+          fontSize: "clamp(16px, 2.5vw, 24px)",  // 👈 texto también responsivo
+          fontWeight: 900, 
+          textShadow: "0 1px 4px rgba(0,0,0,0.4)" 
+        }}>
+          {kiosko.nombre}
+        </h2>
+        {onSalir && (
+          <button onClick={onSalir} style={{ 
+            background: "rgba(255,255,255,0.2)", 
+            border: "none", 
+            color: "#fff", 
+            padding: "6px 12px", 
+            borderRadius: 8, 
+            fontWeight: 700, 
+            fontSize: 12 
+          }}>
+            Salir
+          </button>
+        )}
       </div>
     </div>
   ) : (
-    <div style={{ background: "#f97316", padding: 20, color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div style={{ 
+      background: "#f97316", 
+      padding: 20, 
+      color: "#fff", 
+      display: "flex", 
+      justifyContent: "space-between", 
+      alignItems: "center" 
+    }}>
       <h2 style={{ margin: 0 }}>{kiosko.nombre}</h2>
-      {onSalir && <button onClick={onSalir} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 8, fontWeight: 700 }}>Salir</button>}
+      {onSalir && (
+        <button onClick={onSalir} style={{ 
+          background: "rgba(255,255,255,0.2)", 
+          border: "none", 
+          color: "#fff", 
+          padding: "6px 12px", 
+          borderRadius: 8, 
+          fontWeight: 700 
+        }}>
+          Salir
+        </button>
+      )}
     </div>
   )}
 </div>
-      
-      {/* ... sigue el resto de tu código (filtros y el div con className="productos-grid") ... */}
 
       {/* Filtro de categorías */}
       <div style={{ display: "flex", gap: 8, padding: "12px 15px", overflowX: "auto", background: "#fff", borderBottom: "1px solid #fed7aa" }}>
