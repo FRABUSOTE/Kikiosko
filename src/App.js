@@ -723,10 +723,17 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
           <p style={{ fontSize: 11, color: "#9ca3af" }}>Panel de administración</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "8px 14px", fontSize: 12 }}
-            onClick={() => { setModalProducto({}); setNuevoProducto({ nombre: "", precio: "", categoria: "Bebidas", emoji: "🛒", stock: true, cantidad: 0, foto: null, fotoFile: null }); }}>
-            + Agregar producto
-          </button>
+          {kiosko.plan !== "Básico" ? (
+  <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "8px 14px", fontSize: 12 }}
+    onClick={() => { setModalProducto({}); setNuevoProducto({ nombre: "", precio: "", categoria: "Bebidas", emoji: "🛒", stock: true, cantidad: 0, foto: null, fotoFile: null }); }}>
+    + Agregar producto
+  </button>
+) : (
+  <button className="btn" style={{ background: "#e5e7eb", color: "#9ca3af", padding: "8px 14px", fontSize: 12, cursor: "not-allowed" }}
+    onClick={() => mostrarToast("🔒 Mejora tu plan para agregar productos", "error")}>
+    🔒 Agregar producto
+  </button>
+)}
           <div style={{ width: 1, background: "#e5e7eb", margin: "0 4px" }} />
           <button className="btn" style={{ background: "#ecfdf5", color: "#059669", padding: "8px 14px", fontSize: 12, border: "1px solid #bbf7d0" }}
             onClick={onVerCatalogo}>
