@@ -39,30 +39,15 @@ function SuperAdmin({ onSalir }) {
 
   const mostrarToast = (msg, tipo = "ok") => { setToast({ msg, tipo }); setTimeout(() => setToast(null), 2500); };
 
-  // Cargar kioskos desde Supabase
-  useEffect(() => {
-    cargarKioskos();
-  }, []);
+  useEffect(() => { cargarKioskos(); }, []);
 
- const cargarKioskos = async () => {
-  setCargando(true);
-  
-  const { data, error } = await supabase
-    .from("kioskos")
-    .select(`
-      *,
-      productos (*)
-    `)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    mostrarToast("Error cargando kioskos", "error");
-  } else {
-    setKioskos(data);
-  }
-  
-  setCargando(false);
-};
+  const cargarKioskos = async () => {
+    setCargando(true);
+    const { data, error } = await supabase.from("kioskos").select(`*, productos (*)`).order("created_at", { ascending: false });
+    if (error) mostrarToast("Error cargando kioskos", "error");
+    else setKioskos(data);
+    setCargando(false);
+  };
 
   const toggleAcceso = async (id) => {
     const kiosko = kioskos.find(k => k.id === id);
@@ -103,102 +88,35 @@ function SuperAdmin({ onSalir }) {
     mostrarToast("✅ Kiosko creado exitosamente");
   };
 
-const subirExcel = async (kioskoid, e) => {
+  const subirExcel = async (kioskoid, e) => {
     const file = e.target.files[0];
     if (!file) return;
     mostrarToast("⏳ Leyendo Excel...", "ok");
-
     try {
       const XLSX = await import("https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs");
       const buffer = await file.arrayBuffer();
       const wb = XLSX.read(buffer, { type: "array" });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const filas = XLSX.utils.sheet_to_json(ws, { defval: "" });
-
-      if (!filas || filas.length === 0) {
-        mostrarToast("❌ El Excel está vacío", "error");
-        return;
-      }
-
-     const productos = filas.map(fila => {
-  const get = (keys) => {
-    for (const k of keys) {
-      const found = Object.keys(fila).find(f => f.toLowerCase().trim() === k.toLowerCase());
-      if (found) return fila[found];
-    }
-    return "";
-  };
-
-  // 1. Capturamos los datos básicos
-  const precioBaseExcel = parseFloat(get(["precio", "costo"])) || 0;
-  const variacionesTexto = get(["variaciones", "tallas", "sabores", "presentacion"]);
-  
-  let variacionesFinales = [];
-  let precioParaCatalogo = precioBaseExcel;
-
-  // 2. Procesamos las variaciones si existen
-  if (variacionesTexto && String(variacionesTexto).trim() !== "") {
-    variacionesFinales = String(variacionesTexto).split(',').map(v => {
-      const partes = v.split(':');
-      const nombre = partes[0].trim();
-      
-      // REGLA: Si pusiste "Familiar:45" usa 45. Si solo pusiste "Familiar" usa el precio base.
-      const precioV = partes[1] ? parseFloat(partes[1]) : precioBaseExcel;
-      
-      return { 
-        nombre: nombre, 
-        precio: precioV 
-      };
-    });
-
-    // REGLA DE ORO: El precio que ve el cliente en el catálogo 
-    // será siempre el más bajo de todas las variaciones.
-    const todosLosPrecios = variacionesFinales.map(v => v.precio);
-    precioParaCatalogo = Math.min(...todosLosPrecios);
-  }
-
-  // 3. Retornamos el objeto listo para Supabase
-  return {
-    nombre: String(get(["nombre", "producto", "name"]) || "").trim(),
-    precio: precioParaCatalogo, // Este es el que usa el contenedor del catálogo
-    categoria: String(get(["categoria", "tipo"]) || "Otros").trim(),
-    emoji: String(get(["emoji", "icono"]) || "🛒").trim(),
-    stock: true, // Por defecto activamos el stock al subir
-    cantidad: parseInt(get(["cantidad", "stock_actual"])) || 0,
-    kiosko_id: kioskoid, // El ID de tu kiosko actual
-    foto: null,
-    variaciones: variacionesFinales // Aquí se guarda el JSON [{nombre, precio}, ...]
-  };
-}).filter(p => p.nombre); // Evita subir filas vacías del Excel
-      if (productos.length === 0) {
-        mostrarToast("❌ No se encontraron productos con nombre", "error");
-        return;
-      }
-
-      const { data, error } = await supabase
-  .from("productos")
-  .upsert(productos, { onConflict: 'nombre' }) 
-  .select();
+      if (!filas || filas.length === 0) { mostrarToast("❌ El Excel está vacío", "error"); return; }
+      const productos = filas.map(fila => {
+        const get = (keys) => { for (const k of keys) { const found = Object.keys(fila).find(f => f.toLowerCase().trim() === k.toLowerCase()); if (found) return fila[found]; } return ""; };
+        const precioBaseExcel = parseFloat(get(["precio", "costo"])) || 0;
+        const variacionesTexto = get(["variaciones", "tallas", "sabores", "presentacion"]);
+        let variacionesFinales = [];
+        let precioParaCatalogo = precioBaseExcel;
+        if (variacionesTexto && String(variacionesTexto).trim() !== "") {
+          variacionesFinales = String(variacionesTexto).split(',').map(v => { const partes = v.split(':'); const nombre = partes[0].trim(); const precioV = partes[1] ? parseFloat(partes[1]) : precioBaseExcel; return { nombre, precio: precioV }; });
+          precioParaCatalogo = Math.min(...variacionesFinales.map(v => v.precio));
+        }
+        return { nombre: String(get(["nombre", "producto", "name"]) || "").trim(), precio: precioParaCatalogo, categoria: String(get(["categoria", "tipo"]) || "Otros").trim(), emoji: String(get(["emoji", "icono"]) || "🛒").trim(), stock: true, cantidad: parseInt(get(["cantidad", "stock_actual"])) || 0, kiosko_id: kioskoid, foto: null, variaciones: variacionesFinales };
+      }).filter(p => p.nombre);
+      if (productos.length === 0) { mostrarToast("❌ No se encontraron productos con nombre", "error"); return; }
+      const { data, error } = await supabase.from("productos").upsert(productos, { onConflict: 'nombre' }).select();
       if (error) { mostrarToast("❌ Error guardando: " + error.message, "error"); return; }
-
-     setKioskos(prev => prev.map(k => {
-  if (k.id === kioskoid) {
-    // 1. Sacamos los nombres de los productos que acabamos de subir
-    const nombresNuevos = data.map(d => d.nombre);
-    
-    // 2. Filtramos la lista actual para quitar los que ya existen y se van a actualizar
-    const productosSinCambios = k.productos.filter(p => !nombresNuevos.includes(p.nombre));
-    
-    // 3. Devolvemos la unión de los que no cambiaron + la nueva data limpia
-    return { ...k, productos: [...productosSinCambios, ...data] };
-  }
-  return k;
-}));
+      setKioskos(prev => prev.map(k => { if (k.id === kioskoid) { const nombresNuevos = data.map(d => d.nombre); const productosSinCambios = k.productos.filter(p => !nombresNuevos.includes(p.nombre)); return { ...k, productos: [...productosSinCambios, ...data] }; } return k; }));
       mostrarToast(`✅ ${data.length} productos cargados desde Excel`);
-    } catch (err) {
-      mostrarToast("❌ Error leyendo Excel: " + err.message, "error");
-    }
-
+    } catch (err) { mostrarToast("❌ Error leyendo Excel: " + err.message, "error"); }
     e.target.value = "";
   };
 
@@ -212,7 +130,6 @@ const subirExcel = async (kioskoid, e) => {
   const activos = kioskos.filter(k => k.activo);
   const inactivos = kioskos.filter(k => !k.activo);
   const ingresoMensual = activos.reduce((s, k) => s + k.monto, 0);
-
   const filtrados = kioskos.filter(k => {
     const matchFiltro = filtro === "todos" ? true : filtro === "activos" ? k.activo : !k.activo;
     const matchBusqueda = busqueda === "" || k.nombre.toLowerCase().includes(busqueda.toLowerCase()) || k.dueno.toLowerCase().includes(busqueda.toLowerCase());
@@ -263,7 +180,6 @@ const subirExcel = async (kioskoid, e) => {
       </div>
 
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "28px 20px" }}>
-
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
           {[
@@ -282,7 +198,6 @@ const subirExcel = async (kioskoid, e) => {
           ))}
         </div>
 
-        {/* Alertas vencimiento */}
         {kioskos.filter(k => k.activo && diasRestantes(k.vence) <= 7 && diasRestantes(k.vence) >= 0).length > 0 && (
           <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "#92400e" }}>
             ⚠️ <strong>{kioskos.filter(k => k.activo && diasRestantes(k.vence) <= 7).length} kiosko(s)</strong> vencen en los próximos 7 días
@@ -323,9 +238,7 @@ const subirExcel = async (kioskoid, e) => {
                     <span style={{ fontSize: 12, color: "#f97316", fontWeight: 700 }}>{k.plan}</span>
                     <p style={{ fontSize: 11, color: "#9ca3af" }}>S/. {k.monto}/mes</p>
                   </td>
-                  <td style={{ padding: "12px 16px", fontSize: 13, fontWeight: 700, color: k.productos.length > 0 ? "#059669" : "#dc2626" }}>
-                    {k.productos.length} productos
-                  </td>
+                  <td style={{ padding: "12px 16px", fontSize: 13, fontWeight: 700, color: k.productos.length > 0 ? "#059669" : "#dc2626" }}>{k.productos.length} productos</td>
                   <td style={{ padding: "12px 16px" }}>
                     <p style={{ fontSize: 12, color: diasRestantes(k.vence) <= 7 ? "#f97316" : "#6b7280", fontWeight: diasRestantes(k.vence) <= 7 ? 700 : 400 }}>{fmtFecha(k.vence)}</p>
                     {diasRestantes(k.vence) <= 7 && diasRestantes(k.vence) >= 0 && <p style={{ fontSize: 10, color: "#f97316" }}>Vence en {diasRestantes(k.vence)} días</p>}
@@ -362,92 +275,65 @@ const subirExcel = async (kioskoid, e) => {
               <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "6px 12px", fontSize: 11, border: "1px solid #e5e7eb" }} onClick={() => setDetalle(null)}>✕</button>
             </div>
 
-            {/* Link público */}
             <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 14px", margin: "12px 0" }}>
               <p style={{ fontSize: 11, color: "#059669", fontWeight: 700, marginBottom: 4 }}>🛒 Link público para compradores</p>
               <p style={{ fontSize: 13, fontWeight: 800, color: "#111827" }}>kikiosko-vyvv.vercel.app/#/{detalle.slug}</p>
               <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>Comparte este link con tus clientes — sin usuario ni clave</p>
             </div>
 
-            {/* Banner del kiosko */}
-<div style={{ padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
-  <p style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Banner del catálogo</p>
-  
-  {/* Preview del banner */}
-  {detalle.banner && (
-    <div style={{ marginBottom: 10, borderRadius: 8, overflow: "hidden", height: 120 }}>
-      <img src={detalle.banner} alt="banner" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-    </div>
-  )}
+            <div style={{ padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
+              <p style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Banner del catálogo</p>
+              {detalle.banner && (
+                <div style={{ marginBottom: 10, borderRadius: 8, overflow: "hidden", height: 120 }}>
+                  <img src={detalle.banner} alt="banner" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                </div>
+              )}
+              <input type="file" accept="image/jpeg,image/png,image/webp" id="banner-upload" style={{ display: "none" }}
+                onChange={async e => {
+                  const file = e.target.files[0];
+                  if (!file) return;
+                  if (file.size > 2 * 1024 * 1024) { mostrarToast("❌ La imagen no debe superar 2MB", "error"); return; }
+                  mostrarToast("⏳ Subiendo banner...", "ok");
+                  const ext = file.name.split(".").pop();
+                  const fileName = `banner_${detalle.id}_${Date.now()}.${ext}`;
+                  const { error: uploadError } = await supabase.storage.from("fotos-productos").upload(fileName, file, { upsert: true });
+                  if (uploadError) { mostrarToast("❌ Error subiendo banner", "error"); return; }
+                  const { data: urlData } = supabase.storage.from("fotos-productos").getPublicUrl(fileName);
+                  const bannerUrl = urlData.publicUrl;
+                  await supabase.from("kioskos").update({ banner: bannerUrl }).eq("id", detalle.id);
+                  setKioskos(prev => prev.map(k => k.id === detalle.id ? { ...k, banner: bannerUrl } : k));
+                  setDetalle(prev => ({ ...prev, banner: bannerUrl }));
+                  mostrarToast("✅ Banner actualizado");
+                  e.target.value = "";
+                }} />
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn" style={{ flex: 1, background: "#fff7ed", color: "#f97316", padding: "10px", fontSize: 12, border: "1.5px dashed #fed7aa", borderRadius: 8 }}
+                  onClick={() => document.getElementById("banner-upload").click()}>
+                  🖼️ {detalle.banner ? "Cambiar banner" : "Subir banner"}
+                </button>
+                {detalle.banner && (
+                  <button className="btn" style={{ background: "#fee2e2", color: "#dc2626", padding: "10px 14px", fontSize: 12, border: "1px solid #fecaca" }}
+                    onClick={async () => {
+                      await supabase.from("kioskos").update({ banner: null }).eq("id", detalle.id);
+                      setKioskos(prev => prev.map(k => k.id === detalle.id ? { ...k, banner: null } : k));
+                      setDetalle(prev => ({ ...prev, banner: null }));
+                      mostrarToast("🗑 Banner eliminado");
+                    }}>🗑</button>
+                )}
+              </div>
+            </div>
 
-  <input
-    type="file"
-    accept="image/jpeg,image/png,image/webp"
-    id="banner-upload"
-    style={{ display: "none" }}
-    onChange={async e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      if (file.size > 2 * 1024 * 1024) { mostrarToast("❌ La imagen no debe superar 2MB", "error"); return; }
-      mostrarToast("⏳ Subiendo banner...", "ok");
-      const ext = file.name.split(".").pop();
-      const fileName = `banner_${detalle.id}_${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from("fotos-productos")
-        .upload(fileName, file, { upsert: true });
-      if (uploadError) { mostrarToast("❌ Error subiendo banner", "error"); return; }
-      const { data: urlData } = supabase.storage.from("fotos-productos").getPublicUrl(fileName);
-      const bannerUrl = urlData.publicUrl;
-      await supabase.from("kioskos").update({ banner: bannerUrl }).eq("id", detalle.id);
-      setKioskos(prev => prev.map(k => k.id === detalle.id ? { ...k, banner: bannerUrl } : k));
-      setDetalle(prev => ({ ...prev, banner: bannerUrl }));
-      mostrarToast("✅ Banner actualizado");
-      e.target.value = "";
-    }}
-  />
-  <div style={{ display: "flex", gap: 8 }}>
-    <button className="btn" style={{ flex: 1, background: "#fff7ed", color: "#f97316", padding: "10px", fontSize: 12, border: "1.5px dashed #fed7aa", borderRadius: 8 }}
-      onClick={() => document.getElementById("banner-upload").click()}>
-      🖼️ {detalle.banner ? "Cambiar banner" : "Subir banner"}
-    </button>
-    {detalle.banner && (
-      <button className="btn" style={{ background: "#fee2e2", color: "#dc2626", padding: "10px 14px", fontSize: 12, border: "1px solid #fecaca" }}
-        onClick={async () => {
-          await supabase.from("kioskos").update({ banner: null }).eq("id", detalle.id);
-          setKioskos(prev => prev.map(k => k.id === detalle.id ? { ...k, banner: null } : k));
-          setDetalle(prev => ({ ...prev, banner: null }));
-          mostrarToast("🗑 Banner eliminado");
-        }}>
-        🗑
-      </button>
-    )}
-  </div>
-</div>
-            {/* Datos editables */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 4 }}>
-              {[
-                ["WhatsApp", "whatsapp", detalle.whatsapp],
-                ["Correo", "email", detalle.email],
-                ["Clave", "clave", detalle.clave],
-                ["Acceso hasta", "vence", detalle.vence],
-              ].map(([label, key, val]) => (
+              {[["WhatsApp", "whatsapp", detalle.whatsapp], ["Correo", "email", detalle.email], ["Clave", "clave", detalle.clave], ["Acceso hasta", "vence", detalle.vence]].map(([label, key, val]) => (
                 <div key={key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #f3f4f6" }}>
                   <span style={{ fontSize: 12, color: "#9ca3af", width: 90, flexShrink: 0 }}>{label}</span>
-                  <input
-                    type={key === "vence" ? "date" : "text"}
-                    defaultValue={val}
+                  <input type={key === "vence" ? "date" : "text"} defaultValue={val}
                     onBlur={e => actualizarDato(detalle.id, key, e.target.value)}
                     style={{ flex: 1, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 7, padding: "6px 10px", fontSize: 12, fontWeight: 700, color: "#111827", fontFamily: "inherit", outline: "none" }}
-                    onFocus={e => e.target.style.borderColor = "#f97316"}
-                  />
+                    onFocus={e => e.target.style.borderColor = "#f97316"} />
                 </div>
               ))}
-              {[
-                ["Monto", `S/. ${detalle.monto}/mes`],
-                ["Pagos", `${detalle.pagos} pagos`],
-                ["Productos", `${detalle.productos.length} productos`],
-                ["Estado", detalle.activo ? "✅ Activo" : "❌ Inactivo"],
-              ].map(([k, v]) => (
+              {[["Monto", `S/. ${detalle.monto}/mes`], ["Pagos", `${detalle.pagos} pagos`], ["Productos", `${detalle.productos.length} productos`], ["Estado", detalle.activo ? "✅ Activo" : "❌ Inactivo"]].map(([k, v]) => (
                 <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f3f4f6", fontSize: 13 }}>
                   <span style={{ color: "#9ca3af" }}>{k}</span>
                   <span style={{ fontWeight: 700 }}>{v}</span>
@@ -455,7 +341,6 @@ const subirExcel = async (kioskoid, e) => {
               ))}
             </div>
 
-            {/* Cambiar plan */}
             <div style={{ padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
               <p style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Plan actual</p>
               <div style={{ display: "flex", gap: 8 }}>
@@ -468,7 +353,6 @@ const subirExcel = async (kioskoid, e) => {
               </div>
             </div>
 
-            {/* Subir Excel */}
             <div style={{ padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
               <p style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Cargar productos desde Excel</p>
               <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: "none" }} onChange={(e) => subirExcel(detalle.id, e)} />
@@ -478,13 +362,11 @@ const subirExcel = async (kioskoid, e) => {
               </div>
             </div>
 
-            {/* Ver productos */}
             <button className="btn" style={{ width: "100%", background: "#f3f4f6", color: "#374151", padding: "10px", fontSize: 12, border: "1px solid #e5e7eb", marginTop: 12 }}
               onClick={() => { setVistaProductos(detalle); setDetalle(null); }}>
               📦 Ver y gestionar productos ({detalle.productos.length})
             </button>
 
-            {/* Botones */}
             <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
               <button className="btn" style={{ flex: 1, padding: "11px", fontSize: 12, background: detalle.activo ? "#fee2e2" : "#dcfce7", color: detalle.activo ? "#dc2626" : "#059669", border: `1px solid ${detalle.activo ? "#fecaca" : "#bbf7d0"}` }}
                 onClick={() => toggleAcceso(detalle.id)}>
@@ -508,13 +390,7 @@ const subirExcel = async (kioskoid, e) => {
               <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "6px 12px", fontSize: 11, border: "1px solid #e5e7eb" }} onClick={() => setModalNuevo(false)}>✕</button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {[
-                ["Nombre del kiosko", "nombre", "Kiosko Rosita"],
-                ["Nombre del dueño", "dueno", "Rosa Flores"],
-                ["Correo", "email", "rosita@correo.pe"],
-                ["WhatsApp", "whatsapp", "999888777"],
-                ["Contraseña", "clave", "clave123"],
-              ].map(([label, key, ph]) => (
+              {[["Nombre del kiosko", "nombre", "Kiosko Rosita"], ["Nombre del dueño", "dueno", "Rosa Flores"], ["Correo", "email", "rosita@correo.pe"], ["WhatsApp", "whatsapp", "999888777"], ["Contraseña", "clave", "clave123"]].map(([label, key, ph]) => (
                 <div key={key}>
                   <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>{label}</label>
                   <input className="inp" placeholder={ph} value={nuevoKiosko[key]} onChange={e => setNuevoKiosko(p => ({ ...p, [key]: e.target.value }))} />
@@ -540,7 +416,7 @@ const subirExcel = async (kioskoid, e) => {
         </div>
       )}
 
-{/* Modal gestión productos */}
+      {/* Modal gestión productos */}
       {vistaProductos && (
         <div className="modal-bg" onClick={() => setVistaProductos(null)}>
           <div className="modal fade" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
@@ -548,14 +424,12 @@ const subirExcel = async (kioskoid, e) => {
               <span style={{ fontWeight: 900, fontSize: 16 }}>📦 Productos — {vistaProductos.nombre}</span>
               <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "6px 12px", fontSize: 11, border: "1px solid #e5e7eb" }} onClick={() => setVistaProductos(null)}>✕</button>
             </div>
-
             {vistaProductos.productos.length === 0 ? (
               <p style={{ fontSize: 13, color: "#9ca3af", textAlign: "center", padding: "20px 0" }}>Sin productos aún — sube un Excel desde el detalle</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {vistaProductos.productos.map(p => (
                   <div key={p.id} style={{ display: "flex", flexDirection: "column", gap: 10, padding: "14px", background: "#f9fafb", borderRadius: 12, border: "1px solid #e5e7eb" }}>
-                    
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <span style={{ fontSize: 24 }}>{p.emoji}</span>
                       <div style={{ flex: 1 }}>
@@ -566,7 +440,6 @@ const subirExcel = async (kioskoid, e) => {
                         {p.stock ? "✅" : "❌"}
                       </span>
                     </div>
-
                     <div style={{ background: "#fff", borderRadius: 8, padding: "10px", border: "1px solid #f3f4f6" }}>
                       {p.variaciones && p.variaciones.length > 0 ? (
                         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -595,86 +468,57 @@ const subirExcel = async (kioskoid, e) => {
   );
 }
 
-// ─── PANEL ADMIN KIOSKO ───
+// ─── ADMIN KIOSKO ───
 function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
   const [productos, setProductos] = useState(kiosko.productos);
-  
-  // --- AQUÍ COLOCAS LA PARTE UNO ---
-  // Obtenemos categorías únicas de los productos actuales
-  const categoriasExistentes = [
-    ...new Set(productos.map(p => p.categoria))
-  ].filter(Boolean);
-
-  // Si no hay categorías (kiosko nuevo), usamos una lista base
-  const categoriasParaMostrar = categoriasExistentes.length > 0 
-    ? categoriasExistentes 
-    : ["Bebidas", "Snacks", "Abarrotes", "Otros"];
-  // ---------------------------------
-
-  const actualizarProductos = (nuevos) => {
-    setProductos(nuevos);
-    onProductosChange(nuevos);
-  };
   const [modalProducto, setModalProducto] = useState(null);
-  const [nuevoProducto, setNuevoProducto] = useState({ 
-  nombre: "", 
-  precio: "", 
-  categoria: categoriasParaMostrar[0], // <--- CAMBIO AQUÍ
-  emoji: "🛒", 
-  stock: true, 
-  cantidad: 0, 
-  foto: null 
-});
+  const [modalPago, setModalPago] = useState(false);
+  const [datosPago, setDatosPago] = useState(kiosko.datos_pago || {});
   const [toast, setToast] = useState(null);
 
+  const categoriasExistentes = [...new Set(productos.map(p => p.categoria))].filter(Boolean);
+  const categoriasParaMostrar = categoriasExistentes.length > 0 ? categoriasExistentes : ["Bebidas", "Snacks", "Abarrotes", "Otros"];
+
+  const [nuevoProducto, setNuevoProducto] = useState({
+    nombre: "", precio: "", categoria: categoriasParaMostrar[0], emoji: "🛒", stock: true, cantidad: 0, foto: null
+  });
+
   const mostrarToast = (msg, tipo = "ok") => { setToast({ msg, tipo }); setTimeout(() => setToast(null), 2500); };
+
+  const actualizarProductos = (nuevos) => { setProductos(nuevos); onProductosChange(nuevos); };
 
   const toggleStock = async (id) => {
     const p = productos.find(p => p.id === id);
     const nuevoStock = !p.stock;
     await supabase.from("productos").update({ stock: nuevoStock }).eq("id", id);
-    const nuevos = productos.map(p => p.id === id ? { ...p, stock: nuevoStock } : p);
-    actualizarProductos(nuevos);
+    actualizarProductos(productos.map(p => p.id === id ? { ...p, stock: nuevoStock } : p));
     mostrarToast("✅ Stock actualizado");
   };
 
   const eliminar = async (id) => {
     await supabase.from("productos").delete().eq("id", id);
-    const nuevos = productos.filter(p => p.id !== id);
-    actualizarProductos(nuevos);
+    actualizarProductos(productos.filter(p => p.id !== id));
     mostrarToast("🗑 Producto eliminado");
   };
 
   const guardar = async () => {
     mostrarToast("⏳ Guardando...", "ok");
     let fotoUrl = nuevoProducto.foto && !nuevoProducto.fotoFile ? nuevoProducto.foto : null;
-
-    // Si hay un archivo nuevo, subirlo a Supabase Storage
     if (nuevoProducto.fotoFile) {
       const ext = nuevoProducto.fotoFile.name.split(".").pop();
       const fileName = `${kiosko.id}_${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from("fotos-productos")
-        .upload(fileName, nuevoProducto.fotoFile, { upsert: true });
-      if (uploadError) {
-        mostrarToast("❌ Error subiendo foto: " + uploadError.message, "error");
-        return;
-      }
+      const { error: uploadError } = await supabase.storage.from("fotos-productos").upload(fileName, nuevoProducto.fotoFile, { upsert: true });
+      if (uploadError) { mostrarToast("❌ Error subiendo foto: " + uploadError.message, "error"); return; }
       const { data: urlData } = supabase.storage.from("fotos-productos").getPublicUrl(fileName);
       fotoUrl = urlData.publicUrl;
     }
-
     const productoParaDB = {
-      nombre: nuevoProducto.nombre,
-      precio: parseFloat(nuevoProducto.precio) || 0,
-      emoji: nuevoProducto.emoji || "🛒",
-      categoria: nuevoProducto.categoria,
+      nombre: nuevoProducto.nombre, precio: parseFloat(nuevoProducto.precio) || 0,
+      emoji: nuevoProducto.emoji || "🛒", categoria: nuevoProducto.categoria,
       cantidad: parseInt(nuevoProducto.cantidad) || 0,
       stock: (parseInt(nuevoProducto.cantidad) || 0) > 0,
-      kiosko_id: kiosko.id,
-      foto: fotoUrl,
+      kiosko_id: kiosko.id, foto: fotoUrl,
     };
-
     let nuevos;
     if (modalProducto?.id) {
       const { error } = await supabase.from("productos").update(productoParaDB).eq("id", modalProducto.id);
@@ -691,6 +535,12 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
     actualizarProductos(nuevos);
     setModalProducto(null);
     setNuevoProducto({ nombre: "", precio: "", categoria: categoriasParaMostrar[0], emoji: "🛒", stock: true, cantidad: 0, foto: null, fotoFile: null });
+  };
+
+  const guardarDatosPago = async () => {
+    await supabase.from("kioskos").update({ datos_pago: datosPago }).eq("id", kiosko.id);
+    mostrarToast("✅ Datos de pago guardados");
+    setModalPago(false);
   };
 
   return (
@@ -723,31 +573,36 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
           <p style={{ fontSize: 11, color: "#9ca3af" }}>Panel de administración</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
+
+          {/* ✅ BOTÓN DATOS DE PAGO */}
+          <button className="btn" style={{ background: "#eff6ff", color: "#1d4ed8", padding: "8px 14px", fontSize: 12, border: "1px solid #bfdbfe" }}
+            onClick={() => setModalPago(true)}>
+            💳 Datos de pago
+          </button>
+
           {kiosko.plan !== "Básico" ? (
-  <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "8px 14px", fontSize: 12 }}
-    onClick={() => { setModalProducto({}); setNuevoProducto({ nombre: "", precio: "", categoria: categoriasParaMostrar[0], emoji: "🛒", stock: true, cantidad: 0, foto: null, fotoFile: null }); }}>
-    + Agregar producto
-  </button>
-) : (
-  <button className="btn" style={{ background: "#e5e7eb", color: "#9ca3af", padding: "8px 14px", fontSize: 12, cursor: "not-allowed" }}
-    onClick={() => mostrarToast("🔒 Mejora tu plan para agregar productos", "error")}>
-    🔒 Agregar producto
-  </button>
-)}
+            <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "8px 14px", fontSize: 12 }}
+              onClick={() => { setModalProducto({}); setNuevoProducto({ nombre: "", precio: "", categoria: categoriasParaMostrar[0], emoji: "🛒", stock: true, cantidad: 0, foto: null, fotoFile: null }); }}>
+              + Agregar producto
+            </button>
+          ) : (
+            <button className="btn" style={{ background: "#e5e7eb", color: "#9ca3af", padding: "8px 14px", fontSize: 12, cursor: "not-allowed" }}
+              onClick={() => mostrarToast("🔒 Mejora tu plan para agregar productos", "error")}>
+              🔒 Agregar producto
+            </button>
+          )}
+
           <div style={{ width: 1, background: "#e5e7eb", margin: "0 4px" }} />
-          <button className="btn" style={{ background: "#ecfdf5", color: "#059669", padding: "8px 14px", fontSize: 12, border: "1px solid #bbf7d0" }}
-            onClick={onVerCatalogo}>
+          <button className="btn" style={{ background: "#ecfdf5", color: "#059669", padding: "8px 14px", fontSize: 12, border: "1px solid #bbf7d0" }} onClick={onVerCatalogo}>
             👁 Ver catálogo
           </button>
-          <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "8px 14px", fontSize: 12, border: "1px solid #e5e7eb" }}
-            onClick={onSalir}>
+          <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "8px 14px", fontSize: 12, border: "1px solid #e5e7eb" }} onClick={onSalir}>
             Salir
           </button>
         </div>
       </div>
 
       <div style={{ maxWidth: 800, margin: "0 auto", padding: "24px 20px" }}>
-
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
           {[
@@ -766,129 +621,150 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
         </div>
 
         {/* Link público + QR */}
-<div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 16px", marginBottom: 16 }}>
-  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-    <div>
-      <p style={{ fontSize: 11, color: "#059669", fontWeight: 700, marginBottom: 2 }}>🛒 Link para tus compradores</p>
-      <p style={{ fontSize: 13, fontWeight: 800 }}>kikiosko-vyvv.vercel.app/#/{kiosko.slug}</p>
-    </div>
-    <button className="btn" style={{ background: "#059669", color: "#fff", padding: "8px 14px", fontSize: 11 }}
-      onClick={() => { navigator.clipboard?.writeText(`kikiosko-vyvv.vercel.app/#/${kiosko.slug}`); mostrarToast("📋 Link copiado"); }}>
-      📋 Copiar
-    </button>
-  </div>
-  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 16, gap: 8 }}>
-    <QRCode
-      value={`https://kikiosko-vyvv.vercel.app/#/${kiosko.slug}`}
-      size={160}
-      bgColor="#ffffff"
-      fgColor="#111827"
-      level="H"
-    />
-    <p style={{ fontSize: 11, color: "#9ca3af", textAlign: "center" }}>
-      📲 Tus clientes escanean este QR y llegan directo a tu tienda
-    </p>
-  </div>
-</div>
+        <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 16px", marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <p style={{ fontSize: 11, color: "#059669", fontWeight: 700, marginBottom: 2 }}>🛒 Link para tus compradores</p>
+              <p style={{ fontSize: 13, fontWeight: 800 }}>kikiosko-vyvv.vercel.app/#/{kiosko.slug}</p>
+            </div>
+            <button className="btn" style={{ background: "#059669", color: "#fff", padding: "8px 14px", fontSize: 11 }}
+              onClick={() => { navigator.clipboard?.writeText(`kikiosko-vyvv.vercel.app/#/${kiosko.slug}`); mostrarToast("📋 Link copiado"); }}>
+              📋 Copiar
+            </button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 16, gap: 8 }}>
+            <QRCode value={`https://kikiosko-vyvv.vercel.app/#/${kiosko.slug}`} size={160} bgColor="#ffffff" fgColor="#111827" level="H" />
+            <p style={{ fontSize: 11, color: "#9ca3af", textAlign: "center" }}>📲 Tus clientes escanean este QR y llegan directo a tu tienda</p>
+          </div>
+        </div>
 
         {/* Tabla productos */}
         <div className="card" style={{ overflow: "hidden" }}>
           {productos.length === 0 ? (
-            <div style={{ padding: "32px", textAlign: "center", color: "#9ca3af", fontSize: 13 }}>
-              Sin productos — agrega el primero con el botón de arriba
-            </div>
-         // --- LÍNEA 724 ---
-) : productos.map(p => (
-  <div key={p.id} className="row" style={{ display: "flex", flexDirection: "column", gap: 6, padding: "12px 16px", borderBottom: "1px solid #f3f4f6" }}>
-    
-    {/* Fila 1: emoji + nombre + botones */}
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-      <span style={{ fontSize: '24px' }}>{p.emoji}</span>
-      <div style={{ flex: 1 }}>
-        <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>{p.nombre}</h4>
-        <span style={{ fontSize: '11px', color: '#9ca3af' }}>{p.categoria}</span>
-      </div>
-      <div style={{ display: 'flex', gap: '8px' }}>
-  {kiosko.plan !== "Básico" && (
-    <button
-      className="btn"
-      onClick={async () => {
-        const nuevaOferta = !p.oferta;
-        await supabase.from("productos").update({ oferta: nuevaOferta }).eq("id", p.id);
-        actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, oferta: nuevaOferta } : pr));
-        mostrarToast(nuevaOferta ? "🔥 Marcado como oferta" : "✅ Oferta desactivada");
-      }}
-      style={{ background: p.oferta ? "#fef3c7" : "#f3f4f6", color: p.oferta ? "#d97706" : "#9ca3af", padding: "5px 10px", border: `1px solid ${p.oferta ? "#fde68a" : "#e5e7eb"}` }}>
-      🔥
-    </button>
-  )}
-  <button className="btn" onClick={() => { setModalProducto(p); setNuevoProducto(p); }} style={{ background: "#fff7ed", color: "#f97316", padding: "5px 10px" }}>✏️</button>
-  <button className="btn" onClick={() => eliminar(p.id)} style={{ background: "#fee2e2", color: "#dc2626", padding: "5px 10px" }}>🗑️</button>
-</div>
-    </div>
-
-    {/* Fila 2: stock + precio o variaciones */}
-    <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingLeft: 4, marginTop: 4 }}>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-        <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 700 }}>Stock:</span>
-        <button className="btn" style={{ width: 24, height: 24, background: "#fff7ed", color: "#f97316", fontSize: 14, border: "1px solid #fed7aa", borderRadius: 6, padding: 0, lineHeight: 1 }}
-          onClick={async () => {
-            const nuevaCantidad = Math.max(0, (parseInt(p.cantidad) || 0) - 1);
-            await supabase.from("productos").update({ cantidad: nuevaCantidad, stock: nuevaCantidad > 0 }).eq("id", p.id);
-            actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, cantidad: nuevaCantidad, stock: nuevaCantidad > 0 } : pr));
-          }}>−</button>
-        <input type="number" min="0" value={p.cantidad ?? 0}
-          onChange={e => { const val = parseInt(e.target.value) || 0; actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, cantidad: val, stock: val > 0 } : pr)); }}
-          onBlur={async e => { const val = parseInt(e.target.value) || 0; await supabase.from("productos").update({ cantidad: val, stock: val > 0 }).eq("id", p.id); }}
-          style={{ width: 44, background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 6, padding: "3px 4px", fontSize: 12, fontWeight: 900, color: "#f97316", fontFamily: "inherit", outline: "none", textAlign: "center" }} />
-        <button className="btn" style={{ width: 24, height: 24, background: "#f97316", color: "#fff", fontSize: 14, borderRadius: 6, padding: 0, lineHeight: 1 }}
-          onClick={async () => {
-            const nuevaCantidad = (parseInt(p.cantidad) || 0) + 1;
-            await supabase.from("productos").update({ cantidad: nuevaCantidad, stock: true }).eq("id", p.id);
-            actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, cantidad: nuevaCantidad, stock: true } : pr));
-          }}>+</button>
-      </div>
-
-      {p.variaciones && p.variaciones.length > 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-          {p.variaciones.map((v, idx) => (
-            <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff7ed", padding: "7px 12px", borderRadius: 8, border: "1px solid #fed7aa" }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#374151" }}>{v.nombre}</span>
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#9ca3af" }}>S/.</span>
-                <input type="text" defaultValue={Number(v.precio).toFixed(2)}
-                  onFocus={e => e.target.select()}
-                  onBlur={async e => {
-                    const nuevoPrecio = parseFloat(e.target.value.replace(",", ".")) || 0;
-                    const nuevasVariaciones = p.variaciones.map((vv, i) => i === idx ? { ...vv, precio: nuevoPrecio } : vv);
-                    const precioMin = Math.min(...nuevasVariaciones.map(vv => vv.precio));
-                    await supabase.from("productos").update({ variaciones: nuevasVariaciones, precio: precioMin }).eq("id", p.id);
-                    actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, variaciones: nuevasVariaciones, precio: precioMin } : pr));
-                    mostrarToast("✅ Precio actualizado");
-                  }}
-                  style={{ width: 65, background: "#fff", border: "1.5px solid #fed7aa", borderRadius: 7, padding: "5px 8px", fontSize: 14, fontWeight: 900, color: "#f97316", fontFamily: "inherit", outline: "none", textAlign: "center" }} />
+            <div style={{ padding: "32px", textAlign: "center", color: "#9ca3af", fontSize: 13 }}>Sin productos — agrega el primero con el botón de arriba</div>
+          ) : productos.map(p => (
+            <div key={p.id} className="row" style={{ display: "flex", flexDirection: "column", gap: 6, padding: "12px 16px", borderBottom: "1px solid #f3f4f6" }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                <span style={{ fontSize: '24px' }}>{p.emoji}</span>
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>{p.nombre}</h4>
+                  <span style={{ fontSize: '11px', color: '#9ca3af' }}>{p.categoria}</span>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {kiosko.plan !== "Básico" && (
+                    <button className="btn"
+                      onClick={async () => {
+                        const nuevaOferta = !p.oferta;
+                        await supabase.from("productos").update({ oferta: nuevaOferta }).eq("id", p.id);
+                        actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, oferta: nuevaOferta } : pr));
+                        mostrarToast(nuevaOferta ? "🔥 Marcado como oferta" : "✅ Oferta desactivada");
+                      }}
+                      style={{ background: p.oferta ? "#fef3c7" : "#f3f4f6", color: p.oferta ? "#d97706" : "#9ca3af", padding: "5px 10px", border: `1px solid ${p.oferta ? "#fde68a" : "#e5e7eb"}` }}>
+                      🔥
+                    </button>
+                  )}
+                  <button className="btn" onClick={() => { setModalProducto(p); setNuevoProducto(p); }} style={{ background: "#fff7ed", color: "#f97316", padding: "5px 10px" }}>✏️</button>
+                  <button className="btn" onClick={() => eliminar(p.id)} style={{ background: "#fee2e2", color: "#dc2626", padding: "5px 10px" }}>🗑️</button>
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingLeft: 4, marginTop: 4 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 700 }}>Stock:</span>
+                  <button className="btn" style={{ width: 24, height: 24, background: "#fff7ed", color: "#f97316", fontSize: 14, border: "1px solid #fed7aa", borderRadius: 6, padding: 0, lineHeight: 1 }}
+                    onClick={async () => { const nuevaCantidad = Math.max(0, (parseInt(p.cantidad) || 0) - 1); await supabase.from("productos").update({ cantidad: nuevaCantidad, stock: nuevaCantidad > 0 }).eq("id", p.id); actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, cantidad: nuevaCantidad, stock: nuevaCantidad > 0 } : pr)); }}>−</button>
+                  <input type="number" min="0" value={p.cantidad ?? 0}
+                    onChange={e => { const val = parseInt(e.target.value) || 0; actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, cantidad: val, stock: val > 0 } : pr)); }}
+                    onBlur={async e => { const val = parseInt(e.target.value) || 0; await supabase.from("productos").update({ cantidad: val, stock: val > 0 }).eq("id", p.id); }}
+                    style={{ width: 44, background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 6, padding: "3px 4px", fontSize: 12, fontWeight: 900, color: "#f97316", fontFamily: "inherit", outline: "none", textAlign: "center" }} />
+                  <button className="btn" style={{ width: 24, height: 24, background: "#f97316", color: "#fff", fontSize: 14, borderRadius: 6, padding: 0, lineHeight: 1 }}
+                    onClick={async () => { const nuevaCantidad = (parseInt(p.cantidad) || 0) + 1; await supabase.from("productos").update({ cantidad: nuevaCantidad, stock: true }).eq("id", p.id); actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, cantidad: nuevaCantidad, stock: true } : pr)); }}>+</button>
+                </div>
+                {p.variaciones && p.variaciones.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+                    {p.variaciones.map((v, idx) => (
+                      <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff7ed", padding: "7px 12px", borderRadius: 8, border: "1px solid #fed7aa" }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: "#374151" }}>{v.nombre}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#9ca3af" }}>S/.</span>
+                          <input type="text" defaultValue={Number(v.precio).toFixed(2)} onFocus={e => e.target.select()}
+                            onBlur={async e => {
+                              const nuevoPrecio = parseFloat(e.target.value.replace(",", ".")) || 0;
+                              const nuevasVariaciones = p.variaciones.map((vv, i) => i === idx ? { ...vv, precio: nuevoPrecio } : vv);
+                              const precioMin = Math.min(...nuevasVariaciones.map(vv => vv.precio));
+                              await supabase.from("productos").update({ variaciones: nuevasVariaciones, precio: precioMin }).eq("id", p.id);
+                              actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, variaciones: nuevasVariaciones, precio: precioMin } : pr));
+                              mostrarToast("✅ Precio actualizado");
+                            }}
+                            style={{ width: 65, background: "#fff", border: "1.5px solid #fed7aa", borderRadius: 7, padding: "5px 8px", fontSize: 14, fontWeight: 900, color: "#f97316", fontFamily: "inherit", outline: "none", textAlign: "center" }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#9ca3af" }}>S/.</span>
+                    <input type="text" value={isNaN(p.precio) ? "" : Number(p.precio).toFixed(2)}
+                      onChange={e => { const val = e.target.value.replace(",", "."); actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, precio: parseFloat(val) || 0 } : pr)); }}
+                      onFocus={e => { e.target.style.borderColor = "#f97316"; e.target.select(); }}
+                      onBlur={async e => { e.target.style.borderColor = "#fed7aa"; const val = parseFloat(e.target.value.replace(",", ".")) || 0; await supabase.from("productos").update({ precio: val }).eq("id", p.id); mostrarToast("✅ Precio actualizado"); }}
+                      style={{ width: 70, background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 7, padding: "6px 8px", fontSize: 14, fontWeight: 900, color: "#f97316", fontFamily: "inherit", outline: "none", textAlign: "center" }} />
+                  </div>
+                )}
               </div>
             </div>
           ))}
         </div>
-      ) : (
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "#9ca3af" }}>S/.</span>
-          <input type="text" value={isNaN(p.precio) ? "" : Number(p.precio).toFixed(2)}
-            onChange={e => { const val = e.target.value.replace(",", "."); actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, precio: parseFloat(val) || 0 } : pr)); }}
-            onFocus={e => { e.target.style.borderColor = "#f97316"; e.target.select(); }}
-            onBlur={async e => { e.target.style.borderColor = "#fed7aa"; const val = parseFloat(e.target.value.replace(",", ".")) || 0; await supabase.from("productos").update({ precio: val }).eq("id", p.id); mostrarToast("✅ Precio actualizado"); }}
-            style={{ width: 70, background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 7, padding: "6px 8px", fontSize: 14, fontWeight: 900, color: "#f97316", fontFamily: "inherit", outline: "none", textAlign: "center" }} />
+      </div>
+
+      {/* ✅ Modal datos de pago */}
+      {modalPago && (
+        <div className="modal-bg" onClick={() => setModalPago(false)}>
+          <div className="modal fade" onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontWeight: 900, fontSize: 16 }}>💳 Datos de pago</span>
+              <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "6px 12px", fontSize: 11, border: "1px solid #e5e7eb" }} onClick={() => setModalPago(false)}>✕</button>
+            </div>
+            <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 18, lineHeight: 1.6 }}>
+              Estos datos aparecerán cuando tu cliente elija el método de pago en el catálogo.
+            </p>
+
+            {/* Yape / Plin */}
+            <p style={{ fontSize: 12, fontWeight: 800, color: "#7c3aed", marginBottom: 8 }}>📱 Yape / Plin</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
+              <input className="inp" placeholder="Número de Yape/Plin (ej: 999888777)"
+                value={datosPago.yape_numero || ""}
+                onChange={e => setDatosPago(p => ({ ...p, yape_numero: e.target.value }))} />
+              <input className="inp" placeholder="Nombre del titular"
+                value={datosPago.yape_nombre || ""}
+                onChange={e => setDatosPago(p => ({ ...p, yape_nombre: e.target.value }))} />
+            </div>
+
+            {/* Transferencia */}
+            <p style={{ fontSize: 12, fontWeight: 800, color: "#1d4ed8", marginBottom: 8 }}>🏦 Transferencia bancaria</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+              <input className="inp" placeholder="Banco (ej: BCP, Interbank, BBVA...)"
+                value={datosPago.banco || ""}
+                onChange={e => setDatosPago(p => ({ ...p, banco: e.target.value }))} />
+              <input className="inp" placeholder="Número de cuenta"
+                value={datosPago.cuenta || ""}
+                onChange={e => setDatosPago(p => ({ ...p, cuenta: e.target.value }))} />
+              <input className="inp" placeholder="CCI (código interbancario)"
+                value={datosPago.cci || ""}
+                onChange={e => setDatosPago(p => ({ ...p, cci: e.target.value }))} />
+              <input className="inp" placeholder="A nombre de"
+                value={datosPago.cuenta_nombre || ""}
+                onChange={e => setDatosPago(p => ({ ...p, cuenta_nombre: e.target.value }))} />
+            </div>
+
+            <button className="btn" style={{ width: "100%", background: "#f97316", color: "#fff", padding: 13, fontSize: 14 }}
+              onClick={guardarDatosPago}>
+              💾 Guardar datos de pago
+            </button>
+          </div>
         </div>
       )}
 
-    </div>
-  </div>
-))}
-        </div>
-      </div>
-      {/* Modal agregar/editar */}
+      {/* Modal agregar/editar producto */}
       {modalProducto !== null && (
         <div className="modal-bg" onClick={() => setModalProducto(null)}>
           <div className="modal fade" onClick={e => e.stopPropagation()}>
@@ -897,50 +773,31 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
               <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "6px 12px", fontSize: 11, border: "1px solid #e5e7eb" }} onClick={() => setModalProducto(null)}>✕</button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-
-              {/* Foto del producto */}
               <div>
                 <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>Foto del producto</label>
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                  {/* Preview */}
                   <div style={{ width: 72, height: 72, borderRadius: 12, background: "#fff7ed", border: "1.5px solid #fed7aa", display: "grid", placeItems: "center", overflow: "hidden", flexShrink: 0 }}>
-                    {nuevoProducto.foto ? (
-                      <img src={nuevoProducto.foto} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    ) : (
-                      <span style={{ fontSize: 28 }}>{nuevoProducto.emoji || "📷"}</span>
-                    )}
+                    {nuevoProducto.foto ? <img src={nuevoProducto.foto} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 28 }}>{nuevoProducto.emoji || "📷"}</span>}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      id="foto-upload"
-                      style={{ display: "none" }}
+                    <input type="file" accept="image/jpeg,image/png,image/webp" id="foto-upload" style={{ display: "none" }}
                       onChange={e => {
                         const file = e.target.files[0];
                         if (!file) return;
                         if (file.size > 2 * 1024 * 1024) { alert("La foto no debe superar 2MB"); return; }
-                        // Guardamos el archivo original Y un preview base64 para mostrar
                         const reader = new FileReader();
                         reader.onload = ev => setNuevoProducto(p => ({ ...p, foto: ev.target.result, fotoFile: file }));
                         reader.readAsDataURL(file);
-                      }}
-                    />
+                      }} />
                     <button className="btn" style={{ width: "100%", background: "#fff7ed", color: "#f97316", padding: "10px", fontSize: 12, border: "1.5px dashed #fed7aa", borderRadius: 8, marginBottom: 6 }}
                       onClick={() => document.getElementById("foto-upload").click()}>
                       📸 Subir foto
                     </button>
                     <p style={{ fontSize: 10, color: "#9ca3af" }}>JPG, PNG o WEBP · Máx. 2MB</p>
-                    {nuevoProducto.foto && (
-                      <button className="btn" style={{ fontSize: 10, color: "#dc2626", background: "transparent", padding: "4px 0", marginTop: 4 }}
-                        onClick={() => setNuevoProducto(p => ({ ...p, foto: null }))}>
-                        🗑 Quitar foto
-                      </button>
-                    )}
+                    {nuevoProducto.foto && <button className="btn" style={{ fontSize: 10, color: "#dc2626", background: "transparent", padding: "4px 0", marginTop: 4 }} onClick={() => setNuevoProducto(p => ({ ...p, foto: null }))}>🗑 Quitar foto</button>}
                   </div>
                 </div>
               </div>
-
               {[["Nombre", "nombre", "Juice 250ml"], ["Emoji (si no hay foto)", "emoji", "🥤"], ["Precio (S/.)", "precio", "1.50"]].map(([label, key, ph]) => (
                 <div key={key}>
                   <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>{label}</label>
@@ -953,31 +810,16 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
                   {categoriasParaMostrar.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
-              {/* Stock cantidad manual */}
               <div>
-                <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>
-                  Cantidad en stock
-                </label>
+                <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>Cantidad en stock</label>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <button className="btn" style={{ width: 36, height: 36, background: "#fff7ed", color: "#f97316", fontSize: 20, border: "1.5px solid #fed7aa", borderRadius: 8, flexShrink: 0 }}
-                    onClick={() => setNuevoProducto(p => ({ ...p, cantidad: Math.max(0, (parseInt(p.cantidad) || 0) - 1), stock: Math.max(0, (parseInt(p.cantidad) || 0) - 1) > 0 }))}>
-                    −
-                  </button>
-                  <input
-                    type="number"
-                    min="0"
-                    value={nuevoProducto.cantidad ?? ""}
-                    placeholder="0"
-                    onChange={e => {
-                      const val = parseInt(e.target.value) || 0;
-                      setNuevoProducto(p => ({ ...p, cantidad: val, stock: val > 0 }));
-                    }}
-                    style={{ flex: 1, background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 8, padding: "9px 14px", fontSize: 16, fontWeight: 900, color: "#f97316", fontFamily: "inherit", outline: "none", textAlign: "center" }}
-                  />
+                    onClick={() => setNuevoProducto(p => ({ ...p, cantidad: Math.max(0, (parseInt(p.cantidad) || 0) - 1), stock: Math.max(0, (parseInt(p.cantidad) || 0) - 1) > 0 }))}>−</button>
+                  <input type="number" min="0" value={nuevoProducto.cantidad ?? ""} placeholder="0"
+                    onChange={e => { const val = parseInt(e.target.value) || 0; setNuevoProducto(p => ({ ...p, cantidad: val, stock: val > 0 })); }}
+                    style={{ flex: 1, background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 8, padding: "9px 14px", fontSize: 16, fontWeight: 900, color: "#f97316", fontFamily: "inherit", outline: "none", textAlign: "center" }} />
                   <button className="btn" style={{ width: 36, height: 36, background: "#f97316", color: "#fff", fontSize: 20, borderRadius: 8, flexShrink: 0 }}
-                    onClick={() => setNuevoProducto(p => ({ ...p, cantidad: (parseInt(p.cantidad) || 0) + 1, stock: true }))}>
-                    +
-                  </button>
+                    onClick={() => setNuevoProducto(p => ({ ...p, cantidad: (parseInt(p.cantidad) || 0) + 1, stock: true }))}>+</button>
                 </div>
                 <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 5 }}>
                   {(parseInt(nuevoProducto.cantidad) || 0) === 0 ? "⚠️ Sin stock — no aparecerá disponible en el catálogo" : `✅ ${nuevoProducto.cantidad} unidades disponibles`}
@@ -995,13 +837,12 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
   );
 }
 
+// ─── CATÁLOGO CLIENTE ───
 function CatalogoCliente({ kiosko, onSalir }) {
   const [carrito, setCarrito] = useState({});
   const [categoria, setCategoria] = useState("Todos");
-  const [busqueda, setBusqueda] = useState("");
   const [nombreCliente, setNombreCliente] = useState("");
   const [verCarrito, setVerCarrito] = useState(false);
-  // ✅ Estados nuevos AQUÍ dentro, no en App
   const [tipoEntrega, setTipoEntrega] = useState("delivery");
   const [medioPago, setMedioPago] = useState("efectivo");
   const [direccion, setDireccion] = useState("");
@@ -1011,31 +852,16 @@ function CatalogoCliente({ kiosko, onSalir }) {
     const key = variacion ? `${p.id}-${variacion.nombre}` : `${p.id}-unica`;
     setCarrito(prev => {
       const existente = prev[key];
-      if (existente) {
-        return { ...prev, [key]: { ...existente, cantidad: existente.cantidad + 1 } };
-      } else {
-        return {
-          ...prev,
-          [key]: {
-            id: p.id,
-            nombre: variacion ? `${p.nombre} (${variacion.nombre})` : p.nombre,
-            precio: variacion ? Number(variacion.precio) : Number(p.precio),
-            cantidad: 1,
-            variacionObj: variacion
-          }
-        };
-      }
+      if (existente) return { ...prev, [key]: { ...existente, cantidad: existente.cantidad + 1 } };
+      return { ...prev, [key]: { id: p.id, nombre: variacion ? `${p.nombre} (${variacion.nombre})` : p.nombre, precio: variacion ? Number(variacion.precio) : Number(p.precio), cantidad: 1, variacionObj: variacion } };
     });
   };
 
   const quitar = (key) => {
     setCarrito(prev => {
       const nuevo = { ...prev };
-      if (nuevo[key].cantidad > 1) {
-        nuevo[key] = { ...nuevo[key], cantidad: nuevo[key].cantidad - 1 };
-      } else {
-        delete nuevo[key];
-      }
+      if (nuevo[key].cantidad > 1) nuevo[key] = { ...nuevo[key], cantidad: nuevo[key].cantidad - 1 };
+      else delete nuevo[key];
       return nuevo;
     });
   };
@@ -1049,24 +875,23 @@ function CatalogoCliente({ kiosko, onSalir }) {
     if (!nombreCliente.trim()) return alert("Por favor escribe tu nombre");
     if (tipoEntrega === "delivery" && !direccion.trim()) return alert("Ingresa tu dirección de delivery");
 
-    const lineas = listaCarrito
-      .map(([_, item]) => `• ${item.nombre} x${item.cantidad} — S/. ${(item.precio * item.cantidad).toFixed(2)}`)
-      .join("\n");
-
+    const lineas = listaCarrito.map(([_, item]) => `• ${item.nombre} x${item.cantidad} — S/. ${(item.precio * item.cantidad).toFixed(2)}`).join("\n");
     const entregaTexto = tipoEntrega === "delivery" ? `Delivery — ${direccion}` : "Recojo en tienda";
-    const pagoTexto = { efectivo: "Efectivo", yape: "Yape / Plin", transferencia: "Transferencia" }[medioPago];
 
-    const msg = encodeURIComponent(
-      `*Nuevo Pedido*\n\n${lineas}\n\n*Total: S/. ${totalPrecio.toFixed(2)}*\n*Cliente:* ${nombreCliente}\n*Entrega:* ${entregaTexto}\n*Pago:* ${pagoTexto}${nota ? `\n*Nota:* ${nota}` : ""}`
-    );
+    let pagoTexto = "";
+    if (medioPago === "efectivo") {
+      pagoTexto = "Efectivo";
+    } else if (medioPago === "yape") {
+      const d = kiosko.datos_pago || {};
+      pagoTexto = `Yape/Plin${d.yape_numero ? ` al ${d.yape_numero}` : ""}${d.yape_nombre ? ` (${d.yape_nombre})` : ""}`;
+    } else if (medioPago === "transferencia") {
+      const d = kiosko.datos_pago || {};
+      pagoTexto = `Transferencia${d.banco ? ` — ${d.banco}` : ""}${d.cuenta ? ` | Cta: ${d.cuenta}` : ""}${d.cci ? ` | CCI: ${d.cci}` : ""}${d.cuenta_nombre ? ` | A nombre de: ${d.cuenta_nombre}` : ""}`;
+    }
 
-    await supabase.from("pedidos").insert([{
-      kiosko_id: kiosko.id,
-      nombre_cliente: nombreCliente,
-      detalle: lineas,
-      total: totalPrecio,
-    }]);
+    const msg = encodeURIComponent(`*Nuevo Pedido*\n\n${lineas}\n\n*Total: S/. ${totalPrecio.toFixed(2)}*\n*Cliente:* ${nombreCliente}\n*Entrega:* ${entregaTexto}\n*Pago:* ${pagoTexto}${nota ? `\n*Nota:* ${nota}` : ""}`);
 
+    await supabase.from("pedidos").insert([{ kiosko_id: kiosko.id, nombre_cliente: nombreCliente, detalle: lineas, total: totalPrecio }]);
     window.open(`https://wa.me/51${kiosko.whatsapp}?text=${msg}`, "_blank");
   };
 
@@ -1077,17 +902,9 @@ function CatalogoCliente({ kiosko, onSalir }) {
     return (
       <div className="prod-card" style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
         <div style={{ position: "relative" }}>
-          {p.oferta && (
-            <span style={{ position: "absolute", top: 8, left: 8, background: "#f97316", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 999, zIndex: 1 }}>
-              🔥 Oferta
-            </span>
-          )}
-          <div style={{ width: "100%", aspectRatio: "1 / 1", background: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", padding: "0px" }}>
-            {p.foto ? (
-              <img src={p.foto} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block", borderRadius: "20px" }} />
-            ) : (
-              <span style={{ fontSize: "40px", opacity: 0.6 }}>{p.emoji || "📦"}</span>
-            )}
+          {p.oferta && <span style={{ position: "absolute", top: 8, left: 8, background: "#f97316", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 999, zIndex: 1 }}>🔥 Oferta</span>}
+          <div style={{ width: "100%", aspectRatio: "1 / 1", background: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+            {p.foto ? <img src={p.foto} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block", borderRadius: "20px" }} /> : <span style={{ fontSize: "40px", opacity: 0.6 }}>{p.emoji || "📦"}</span>}
           </div>
         </div>
         <div style={{ padding: 12 }}>
@@ -1096,10 +913,9 @@ function CatalogoCliente({ kiosko, onSalir }) {
             <div style={{ display: "flex", gap: 5, margin: "8px 0", flexWrap: "wrap" }}>
               {p.variaciones.map((v, i) => (
                 <button key={i} onClick={() => setVarSel(v)}
-                  style={{ fontSize: 10, padding: "4px 8px", borderRadius: 6, border: "none", cursor: "pointer",
-                    background: varSel?.nombre === v.nombre ? "#f97316" : "#eee",
-                    color: varSel?.nombre === v.nombre ? "#fff" : "#666"
-                  }}>{v.nombre}</button>
+                  style={{ fontSize: 10, padding: "4px 8px", borderRadius: 6, border: "none", cursor: "pointer", background: varSel?.nombre === v.nombre ? "#f97316" : "#eee", color: varSel?.nombre === v.nombre ? "#fff" : "#666" }}>
+                  {v.nombre}
+                </button>
               ))}
             </div>
           )}
@@ -1109,10 +925,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
               const key = varSel ? `${p.id}-${varSel.nombre}` : `${p.id}-unica`;
               const cantidad = carrito[key]?.cantidad || 0;
               return cantidad === 0 ? (
-                <button onClick={() => agregar(p, varSel)}
-                  style={{ width: "100%", marginTop: 8, background: "#f97316", color: "#fff", border: "none", padding: "10px", borderRadius: 8, fontWeight: 800, cursor: "pointer", fontSize: 13 }}>
-                  + Agregar
-                </button>
+                <button onClick={() => agregar(p, varSel)} style={{ width: "100%", marginTop: 8, background: "#f97316", color: "#fff", border: "none", padding: "10px", borderRadius: 8, fontWeight: 800, cursor: "pointer", fontSize: 13 }}>+ Agregar</button>
               ) : (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, background: "#fff7ed", borderRadius: 8, padding: "4px" }}>
                   <button onClick={() => quitar(key)} style={{ width: 26, height: 26, border: "none", background: "#f97316", color: "#fff", borderRadius: 6, fontWeight: 900, cursor: "pointer", fontSize: 13 }}>−</button>
@@ -1133,9 +946,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
   return (
     <div style={{ minHeight: "100vh", background: "#fff7ed", fontFamily: "Nunito, sans-serif" }}>
       <style>{`
-        @media (min-width: 600px) {
-          .productos-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; }
-        }
+        @media (min-width: 600px) { .productos-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; } }
         .prod-card img { height: 120px !important; }
       `}</style>
 
@@ -1161,11 +972,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
       <div style={{ display: "flex", gap: 8, padding: "12px 15px", overflowX: "auto", background: "#fff", borderBottom: "1px solid #fed7aa" }}>
         {categorias.map(cat => (
           <button key={cat} onClick={() => setCategoria(cat)}
-            style={{ flexShrink: 0, padding: "7px 16px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: 13,
-              background: categoria === cat ? "#f97316" : "#fff7ed",
-              color: categoria === cat ? "#fff" : "#f97316",
-              boxShadow: categoria === cat ? "0 2px 8px rgba(249,115,22,0.3)" : "none"
-            }}>
+            style={{ flexShrink: 0, padding: "7px 16px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: 13, background: categoria === cat ? "#f97316" : "#fff7ed", color: categoria === cat ? "#fff" : "#f97316", boxShadow: categoria === cat ? "0 2px 8px rgba(249,115,22,0.3)" : "none" }}>
             {cat}
           </button>
         ))}
@@ -1185,7 +992,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
         </button>
       )}
 
-      {/* Modal carrito mejorado */}
+      {/* Modal carrito */}
       {verCarrito && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", zIndex: 100 }}>
           <div style={{ background: "#fff", width: "100%", borderTopLeftRadius: 25, borderTopRightRadius: 25, maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
@@ -1196,7 +1003,6 @@ function CatalogoCliente({ kiosko, onSalir }) {
               <button onClick={() => setVerCarrito(false)} style={{ border: "none", background: "#f3f4f6", width: 35, height: 35, borderRadius: "50%", fontSize: 16, cursor: "pointer" }}>✕</button>
             </div>
 
-            {/* Scroll area */}
             <div style={{ overflowY: "auto", flex: 1 }}>
 
               {/* Productos */}
@@ -1239,20 +1045,19 @@ function CatalogoCliente({ kiosko, onSalir }) {
                   <div style={{ display: "flex", alignItems: "center", marginTop: 10, border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "10px 14px", gap: 8, background: "#f9fafb" }}>
                     <span>📍</span>
                     <input style={{ border: "none", outline: "none", fontSize: 14, background: "transparent", flex: 1 }}
-                      placeholder="Ingresa tu dirección"
-                      value={direccion} onChange={e => setDireccion(e.target.value)} />
+                      placeholder="Ingresa tu dirección" value={direccion} onChange={e => setDireccion(e.target.value)} />
                   </div>
                 )}
               </div>
 
-              {/* Medio de pago */}
+              {/* ✅ Medio de pago con info dinámica */}
               <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                   <span style={{ fontSize: 18 }}>💳</span>
                   <span style={{ fontWeight: 700, fontSize: 15, flex: 1 }}>Medio de pago</span>
                   <span style={{ fontSize: 11, fontWeight: 700, background: "#f0fdf4", color: "#16a34a", padding: "2px 8px", borderRadius: 20 }}>Obligatorio</span>
                 </div>
-                <div style={{ display: "flex", gap: 10 }}>
+                <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
                   {[{ id: "efectivo", label: "Efectivo", icon: "💵" }, { id: "yape", label: "Yape / Plin", icon: "📱" }, { id: "transferencia", label: "Transferencia", icon: "🏦" }].map(op => (
                     <button key={op.id} onClick={() => setMedioPago(op.id)}
                       style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "12px 4px", borderRadius: 12, border: `1.5px solid ${medioPago === op.id ? "#16a34a" : "#e5e7eb"}`, background: medioPago === op.id ? "#f0fdf4" : "#f9fafb", cursor: "pointer" }}>
@@ -1261,6 +1066,46 @@ function CatalogoCliente({ kiosko, onSalir }) {
                     </button>
                   ))}
                 </div>
+
+                {/* Info Yape */}
+                {medioPago === "yape" && kiosko.datos_pago?.yape_numero && (
+                  <div style={{ background: "#fdf4ff", border: "1.5px solid #e9d5ff", borderRadius: 12, padding: "12px 14px" }}>
+                    <p style={{ fontSize: 12, fontWeight: 800, color: "#7c3aed", marginBottom: 6 }}>📱 Datos para Yape / Plin</p>
+                    <p style={{ fontSize: 15, fontWeight: 900, color: "#111827" }}>📞 {kiosko.datos_pago.yape_numero}</p>
+                    {kiosko.datos_pago.yape_nombre && <p style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>👤 {kiosko.datos_pago.yape_nombre}</p>}
+                  </div>
+                )}
+
+                {/* Info Transferencia */}
+                {medioPago === "transferencia" && (kiosko.datos_pago?.banco || kiosko.datos_pago?.cuenta) && (
+                  <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 12, padding: "12px 14px" }}>
+                    <p style={{ fontSize: 12, fontWeight: 800, color: "#1d4ed8", marginBottom: 8 }}>🏦 Datos para transferencia</p>
+                    {kiosko.datos_pago.banco && (
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 12, color: "#6b7280" }}>Banco</span>
+                        <span style={{ fontSize: 13, fontWeight: 800 }}>{kiosko.datos_pago.banco}</span>
+                      </div>
+                    )}
+                    {kiosko.datos_pago.cuenta && (
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 12, color: "#6b7280" }}>Cuenta</span>
+                        <span style={{ fontSize: 13, fontWeight: 800 }}>{kiosko.datos_pago.cuenta}</span>
+                      </div>
+                    )}
+                    {kiosko.datos_pago.cci && (
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 12, color: "#6b7280" }}>CCI</span>
+                        <span style={{ fontSize: 13, fontWeight: 800 }}>{kiosko.datos_pago.cci}</span>
+                      </div>
+                    )}
+                    {kiosko.datos_pago.cuenta_nombre && (
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: 12, color: "#6b7280" }}>A nombre de</span>
+                        <span style={{ fontSize: 13, fontWeight: 800 }}>{kiosko.datos_pago.cuenta_nombre}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Nota */}
@@ -1294,10 +1139,10 @@ function CatalogoCliente({ kiosko, onSalir }) {
           </div>
         </div>
       )}
-
     </div>
   );
 }
+
 // ─── APP PRINCIPAL ───
 export default function App() {
   const [pantalla, setPantalla] = useState("login");
@@ -1308,15 +1153,10 @@ export default function App() {
   const [cargandoPublico, setCargandoPublico] = useState(false);
   const [kioskoPorSlug, setKioskoPorSlug] = useState(null);
 
-  // Detectar link público tipo /#/rosita
   const hash = window.location.hash;
   const slug = hash.replace(/^#\/?/, "").replace(/\/$/, "").toLowerCase().trim();
 
-  useEffect(() => {
-    if (slug && slug.length > 0) {
-      cargarKioskoPorSlug(slug);
-    }
-  }, [slug]);
+  useEffect(() => { if (slug && slug.length > 0) cargarKioskoPorSlug(slug); }, [slug]);
 
   const cargarKioskoPorSlug = async (slug) => {
     setCargandoPublico(true);
@@ -1349,9 +1189,7 @@ export default function App() {
 
   const handleLogin = async () => {
     if (loginForm.email === SUPERADMIN.email && loginForm.clave === SUPERADMIN.clave) {
-      setPantalla("superadmin");
-      setLoginError("");
-      return;
+      setPantalla("superadmin"); setLoginError(""); return;
     }
     const { data: ks } = await supabase.from("kioskos").select("*").eq("email", loginForm.email).eq("clave", loginForm.clave).single();
     if (ks) {
@@ -1367,7 +1205,7 @@ export default function App() {
   };
 
   if (pantalla === "superadmin") return <SuperAdmin onSalir={() => { setPantalla("login"); setLoginForm({ email: "", clave: "" }); }} />;
-  
+
   if (pantalla === "adminkiosko" && kioskoCurrent) return (
     <AdminKiosko
       kiosko={{ ...kioskoCurrent, productos: productosActuales }}
