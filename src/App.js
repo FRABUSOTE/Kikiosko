@@ -946,11 +946,11 @@ function CatalogoCliente({ kiosko, onSalir }) {
   useEffect(() => {
     const handleBack = (e) => {
       // Si está en una madre, volver a la pantalla inicial
-      if (madreActiva && madreActiva !== "sin_madre") {
-        setMadreActiva(null);
-        setBusqueda("");
-        setCategoria("Todos");
-      }
+      if (madreActiva !== null) {
+  setMadreActiva(null);
+  setBusqueda("");
+  setCategoria("Todos");
+}
     };
     window.addEventListener("popstate", handleBack);
     return () => window.removeEventListener("popstate", handleBack);
@@ -1098,7 +1098,13 @@ function CatalogoCliente({ kiosko, onSalir }) {
             <input style={{ border: "none", outline: "none", fontSize: 15, background: "transparent", flex: 1, color: "#111827" }}
               placeholder="Buscar productos..."
               value={busqueda}
-              onChange={e => { setBusqueda(e.target.value); if (e.target.value.trim()) setMadreActiva("sin_madre"); }} />
+              onChange={e => {
+  setBusqueda(e.target.value);
+  if (e.target.value.trim() && madreActiva === null) {
+    window.history.pushState({ madre: "sin_madre" }, "");
+    setMadreActiva("sin_madre");
+  }
+}} />
           </div>
           <div style={{ textAlign: "center", marginBottom: 24 }}>
             <p style={{ fontSize: 22, fontWeight: 900, color: "#111827" }}>{kiosko.nombre}</p>
