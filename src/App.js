@@ -1041,11 +1041,13 @@ function CatalogoCliente({ kiosko, onSalir }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#fff7ed", fontFamily: "Nunito, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#fff7ed", fontFamily: "Nunito, sans-serif", overflowX: "hidden", width: "100%", maxWidth: "100vw" }}>
       <style>{`
-        @media (min-width: 600px) { .productos-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; } }
-        .prod-card img { height: 120px !important; }
-      `}</style>
+  @media (min-width: 600px) { .productos-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; } }
+  .prod-card img { height: 120px !important; }
+  * { box-sizing: border-box; }
+  html, body, #root { overflow-x: hidden !important; max-width: 100vw; }
+`}</style>
 
       {/* Header */}
       <div style={{ position: "relative" }}>
@@ -1108,40 +1110,67 @@ function CatalogoCliente({ kiosko, onSalir }) {
         /* ✅ PANTALLA CATÁLOGO */
         <>
           {/* Barra con buscador y botón volver */}
-          <div style={{ background: "#fff", borderBottom: "1px solid #fed7aa", padding: "10px 15px", display: "flex", alignItems: "center", gap: 10 }}>
-            {madreActiva !== "sin_madre" && (
-              <button onClick={() => { setMadreActiva(null); setBusqueda(""); setCategoria("Todos"); }}
-                style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 800, color: "#f97316", cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
-                ← {madreActiva}
-              </button>
-            )}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f9fafb", borderRadius: 10, padding: "8px 12px", flex: 1, border: "1px solid #e5e7eb" }}>
-              <span style={{ fontSize: 14 }}>🔍</span>
-              <input style={{ border: "none", outline: "none", fontSize: 13, background: "transparent", flex: 1 }}
-                placeholder="Buscar productos..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
-            </div>
-          </div>
+<div style={{
+  background: "#fff", borderBottom: "1px solid #fed7aa",
+  padding: "10px 15px", display: "flex", alignItems: "center", gap: 8,
+  width: "100%", maxWidth: "100vw", boxSizing: "border-box", overflow: "hidden"
+}}>
+  {madreActiva !== "sin_madre" && (
+    <button onClick={() => { setMadreActiva(null); setBusqueda(""); setCategoria("Todos"); }}
+      style={{
+        background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8,
+        padding: "6px 10px", fontSize: 11, fontWeight: 800, color: "#f97316",
+        cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap",
+        maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis"
+      }}>
+      ← {madreActiva}
+    </button>
+  )}
+  <div style={{
+    display: "flex", alignItems: "center", gap: 8, background: "#f9fafb",
+    borderRadius: 10, padding: "8px 12px", flex: 1, minWidth: 0,
+    border: "1px solid #e5e7eb", boxSizing: "border-box"
+  }}>
+    <span style={{ fontSize: 14, flexShrink: 0 }}>🔍</span>
+    <input style={{ border: "none", outline: "none", fontSize: 13, background: "transparent", flex: 1, minWidth: 0, width: "100%" }}
+      placeholder="Buscar productos..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+  </div>
+</div>
 
-          {/* Filtro subcategorías */}
-          <div style={{ display: "flex", gap: 8, padding: "10px 15px", overflowX: "auto", background: "#fff", borderBottom: "1px solid #fed7aa" }}>
-            {categoriasDeMadre.map(cat => (
-              <button key={cat} onClick={() => setCategoria(cat)}
-                style={{ flexShrink: 0, padding: "7px 16px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: 13, background: categoria === cat ? "#f97316" : "#fff7ed", color: categoria === cat ? "#fff" : "#f97316", boxShadow: categoria === cat ? "0 2px 8px rgba(249,115,22,0.3)" : "none" }}>
-                {cat}
-              </button>
-            ))}
-          </div>
+{/* Filtro subcategorías */}
+<div style={{
+  display: "flex", gap: 8, padding: "10px 15px",
+  overflowX: "auto", overflowY: "hidden",
+  background: "#fff", borderBottom: "1px solid #fed7aa",
+  width: "100%", maxWidth: "100vw", boxSizing: "border-box"
+}}>
+  {categoriasDeMadre.map(cat => (
+    <button key={cat} onClick={() => setCategoria(cat)}
+      style={{
+        flexShrink: 0, padding: "7px 16px", borderRadius: 999, border: "none",
+        cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: 13,
+        background: categoria === cat ? "#f97316" : "#fff7ed",
+        color: categoria === cat ? "#fff" : "#f97316",
+        boxShadow: categoria === cat ? "0 2px 8px rgba(249,115,22,0.3)" : "none"
+      }}>
+      {cat}
+    </button>
+  ))}
+</div>
 
-          {/* Grid productos */}
-          <div className="productos-grid" style={{ padding: 15, paddingBottom: 100, display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
-            {productosFiltrados.length === 0
-              ? <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "40px 0", color: "#9ca3af", fontSize: 13 }}>Sin productos encontrados</div>
-              : productosFiltrados.map(p => <ProductoCard key={p.id} p={p} />)
-            }
-          </div>
+{/* Grid productos */}
+<div className="productos-grid" style={{
+  padding: 15, paddingBottom: 100,
+  display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12,
+  width: "100%", maxWidth: "100vw", boxSizing: "border-box"
+}}>
+  {productosFiltrados.length === 0
+    ? <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "40px 0", color: "#9ca3af", fontSize: 13 }}>Sin productos encontrados</div>
+    : productosFiltrados.map(p => <ProductoCard key={p.id} p={p} />)
+  }
+</div>
         </>
       )}
-
       {/* Botón flotante carrito */}
       {totalItems > 0 && (
         <button onClick={() => setVerCarrito(true)}
