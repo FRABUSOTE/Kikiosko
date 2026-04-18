@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "./supabase";
 import { QRCodeSVG as QRCode } from "qrcode.react";
+import imageCompression from "browser-image-compression";
 
 const SUPERADMIN = { email: "admin@kikiosko.pe", clave: "admin123" };
 const PLANES = [
@@ -9,6 +10,20 @@ const PLANES = [
   { id: "Pro", precio: 59 },
   { id: "Premium", precio: 99 },
 ];
+
+// ✅ FUNCIÓN GLOBAL DE COMPRESIÓN
+const comprimirImagen = async (file, tipo = "producto") => {
+  const opciones = tipo === "producto"
+    ? { maxSizeMB: 0.06, maxWidthOrHeight: 600, useWebWorker: true }
+    : { maxSizeMB: 0.08, maxWidthOrHeight: 800, useWebWorker: true };
+  try {
+    const comprimido = await imageCompression(file, opciones);
+    return comprimido;
+  } catch (err) {
+    console.warn("Compresión falló, usando original:", err);
+    return file;
+  }
+};
 
 function fmtFecha(f) {
   if (!f) return "—";
@@ -57,11 +72,12 @@ function SuperAdmin({ onSalir }) {
 
   const subirImagenMadre = async (madreId, file) => {
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { mostrarToast("❌ Imagen máx 2MB", "error"); return; }
-    mostrarToast("⏳ Subiendo imagen...", "ok");
-    const ext = file.name.split(".").pop();
+    mostrarToast("⏳ Comprimiendo y subiendo...", "ok");
+    // ✅ COMPRESIÓN para imágenes de categorías madre
+    const fileComprimido = await comprimirImagen(file, "banner");
+    const ext = "jpg";
     const fileName = `madre_${madreId}_${Date.now()}.${ext}`;
-    const { error: uploadError } = await supabase.storage.from("fotos-productos").upload(fileName, file, { upsert: true });
+    const { error: uploadError } = await supabase.storage.from("fotos-productos").upload(fileName, fileComprimido, { upsert: true, contentType: "image/jpeg" });
     if (uploadError) { mostrarToast("❌ Error subiendo imagen", "error"); return; }
     const { data: urlData } = supabase.storage.from("fotos-productos").getPublicUrl(fileName);
     const imagenUrl = urlData.publicUrl;
@@ -120,7 +136,6 @@ function SuperAdmin({ onSalir }) {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const filas = XLSX.utils.sheet_to_json(ws, { defval: "" });
       if (!filas || filas.length === 0) { mostrarToast("❌ El Excel está vacío", "error"); return; }
-
       const productos = filas.map(fila => {
         const get = (keys) => { for (const k of keys) { const found = Object.keys(fila).find(f => f.toLowerCase().trim() === k.toLowerCase()); if (found) return fila[found]; } return ""; };
         const precioBaseExcel = parseFloat(get(["precio", "costo"])) || 0;
@@ -145,28 +160,21 @@ function SuperAdmin({ onSalir }) {
           variaciones: variacionesFinales
         };
       }).filter(p => p.nombre);
-
       if (productos.length === 0) { mostrarToast("❌ No se encontraron productos con nombre", "error"); return; }
-
       const { data, error } = await supabase.from("productos").upsert(productos, { onConflict: 'nombre' }).select();
       if (error) { mostrarToast("❌ Error guardando: " + error.message, "error"); return; }
-
-      // Detectar madres únicas y crearlas si no existen
       const madresUnicas = [...new Set(productos.map(p => p.madre).filter(Boolean))];
       if (madresUnicas.length > 0) {
         const { data: madresExistentes } = await supabase.from("categorias_madre").select("nombre").eq("kiosko_id", kioskoid);
         const nombresExistentes = (madresExistentes || []).map(m => m.nombre);
         const madresNuevas = madresUnicas.filter(m => !nombresExistentes.includes(m));
         if (madresNuevas.length > 0) {
-          await supabase.from("categorias_madre").insert(
-            madresNuevas.map((nombre, i) => ({ kiosko_id: kioskoid, nombre, orden: nombresExistentes.length + i }))
-          );
+          await supabase.from("categorias_madre").insert(madresNuevas.map((nombre, i) => ({ kiosko_id: kioskoid, nombre, orden: nombresExistentes.length + i })));
         }
         mostrarToast(`✅ ${data.length} productos · ${madresUnicas.length} categorías madre detectadas`);
       } else {
         mostrarToast(`✅ ${data.length} productos cargados`);
       }
-
       setKioskos(prev => prev.map(k => {
         if (k.id === kioskoid) {
           const nombresNuevos = data.map(d => d.nombre);
@@ -238,7 +246,6 @@ function SuperAdmin({ onSalir }) {
       </div>
 
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "28px 20px" }}>
-        {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
           {[
             { label: "Total kioskos", val: kioskos.length, color: "#111827", icon: "🏪" },
@@ -262,7 +269,6 @@ function SuperAdmin({ onSalir }) {
           </div>
         )}
 
-        {/* Filtros */}
         <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
           <input className="inp" style={{ width: 240 }} placeholder="🔍 Buscar kiosko o dueño..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
           {[["todos", "Todos"], ["activos", `✅ Activos (${activos.length})`], ["inactivos", `❌ Inactivos (${inactivos.length})`]].map(([id, label]) => (
@@ -270,7 +276,6 @@ function SuperAdmin({ onSalir }) {
           ))}
         </div>
 
-        {/* Tabla */}
         <div className="card" style={{ overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
@@ -346,11 +351,11 @@ function SuperAdmin({ onSalir }) {
               <input type="file" accept="image/jpeg,image/png,image/webp" id="banner-upload" style={{ display: "none" }}
                 onChange={async e => {
                   const file = e.target.files[0]; if (!file) return;
-                  if (file.size > 2 * 1024 * 1024) { mostrarToast("❌ Imagen max 2MB", "error"); return; }
-                  mostrarToast("⏳ Subiendo...", "ok");
-                  const ext = file.name.split(".").pop();
-                  const fileName = `banner_${detalle.id}_${Date.now()}.${ext}`;
-                  const { error: uploadError } = await supabase.storage.from("fotos-productos").upload(fileName, file, { upsert: true });
+                  mostrarToast("⏳ Comprimiendo y subiendo...", "ok");
+                  // ✅ COMPRESIÓN para banner
+                  const fileComprimido = await comprimirImagen(file, "banner");
+                  const fileName = `banner_${detalle.id}_${Date.now()}.jpg`;
+                  const { error: uploadError } = await supabase.storage.from("fotos-productos").upload(fileName, fileComprimido, { upsert: true, contentType: "image/jpeg" });
                   if (uploadError) { mostrarToast("❌ Error subiendo banner", "error"); return; }
                   const { data: urlData } = supabase.storage.from("fotos-productos").getPublicUrl(fileName);
                   const bannerUrl = urlData.publicUrl;
@@ -376,7 +381,6 @@ function SuperAdmin({ onSalir }) {
               </div>
             </div>
 
-            {/* Datos editables */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 4 }}>
               {[["WhatsApp", "whatsapp", detalle.whatsapp], ["Correo", "email", detalle.email], ["Clave", "clave", detalle.clave], ["Acceso hasta", "vence", detalle.vence]].map(([label, key, val]) => (
                 <div key={key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #f3f4f6" }}>
@@ -394,7 +398,6 @@ function SuperAdmin({ onSalir }) {
               ))}
             </div>
 
-            {/* Plan */}
             <div style={{ padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
               <p style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Plan actual</p>
               <div style={{ display: "flex", gap: 8 }}>
@@ -407,7 +410,6 @@ function SuperAdmin({ onSalir }) {
               </div>
             </div>
 
-            {/* Excel */}
             <div style={{ padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
               <p style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Cargar productos desde Excel</p>
               <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: "none" }} onChange={(e) => subirExcel(detalle.id, e)} />
@@ -417,7 +419,6 @@ function SuperAdmin({ onSalir }) {
               </div>
             </div>
 
-            {/* ✅ Categorías madre */}
             <div style={{ padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
               <p style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Imágenes de categorías madre</p>
               <button className="btn" style={{ width: "100%", background: "#f0fdf4", color: "#059669", padding: "10px", fontSize: 12, border: "1px solid #bbf7d0" }}
@@ -445,7 +446,7 @@ function SuperAdmin({ onSalir }) {
         </div>
       )}
 
-      {/* ✅ Modal gestión imágenes categorías madre */}
+      {/* Modal categorías madre */}
       {modalCatMadre && (
         <div className="modal-bg" onClick={() => setModalCatMadre(null)}>
           <div className="modal fade" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
@@ -470,9 +471,7 @@ function SuperAdmin({ onSalir }) {
                 {catMadres.map(madre => (
                   <div key={madre.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px", background: "#f9fafb", borderRadius: 12, border: "1px solid #e5e7eb" }}>
                     <div style={{ width: 64, height: 64, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "#fff7ed", border: "1.5px solid #fed7aa", display: "grid", placeItems: "center" }}>
-                      {madre.imagen_url
-                        ? <img src={madre.imagen_url} alt={madre.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        : <span style={{ fontSize: 28 }}>🗂</span>}
+                      {madre.imagen_url ? <img src={madre.imagen_url} alt={madre.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 28 }}>🗂</span>}
                     </div>
                     <div style={{ flex: 1 }}>
                       <p style={{ fontWeight: 800, fontSize: 14, color: "#111827", marginBottom: 6 }}>{madre.nombre}</p>
@@ -601,9 +600,11 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
     mostrarToast("⏳ Guardando...", "ok");
     let fotoUrl = nuevoProducto.foto && !nuevoProducto.fotoFile ? nuevoProducto.foto : null;
     if (nuevoProducto.fotoFile) {
-      const ext = nuevoProducto.fotoFile.name.split(".").pop();
-      const fileName = `${kiosko.id}_${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from("fotos-productos").upload(fileName, nuevoProducto.fotoFile, { upsert: true });
+      // ✅ COMPRESIÓN para fotos de productos
+      mostrarToast("⏳ Comprimiendo foto...", "ok");
+      const fileComprimido = await comprimirImagen(nuevoProducto.fotoFile, "producto");
+      const fileName = `${kiosko.id}_${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage.from("fotos-productos").upload(fileName, fileComprimido, { upsert: true, contentType: "image/jpeg" });
       if (uploadError) { mostrarToast("❌ Error subiendo foto", "error"); return; }
       const { data: urlData } = supabase.storage.from("fotos-productos").getPublicUrl(fileName);
       fotoUrl = urlData.publicUrl;
@@ -629,7 +630,6 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
       nuevos = [...productos, data[0]];
       mostrarToast("✅ Producto agregado");
     }
-    // Si la madre es nueva, crearla en categorias_madre
     if (nuevoProducto.madre && !catMadres.find(m => m.nombre === nuevoProducto.madre)) {
       const { data: nuevaMadre } = await supabase.from("categorias_madre")
         .insert([{ kiosko_id: kiosko.id, nombre: nuevoProducto.madre, orden: catMadres.length }]).select();
@@ -666,7 +666,6 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
 
       {toast && <div className="toast" style={{ background: toast.tipo === "ok" ? "#059669" : "#dc2626", color: "#fff" }}>{toast.msg}</div>}
 
-      {/* Header */}
       <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "13px 20px", display: "flex", alignItems: "center", gap: 10 }}>
         <span style={{ fontSize: 22 }}>🏪</span>
         <div style={{ flex: 1 }}>
@@ -693,7 +692,6 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
       </div>
 
       <div style={{ maxWidth: 800, margin: "0 auto", padding: "24px 20px" }}>
-        {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
           {[
             { label: "Total productos", val: productos.length, color: "#111827", icon: "📦" },
@@ -710,7 +708,6 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
           ))}
         </div>
 
-        {/* Link + QR */}
         <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 16px", marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
@@ -728,7 +725,6 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
           </div>
         </div>
 
-        {/* Lista productos */}
         <div className="card" style={{ overflow: "hidden" }}>
           {productos.length === 0 ? (
             <div style={{ padding: "32px", textAlign: "center", color: "#9ca3af", fontSize: 13 }}>Sin productos — agrega el primero con el botón de arriba</div>
@@ -841,7 +837,6 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
               <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "6px 12px", fontSize: 11, border: "1px solid #e5e7eb" }} onClick={() => setModalProducto(null)}>✕</button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {/* Foto */}
               <div>
                 <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>Foto del producto</label>
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
@@ -852,27 +847,23 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
                     <input type="file" accept="image/jpeg,image/png,image/webp" id="foto-upload" style={{ display: "none" }}
                       onChange={e => {
                         const file = e.target.files[0]; if (!file) return;
-                        if (file.size > 2 * 1024 * 1024) { alert("Máx 2MB"); return; }
                         const reader = new FileReader();
                         reader.onload = ev => setNuevoProducto(p => ({ ...p, foto: ev.target.result, fotoFile: file }));
                         reader.readAsDataURL(file);
                       }} />
                     <button className="btn" style={{ width: "100%", background: "#fff7ed", color: "#f97316", padding: "10px", fontSize: 12, border: "1.5px dashed #fed7aa", borderRadius: 8, marginBottom: 6 }}
                       onClick={() => document.getElementById("foto-upload").click()}>📸 Subir foto</button>
-                    <p style={{ fontSize: 10, color: "#9ca3af" }}>JPG, PNG o WEBP · Máx. 2MB</p>
+                    <p style={{ fontSize: 10, color: "#9ca3af" }}>JPG, PNG o WEBP · Se comprime automáticamente ✅</p>
                     {nuevoProducto.foto && <button className="btn" style={{ fontSize: 10, color: "#dc2626", background: "transparent", padding: "4px 0", marginTop: 4 }} onClick={() => setNuevoProducto(p => ({ ...p, foto: null }))}>🗑 Quitar foto</button>}
                   </div>
                 </div>
               </div>
-
               {[["Nombre", "nombre", "Juice 250ml"], ["Emoji (si no hay foto)", "emoji", "🥤"], ["Precio (S/.)", "precio", "1.50"]].map(([label, key, ph]) => (
                 <div key={key}>
                   <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>{label}</label>
                   <input className="inp" placeholder={ph} value={nuevoProducto[key]} onChange={e => setNuevoProducto(p => ({ ...p, [key]: e.target.value }))} />
                 </div>
               ))}
-
-              {/* ✅ Categoría madre */}
               <div>
                 <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>
                   Categoría madre <span style={{ color: "#9ca3af", fontWeight: 400, textTransform: "none" }}>(opcional)</span>
@@ -888,16 +879,12 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
                     onChange={e => setNuevoProducto(p => ({ ...p, madre: e.target.value }))} />
                 )}
               </div>
-
-              {/* Categoría */}
               <div>
                 <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>Categoría</label>
                 <select value={nuevoProducto.categoria} onChange={e => setNuevoProducto(p => ({ ...p, categoria: e.target.value }))}>
                   {categoriasParaMostrar.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
-
-              {/* Stock */}
               <div>
                 <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>Cantidad en stock</label>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -937,7 +924,6 @@ function CatalogoCliente({ kiosko, onSalir }) {
   const [nota, setNota] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [catMadres, setCatMadres] = useState([]);
-  // null=pantalla inicial madres | "sin_madre"=sin madres ir directo | string=madre seleccionada
   const [madreActiva, setMadreActiva] = useState(null);
 
   useEffect(() => {
@@ -948,6 +934,43 @@ function CatalogoCliente({ kiosko, onSalir }) {
         if (madres.length === 0) setMadreActiva("sin_madre");
       });
   }, [kiosko.id]);
+
+  // ✅ BOTÓN ATRÁS DEL CELULAR
+  useEffect(() => {
+    // Cuando el usuario entra a una madre, agrega estado al historial
+    if (madreActiva && madreActiva !== "sin_madre") {
+      window.history.pushState({ madre: madreActiva }, "");
+    }
+  }, [madreActiva]);
+
+  useEffect(() => {
+    const handleBack = (e) => {
+      // Si está en una madre, volver a la pantalla inicial
+      if (madreActiva && madreActiva !== "sin_madre") {
+        setMadreActiva(null);
+        setBusqueda("");
+        setCategoria("Todos");
+      }
+    };
+    window.addEventListener("popstate", handleBack);
+    return () => window.removeEventListener("popstate", handleBack);
+  }, [madreActiva]);
+
+  const entrarMadre = (nombreMadre) => {
+    setMadreActiva(nombreMadre);
+    setCategoria("Todos");
+    setBusqueda("");
+  };
+
+  const volverInicio = () => {
+    setMadreActiva(null);
+    setBusqueda("");
+    setCategoria("Todos");
+    // Limpiar el estado del historial
+    if (window.history.state?.madre) {
+      window.history.back();
+    }
+  };
 
   const agregar = (p, variacion) => {
     const key = variacion ? `${p.id}-${variacion.nombre}` : `${p.id}-unica`;
@@ -1043,11 +1066,11 @@ function CatalogoCliente({ kiosko, onSalir }) {
   return (
     <div style={{ minHeight: "100vh", background: "#fff7ed", fontFamily: "Nunito, sans-serif", overflowX: "hidden", width: "100%", maxWidth: "100vw" }}>
       <style>{`
-  @media (min-width: 600px) { .productos-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; } }
-  .prod-card img { height: 120px !important; }
-  * { box-sizing: border-box; }
-  html, body, #root { overflow-x: hidden !important; max-width: 100vw; }
-`}</style>
+        @media (min-width: 600px) { .productos-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; } }
+        .prod-card img { height: 120px !important; }
+        * { box-sizing: border-box; }
+        html, body, #root { overflow-x: hidden !important; max-width: 100vw; }
+      `}</style>
 
       {/* Header */}
       <div style={{ position: "relative" }}>
@@ -1067,10 +1090,9 @@ function CatalogoCliente({ kiosko, onSalir }) {
         )}
       </div>
 
-      {/* ✅ PANTALLA INICIAL: madres con buscador y nombre */}
+      {/* PANTALLA INICIAL: madres */}
       {madreActiva === null ? (
         <div style={{ padding: "20px 16px" }}>
-          {/* Buscador */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", borderRadius: 14, padding: "12px 16px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)", marginBottom: 20 }}>
             <span style={{ fontSize: 18 }}>🔍</span>
             <input style={{ border: "none", outline: "none", fontSize: 15, background: "transparent", flex: 1, color: "#111827" }}
@@ -1078,18 +1100,14 @@ function CatalogoCliente({ kiosko, onSalir }) {
               value={busqueda}
               onChange={e => { setBusqueda(e.target.value); if (e.target.value.trim()) setMadreActiva("sin_madre"); }} />
           </div>
-
-          {/* Nombre negocio */}
           <div style={{ textAlign: "center", marginBottom: 24 }}>
             <p style={{ fontSize: 22, fontWeight: 900, color: "#111827" }}>{kiosko.nombre}</p>
             <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>¿Qué estás buscando hoy?</p>
           </div>
-
-          {/* Grid categorías madre */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14 }}>
             {catMadres.map(madre => (
               <button key={madre.id}
-                onClick={() => { setMadreActiva(madre.nombre); setCategoria("Todos"); setBusqueda(""); }}
+                onClick={() => entrarMadre(madre.nombre)}
                 style={{ background: "#fff", borderRadius: 18, overflow: "hidden", border: "none", cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.08)", padding: 0, textAlign: "left" }}>
                 <div style={{ width: "100%", aspectRatio: "16/9", background: "#fff7ed", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
                   {madre.imagen_url
@@ -1107,70 +1125,42 @@ function CatalogoCliente({ kiosko, onSalir }) {
           </div>
         </div>
       ) : (
-        /* ✅ PANTALLA CATÁLOGO */
         <>
           {/* Barra con buscador y botón volver */}
-<div style={{
-  background: "#fff", borderBottom: "1px solid #fed7aa",
-  padding: "10px 15px", display: "flex", alignItems: "center", gap: 8,
-  width: "100%", maxWidth: "100vw", boxSizing: "border-box", overflow: "hidden"
-}}>
-  {madreActiva !== "sin_madre" && (
-    <button onClick={() => { setMadreActiva(null); setBusqueda(""); setCategoria("Todos"); }}
-      style={{
-        background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8,
-        padding: "6px 10px", fontSize: 11, fontWeight: 800, color: "#f97316",
-        cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap",
-        maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis"
-      }}>
-      ← {madreActiva}
-    </button>
-  )}
-  <div style={{
-    display: "flex", alignItems: "center", gap: 8, background: "#f9fafb",
-    borderRadius: 10, padding: "8px 12px", flex: 1, minWidth: 0,
-    border: "1px solid #e5e7eb", boxSizing: "border-box"
-  }}>
-    <span style={{ fontSize: 14, flexShrink: 0 }}>🔍</span>
-    <input style={{ border: "none", outline: "none", fontSize: 13, background: "transparent", flex: 1, minWidth: 0, width: "100%" }}
-      placeholder="Buscar productos..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
-  </div>
-</div>
+          <div style={{ background: "#fff", borderBottom: "1px solid #fed7aa", padding: "10px 15px", display: "flex", alignItems: "center", gap: 8, width: "100%", maxWidth: "100vw", boxSizing: "border-box", overflow: "hidden" }}>
+            {madreActiva !== "sin_madre" && (
+              <button onClick={volverInicio}
+                style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 800, color: "#f97316", cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap", maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis" }}>
+                ← {madreActiva}
+              </button>
+            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f9fafb", borderRadius: 10, padding: "8px 12px", flex: 1, minWidth: 0, border: "1px solid #e5e7eb", boxSizing: "border-box" }}>
+              <span style={{ fontSize: 14, flexShrink: 0 }}>🔍</span>
+              <input style={{ border: "none", outline: "none", fontSize: 13, background: "transparent", flex: 1, minWidth: 0, width: "100%" }}
+                placeholder="Buscar productos..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+            </div>
+          </div>
 
-{/* Filtro subcategorías */}
-<div style={{
-  display: "flex", gap: 8, padding: "10px 15px",
-  overflowX: "auto", overflowY: "hidden",
-  background: "#fff", borderBottom: "1px solid #fed7aa",
-  width: "100%", maxWidth: "100vw", boxSizing: "border-box"
-}}>
-  {categoriasDeMadre.map(cat => (
-    <button key={cat} onClick={() => setCategoria(cat)}
-      style={{
-        flexShrink: 0, padding: "7px 16px", borderRadius: 999, border: "none",
-        cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: 13,
-        background: categoria === cat ? "#f97316" : "#fff7ed",
-        color: categoria === cat ? "#fff" : "#f97316",
-        boxShadow: categoria === cat ? "0 2px 8px rgba(249,115,22,0.3)" : "none"
-      }}>
-      {cat}
-    </button>
-  ))}
-</div>
+          {/* Filtro subcategorías */}
+          <div style={{ display: "flex", gap: 8, padding: "10px 15px", overflowX: "auto", overflowY: "hidden", background: "#fff", borderBottom: "1px solid #fed7aa", width: "100%", maxWidth: "100vw", boxSizing: "border-box" }}>
+            {categoriasDeMadre.map(cat => (
+              <button key={cat} onClick={() => setCategoria(cat)}
+                style={{ flexShrink: 0, padding: "7px 16px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: 13, background: categoria === cat ? "#f97316" : "#fff7ed", color: categoria === cat ? "#fff" : "#f97316", boxShadow: categoria === cat ? "0 2px 8px rgba(249,115,22,0.3)" : "none" }}>
+                {cat}
+              </button>
+            ))}
+          </div>
 
-{/* Grid productos */}
-<div className="productos-grid" style={{
-  padding: 15, paddingBottom: 100,
-  display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12,
-  width: "100%", maxWidth: "100vw", boxSizing: "border-box"
-}}>
-  {productosFiltrados.length === 0
-    ? <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "40px 0", color: "#9ca3af", fontSize: 13 }}>Sin productos encontrados</div>
-    : productosFiltrados.map(p => <ProductoCard key={p.id} p={p} />)
-  }
-</div>
+          {/* Grid productos */}
+          <div className="productos-grid" style={{ padding: 15, paddingBottom: 100, display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, width: "100%", maxWidth: "100vw", boxSizing: "border-box" }}>
+            {productosFiltrados.length === 0
+              ? <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "40px 0", color: "#9ca3af", fontSize: 13 }}>Sin productos encontrados</div>
+              : productosFiltrados.map(p => <ProductoCard key={p.id} p={p} />)
+            }
+          </div>
         </>
       )}
+
       {/* Botón flotante carrito */}
       {totalItems > 0 && (
         <button onClick={() => setVerCarrito(true)}
@@ -1208,7 +1198,6 @@ function CatalogoCliente({ kiosko, onSalir }) {
                   <span style={{ fontSize: 15, fontWeight: 700 }}>S/. {totalPrecio.toFixed(2)}</span>
                 </div>
               </div>
-              {/* Entrega */}
               <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                   <span style={{ fontSize: 18 }}>🚚</span>
@@ -1231,7 +1220,6 @@ function CatalogoCliente({ kiosko, onSalir }) {
                   </div>
                 )}
               </div>
-              {/* Pago */}
               <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                   <span style={{ fontSize: 18 }}>💳</span>
@@ -1264,13 +1252,11 @@ function CatalogoCliente({ kiosko, onSalir }) {
                   </div>
                 )}
               </div>
-              {/* Nota */}
               <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb" }}>
                 <textarea style={{ width: "100%", boxSizing: "border-box", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "12px 14px", fontSize: 13, background: "#f9fafb", resize: "none", outline: "none", fontFamily: "inherit" }}
                   placeholder={"¿Alguna indicación? (opcional)\nEj: sin cebolla, entregar en puerta"}
                   rows={3} value={nota} onChange={e => setNota(e.target.value)} />
               </div>
-              {/* Nombre */}
               <div style={{ padding: "14px 20px" }}>
                 <input style={{ width: "100%", padding: 14, borderRadius: 12, border: "1.5px solid #fed7aa", boxSizing: "border-box", outline: "none", fontSize: 14, background: "#fff7ed" }}
                   placeholder="Escribe tu nombre aquí..." value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} />
@@ -1337,7 +1323,7 @@ export default function App() {
     return <CatalogoCliente kiosko={kioskoPorSlug} onSalir={() => { window.location.hash = ""; setKioskoPorSlug(null); }} />;
   }
 
- const handleLogin = async () => {
+  const handleLogin = async () => {
     if (loginForm.email === SUPERADMIN.email && loginForm.clave === SUPERADMIN.clave) {
       setPantalla("superadmin"); setLoginError(""); return;
     }
