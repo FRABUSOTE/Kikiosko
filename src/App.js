@@ -1326,7 +1326,7 @@ export default function App() {
         </div>
       </div>
     );
-    return <CatalogoCliente kiosko={kioskoPorSlug} onSalir={() => { window.location.hash = ""; setKioskoPorSlug(null); }} />;
+    return <CatalogoCliente kiosko={kioskoPorSlug} onSalir={null} />;
   }
 
   const handleLogin = async () => {
