@@ -1026,8 +1026,8 @@ function CatalogoCliente({ kiosko, onSalir }) {
       <div className="prod-card" style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
         <div style={{ position: "relative" }}>
           {p.oferta && <span style={{ position: "absolute", top: 8, left: 8, background: "#f97316", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 999, zIndex: 1 }}>🔥 Oferta</span>}
-          <div style={{ width: "100%", aspectRatio: "1 / 1", background: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-            {p.foto ? <img src={p.foto} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block", borderRadius: "20px" }} /> : <span style={{ fontSize: "40px", opacity: 0.6 }}>{p.emoji || "📦"}</span>}
+          <div style={{ width: "100%", aspectRatio: "1 / 1", background: "#ffffff", display: "flex", alignItems: "flex-start", justifyContent: "center", overflow: "hidden" }}>
+            {p.foto ? <img src={p.foto} style={{ width: "100%", objectFit: "contain", display: "block", borderRadius: "20px" }} /> : <span style={{ fontSize: "40px", opacity: 0.6 }}>{p.emoji || "📦"}</span>}
           </div>
         </div>
         <div style={{ padding: 12 }}>
@@ -1067,7 +1067,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
     <div style={{ minHeight: "100vh", background: "#fff7ed", fontFamily: "Nunito, sans-serif", overflowX: "hidden", width: "100%", maxWidth: "100vw" }}>
       <style>{`
         @media (min-width: 600px) { .productos-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; } }
-        .prod-card img { height: 120px !important; }
+        
         * { box-sizing: border-box; }
         html, body, #root { overflow-x: hidden !important; max-width: 100vw; }
       `}</style>
