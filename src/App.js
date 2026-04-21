@@ -573,6 +573,7 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
   const [datosPago, setDatosPago] = useState(kiosko.datos_pago || {});
   const [toast, setToast] = useState(null);
   const [catMadres, setCatMadres] = useState([]);
+  const [busquedaAdmin, setBusquedaAdmin] = useState("");
 
   const categoriasExistentes = [...new Set(productos.map(p => p.categoria))].filter(Boolean);
   const categoriasParaMostrar = categoriasExistentes.length > 0 ? categoriasExistentes : ["Bebidas", "Snacks", "Abarrotes", "Otros"];
@@ -725,10 +726,34 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
           </div>
         </div>
 
-        <div className="card" style={{ overflow: "hidden" }}>
+        {/* ✅ Buscador de productos — solo Pro y Premium */}
+{kiosko.plan !== "Básico" && (
+  <div style={{ marginBottom: 12 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "10px 14px" }}>
+      <span style={{ fontSize: 16 }}>🔍</span>
+      <input
+        style={{ border: "none", outline: "none", fontSize: 14, flex: 1, fontFamily: "inherit", color: "#111827" }}
+        placeholder="Buscar producto por nombre..."
+        value={busquedaAdmin}
+        onChange={e => setBusquedaAdmin(e.target.value)}
+      />
+      {busquedaAdmin && (
+        <button onClick={() => setBusquedaAdmin("")}
+          style={{ border: "none", background: "#f3f4f6", borderRadius: 6, padding: "4px 8px", fontSize: 11, cursor: "pointer", color: "#6b7280" }}>
+          ✕
+        </button>
+      )}
+    </div>
+  </div>
+)}
+
+{/* Lista productos */}
+<div className="card" style={{ overflow: "hidden" }}>
           {productos.length === 0 ? (
             <div style={{ padding: "32px", textAlign: "center", color: "#9ca3af", fontSize: 13 }}>Sin productos — agrega el primero con el botón de arriba</div>
-          ) : productos.map(p => (
+          ) : productos
+    .filter(p => busquedaAdmin === "" || p.nombre.toLowerCase().includes(busquedaAdmin.toLowerCase()))
+    .map(p => (
             <div key={p.id} className="row" style={{ display: "flex", flexDirection: "column", gap: 6, padding: "12px 16px", borderBottom: "1px solid #f3f4f6" }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                 <span style={{ fontSize: '24px' }}>{p.emoji}</span>
