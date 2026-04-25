@@ -1182,12 +1182,24 @@ function CatalogoCliente({ kiosko, onSalir }) {
         <>
           {/* ✅ BANNER con bordes redondeados */}
           {kiosko.banner && kiosko.plan !== "Básico" && (
-            <div style={{ padding: "10px 12px 0" }}>
-  <div style={{ borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }}>
-    <img src={kiosko.banner} alt="banner"
-      style={{ width: "100%", height: "clamp(130px, 35vw, 200px)", objectFit: "cover", display: "block" }} />
-              </div>
-            </div>
+            <div style={{ padding: "12px 12px 0" }}>
+  <div style={{
+    borderRadius: 20,
+    overflow: "hidden",
+    boxShadow: "0 6px 20px rgba(0,0,0,0.12)"
+  }}>
+    <img
+      src={kiosko.banner}
+      alt="banner"
+      style={{
+        width: "100%",
+        aspectRatio: "16/9",
+        objectFit: "cover",
+        display: "block"
+      }}
+    />
+  </div>
+</div>
           )}
 
           {/* ✅ Filtro subcategorías con emojis */}
@@ -1213,7 +1225,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
 
           {/* Grid productos */}
           <div className="productos-grid" style={{
-            ppadding: "10px 10px", paddingBottom: 100,
+            ppadding: "10px 14px", paddingBottom: 100,
             display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12,
             width: "100%", maxWidth: "100vw", boxSizing: "border-box"
           }}>
