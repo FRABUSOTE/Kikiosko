@@ -1204,7 +1204,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
 
           {/* ✅ Filtro subcategorías con emojis */}
           <div style={{
-            display: "flex", gap: 8, padding: "10px 10px",
+            display: "flex", gap: 8, padding: "10px 12px",
             overflowX: "auto", overflowY: "hidden",
             background: "#fff7ed",
             width: "100%", maxWidth: "100vw", boxSizing: "border-box"
