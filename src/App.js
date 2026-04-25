@@ -938,6 +938,7 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
 }
 
 // ─── CATÁLOGO CLIENTE ───
+// REEMPLAZA SOLO LA FUNCIÓN CatalogoCliente COMPLETA
 function CatalogoCliente({ kiosko, onSalir }) {
   const [carrito, setCarrito] = useState({});
   const [categoria, setCategoria] = useState("Todos");
@@ -962,7 +963,6 @@ function CatalogoCliente({ kiosko, onSalir }) {
 
   // ✅ BOTÓN ATRÁS DEL CELULAR
   useEffect(() => {
-    // Cuando el usuario entra a una madre, agrega estado al historial
     if (madreActiva && madreActiva !== "sin_madre") {
       window.history.pushState({ madre: madreActiva }, "");
     }
@@ -970,12 +970,11 @@ function CatalogoCliente({ kiosko, onSalir }) {
 
   useEffect(() => {
     const handleBack = (e) => {
-      // Si está en una madre, volver a la pantalla inicial
       if (madreActiva !== null) {
-  setMadreActiva(null);
-  setBusqueda("");
-  setCategoria("Todos");
-}
+        setMadreActiva(null);
+        setBusqueda("");
+        setCategoria("Todos");
+      }
     };
     window.addEventListener("popstate", handleBack);
     return () => window.removeEventListener("popstate", handleBack);
@@ -991,10 +990,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
     setMadreActiva(null);
     setBusqueda("");
     setCategoria("Todos");
-    // Limpiar el estado del historial
-    if (window.history.state?.madre) {
-      window.history.back();
-    }
+    if (window.history.state?.madre) window.history.back();
   };
 
   const agregar = (p, variacion) => {
@@ -1052,7 +1048,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
         <div style={{ position: "relative" }}>
           {p.oferta && <span style={{ position: "absolute", top: 8, left: 8, background: "#f97316", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 999, zIndex: 1 }}>🔥 Oferta</span>}
           <div style={{ width: "100%", aspectRatio: "1 / 1", background: "#ffffff", display: "flex", alignItems: "flex-start", justifyContent: "center", overflow: "hidden" }}>
-            {p.foto ? <img src={p.foto} style={{ width: "100%", objectFit: "contain", display: "block", borderRadius: "20px" }} /> : <span style={{ fontSize: "40px", opacity: 0.6 }}>{p.emoji || "📦"}</span>}
+            {p.foto ? <img src={p.foto} style={{ width: "100%", objectFit: "contain", display: "block" }} /> : <span style={{ fontSize: "40px", opacity: 0.6, marginTop: 20 }}>{p.emoji || "📦"}</span>}
           </div>
         </div>
         <div style={{ padding: 12 }}>
@@ -1092,49 +1088,76 @@ function CatalogoCliente({ kiosko, onSalir }) {
     <div style={{ minHeight: "100vh", background: "#fff7ed", fontFamily: "Nunito, sans-serif", overflowX: "hidden", width: "100%", maxWidth: "100vw" }}>
       <style>{`
         @media (min-width: 600px) { .productos-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; } }
-        
         * { box-sizing: border-box; }
         html, body, #root { overflow-x: hidden !important; max-width: 100vw; }
       `}</style>
 
-      {/* Header */}
-      <div style={{ position: "relative" }}>
-        {kiosko.banner && kiosko.plan !== "Básico" ? (
-          <div style={{ width: "100%", height: "clamp(180px, 25vw, 320px)", overflow: "hidden", position: "relative" }}>
-            <img src={kiosko.banner} alt="banner" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center center" }} />
-            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(transparent, rgba(0,0,0,0.6))", padding: "30px 20px 14px 20px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-              <h2 style={{ margin: 0, color: "#fff", fontSize: "clamp(16px, 2.5vw, 24px)", fontWeight: 900, textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}>{kiosko.nombre}</h2>
-              {onSalir && <button onClick={onSalir} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 8, fontWeight: 700, fontSize: 12 }}>Salir</button>}
+      {/* ✅ NUEVO HEADER NARANJA CON BUSCADOR */}
+      <div style={{
+        background: "linear-gradient(135deg, #f97316 0%, #ea6000 100%)",
+        padding: "14px 16px 12px",
+        position: "sticky", top: 0, zIndex: 40,
+        boxShadow: "0 2px 12px rgba(249,115,22,0.25)"
+      }}>
+        {/* Fila 1: Nombre del negocio + carrito */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* Botón volver si está dentro de una madre */}
+            {madreActiva && madreActiva !== "sin_madre" && (
+              <button onClick={volverInicio}
+                style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                ←
+              </button>
+            )}
+            <div>
+              <h2 style={{ margin: 0, color: "#fff", fontSize: 17, fontWeight: 900, lineHeight: 1.2 }}>{kiosko.nombre}</h2>
+              {madreActiva && madreActiva !== "sin_madre" && (
+                <p style={{ margin: 0, color: "rgba(255,255,255,0.8)", fontSize: 11, fontWeight: 600 }}>{madreActiva}</p>
+              )}
             </div>
           </div>
-        ) : (
-          <div style={{ background: "#f97316", padding: 20, color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <h2 style={{ margin: 0 }}>{kiosko.nombre}</h2>
-            {onSalir && <button onClick={onSalir} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 8, fontWeight: 700 }}>Salir</button>}
-          </div>
-        )}
+          {/* Carrito */}
+          <button onClick={() => totalItems > 0 && setVerCarrito(true)}
+            style={{ position: "relative", background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", width: 42, height: 42, borderRadius: 12, fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            🛒
+            {totalItems > 0 && (
+              <span style={{ position: "absolute", top: -4, right: -4, background: "#fff", color: "#f97316", fontSize: 10, fontWeight: 900, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {totalItems}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Fila 2: Buscador */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", borderRadius: 12, padding: "9px 14px" }}>
+          <span style={{ fontSize: 15, flexShrink: 0 }}>🔍</span>
+          <input
+            style={{ border: "none", outline: "none", fontSize: 14, background: "transparent", flex: 1, minWidth: 0, color: "#111827", fontFamily: "Nunito, sans-serif" }}
+            placeholder="Buscar productos..."
+            value={busqueda}
+            onChange={e => {
+              setBusqueda(e.target.value);
+              if (e.target.value.trim() && madreActiva === null) {
+                window.history.pushState({ madre: "sin_madre" }, "");
+                setMadreActiva("sin_madre");
+              }
+            }}
+          />
+          {busqueda && (
+            <button onClick={() => setBusqueda("")}
+              style={{ border: "none", background: "#f3f4f6", borderRadius: 6, padding: "3px 7px", fontSize: 11, cursor: "pointer", color: "#6b7280", flexShrink: 0 }}>✕</button>
+          )}
+        </div>
       </div>
 
-      {/* PANTALLA INICIAL: madres */}
+      {/* PANTALLA INICIAL: categorías madre */}
       {madreActiva === null ? (
-        <div style={{ padding: "20px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", borderRadius: 14, padding: "12px 16px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)", marginBottom: 20 }}>
-            <span style={{ fontSize: 18 }}>🔍</span>
-            <input style={{ border: "none", outline: "none", fontSize: 15, background: "transparent", flex: 1, color: "#111827" }}
-              placeholder="Buscar productos..."
-              value={busqueda}
-              onChange={e => {
-  setBusqueda(e.target.value);
-  if (e.target.value.trim() && madreActiva === null) {
-    window.history.pushState({ madre: "sin_madre" }, "");
-    setMadreActiva("sin_madre");
-  }
-}} />
+        <div style={{ padding: "16px" }}>
+          {/* Nombre y subtítulo */}
+          <div style={{ textAlign: "center", marginBottom: 20, paddingTop: 8 }}>
+            <p style={{ fontSize: 14, color: "#9ca3af" }}>¿Qué estás buscando hoy?</p>
           </div>
-          <div style={{ textAlign: "center", marginBottom: 24 }}>
-            <p style={{ fontSize: 22, fontWeight: 900, color: "#111827" }}>{kiosko.nombre}</p>
-            <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>¿Qué estás buscando hoy?</p>
-          </div>
+          {/* Grid madres */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14 }}>
             {catMadres.map(madre => (
               <button key={madre.id}
@@ -1157,33 +1180,43 @@ function CatalogoCliente({ kiosko, onSalir }) {
         </div>
       ) : (
         <>
-          {/* Barra con buscador y botón volver */}
-          <div style={{ background: "#fff", borderBottom: "1px solid #fed7aa", padding: "10px 15px", display: "flex", alignItems: "center", gap: 8, width: "100%", maxWidth: "100vw", boxSizing: "border-box", overflow: "hidden" }}>
-            {madreActiva !== "sin_madre" && (
-              <button onClick={volverInicio}
-                style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 800, color: "#f97316", cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap", maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis" }}>
-                ← {madreActiva}
-              </button>
-            )}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f9fafb", borderRadius: 10, padding: "8px 12px", flex: 1, minWidth: 0, border: "1px solid #e5e7eb", boxSizing: "border-box" }}>
-              <span style={{ fontSize: 14, flexShrink: 0 }}>🔍</span>
-              <input style={{ border: "none", outline: "none", fontSize: 13, background: "transparent", flex: 1, minWidth: 0, width: "100%" }}
-                placeholder="Buscar productos..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+          {/* ✅ BANNER con bordes redondeados */}
+          {kiosko.banner && kiosko.plan !== "Básico" && (
+            <div style={{ padding: "12px 16px 0" }}>
+              <div style={{ borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }}>
+                <img src={kiosko.banner} alt="banner"
+                  style={{ width: "100%", height: "clamp(100px, 25vw, 160px)", objectFit: "cover", display: "block" }} />
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Filtro subcategorías */}
-          <div style={{ display: "flex", gap: 8, padding: "10px 15px", overflowX: "auto", overflowY: "hidden", background: "#fff", borderBottom: "1px solid #fed7aa", width: "100%", maxWidth: "100vw", boxSizing: "border-box" }}>
+          {/* ✅ Filtro subcategorías con emojis */}
+          <div style={{
+            display: "flex", gap: 8, padding: "10px 16px",
+            overflowX: "auto", overflowY: "hidden",
+            background: "#fff7ed",
+            width: "100%", maxWidth: "100vw", boxSizing: "border-box"
+          }}>
             {categoriasDeMadre.map(cat => (
               <button key={cat} onClick={() => setCategoria(cat)}
-                style={{ flexShrink: 0, padding: "7px 16px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: 13, background: categoria === cat ? "#f97316" : "#fff7ed", color: categoria === cat ? "#fff" : "#f97316", boxShadow: categoria === cat ? "0 2px 8px rgba(249,115,22,0.3)" : "none" }}>
+                style={{
+                  flexShrink: 0, padding: "7px 16px", borderRadius: 999, border: "none",
+                  cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: 13,
+                  background: categoria === cat ? "#f97316" : "#fff",
+                  color: categoria === cat ? "#fff" : "#f97316",
+                  boxShadow: categoria === cat ? "0 2px 8px rgba(249,115,22,0.3)" : "0 1px 4px rgba(0,0,0,0.06)"
+                }}>
                 {cat}
               </button>
             ))}
           </div>
 
           {/* Grid productos */}
-          <div className="productos-grid" style={{ padding: 15, paddingBottom: 100, display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, width: "100%", maxWidth: "100vw", boxSizing: "border-box" }}>
+          <div className="productos-grid" style={{
+            padding: "12px 16px", paddingBottom: 100,
+            display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12,
+            width: "100%", maxWidth: "100vw", boxSizing: "border-box"
+          }}>
             {productosFiltrados.length === 0
               ? <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "40px 0", color: "#9ca3af", fontSize: 13 }}>Sin productos encontrados</div>
               : productosFiltrados.map(p => <ProductoCard key={p.id} p={p} />)
@@ -1192,7 +1225,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
         </>
       )}
 
-      {/* Botón flotante carrito */}
+      {/* Botón flotante carrito — solo si hay items y NO está el header con carrito visible */}
       {totalItems > 0 && (
         <button onClick={() => setVerCarrito(true)}
           style={{ position: "fixed", bottom: 16, left: 16, right: 16, background: "#f97316", color: "#fff", padding: "14px 16px", borderRadius: 12, border: "none", fontWeight: 800, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14, boxShadow: "0 4px 12px rgba(249,115,22,0.3)", zIndex: 50 }}>
@@ -1229,6 +1262,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
                   <span style={{ fontSize: 15, fontWeight: 700 }}>S/. {totalPrecio.toFixed(2)}</span>
                 </div>
               </div>
+              {/* Entrega */}
               <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                   <span style={{ fontSize: 18 }}>🚚</span>
@@ -1251,6 +1285,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
                   </div>
                 )}
               </div>
+              {/* Pago */}
               <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                   <span style={{ fontSize: 18 }}>💳</span>
@@ -1283,11 +1318,13 @@ function CatalogoCliente({ kiosko, onSalir }) {
                   </div>
                 )}
               </div>
+              {/* Nota */}
               <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb" }}>
                 <textarea style={{ width: "100%", boxSizing: "border-box", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "12px 14px", fontSize: 13, background: "#f9fafb", resize: "none", outline: "none", fontFamily: "inherit" }}
                   placeholder={"¿Alguna indicación? (opcional)\nEj: sin cebolla, entregar en puerta"}
                   rows={3} value={nota} onChange={e => setNota(e.target.value)} />
               </div>
+              {/* Nombre */}
               <div style={{ padding: "14px 20px" }}>
                 <input style={{ width: "100%", padding: 14, borderRadius: 12, border: "1.5px solid #fed7aa", boxSizing: "border-box", outline: "none", fontSize: 14, background: "#fff7ed" }}
                   placeholder="Escribe tu nombre aquí..." value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} />
