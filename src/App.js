@@ -1182,7 +1182,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
         <>
           {/* ✅ BANNER con bordes redondeados */}
           {kiosko.banner && kiosko.plan !== "Básico" && (
-            <div style={{ padding: "12px 12px 0" }}>
+            <div style={{ padding: "10px 12px 0" }}>
   <div style={{
     borderRadius: 20,
     overflow: "hidden",
@@ -1225,8 +1225,8 @@ function CatalogoCliente({ kiosko, onSalir }) {
 
           {/* Grid productos */}
           <div className="productos-grid" style={{
-            ppadding: "10px 14px", paddingBottom: 100,
-            display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12,
+            ppadding: "10px 16px", paddingBottom: 100,
+            display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10,
             width: "100%", maxWidth: "100vw", boxSizing: "border-box"
           }}>
             {productosFiltrados.length === 0
