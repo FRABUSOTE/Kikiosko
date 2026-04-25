@@ -1095,7 +1095,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
       {/* ✅ NUEVO HEADER NARANJA CON BUSCADOR */}
       <div style={{
         background: "linear-gradient(135deg, #f97316 0%, #ea6000 100%)",
-        padding: "14px 16px 12px",
+        padding: "10px 14px 10px",
         position: "sticky", top: 0, zIndex: 40,
         boxShadow: "0 2px 12px rgba(249,115,22,0.25)"
       }}>
@@ -1182,17 +1182,17 @@ function CatalogoCliente({ kiosko, onSalir }) {
         <>
           {/* ✅ BANNER con bordes redondeados */}
           {kiosko.banner && kiosko.plan !== "Básico" && (
-            <div style={{ padding: "12px 16px 0" }}>
-              <div style={{ borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }}>
-                <img src={kiosko.banner} alt="banner"
-                  style={{ width: "100%", height: "clamp(100px, 25vw, 160px)", objectFit: "cover", display: "block" }} />
+            <div style={{ padding: "10px 12px 0" }}>
+  <div style={{ borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }}>
+    <img src={kiosko.banner} alt="banner"
+      style={{ width: "100%", height: "clamp(130px, 35vw, 200px)", objectFit: "cover", display: "block" }} />
               </div>
             </div>
           )}
 
           {/* ✅ Filtro subcategorías con emojis */}
           <div style={{
-            display: "flex", gap: 8, padding: "10px 16px",
+            display: "flex", gap: 8, padding: "10px 10px",
             overflowX: "auto", overflowY: "hidden",
             background: "#fff7ed",
             width: "100%", maxWidth: "100vw", boxSizing: "border-box"
@@ -1213,7 +1213,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
 
           {/* Grid productos */}
           <div className="productos-grid" style={{
-            padding: "12px 16px", paddingBottom: 100,
+            ppadding: "10px 10px", paddingBottom: 100,
             display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12,
             width: "100%", maxWidth: "100vw", boxSizing: "border-box"
           }}>
