@@ -1118,7 +1118,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
           </div>
           {/* Carrito */}
           <button onClick={() => totalItems > 0 && setVerCarrito(true)}
-            style={{ position: "relative", background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", width: 42, height: 42, borderRadius: 12, fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            style={{ position: "relative", background: "#fff", border: "none", color: "#f97316", width: 42, height: 42, borderRadius: 12, fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             🛒
             {totalItems > 0 && (
               <span style={{ position: "absolute", top: -4, right: -4, background: "#fff", color: "#f97316", fontSize: 10, fontWeight: 900, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
