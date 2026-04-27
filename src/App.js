@@ -1102,13 +1102,21 @@ function CatalogoCliente({ kiosko, onSalir }) {
         {/* Fila 1: Nombre del negocio + carrito */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {/* Botón volver si está dentro de una madre */}
-            {madreActiva && madreActiva !== "sin_madre" && (
-              <button onClick={volverInicio}
-                style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                ←
-              </button>
-            )}
+            {/* Botón volver al panel — solo para admin */}
+{onSalir && (
+  <button onClick={onSalir}
+    style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+    ←
+  </button>
+)}
+
+{/* Botón volver si está dentro de una madre */}
+{madreActiva && madreActiva !== "sin_madre" && (
+  <button onClick={volverInicio}
+    style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+    ←
+  </button>
+)}
             <div>
               <h2 style={{ margin: 0, color: "#fff", fontSize: 17, fontWeight: 900, lineHeight: 1.2 }}>{kiosko.nombre}</h2>
               {madreActiva && madreActiva !== "sin_madre" && (
