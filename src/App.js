@@ -574,6 +574,8 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
   const [toast, setToast] = useState(null);
   const [catMadres, setCatMadres] = useState([]);
   const [busquedaAdmin, setBusquedaAdmin] = useState("");
+  const [modalTienda, setModalTienda] = useState(false);
+  const [infoTienda, setInfoTienda] = useState(kiosko.info_tienda || {});
 
   const categoriasExistentes = [...new Set(productos.map(p => p.categoria))].filter(Boolean);
   const categoriasParaMostrar = categoriasExistentes.length > 0 ? categoriasExistentes : ["Bebidas", "Snacks", "Abarrotes", "Otros"];
@@ -646,6 +648,11 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
     mostrarToast("✅ Datos de pago guardados");
     setModalPago(false);
   };
+  const guardarInfoTienda = async () => {
+   await supabase.from("kioskos").update({ info_tienda: infoTienda }).eq("id", kiosko.id);
+   mostrarToast("✅ Info de tienda guardada");
+   setModalTienda(false);
+  };
 
   return (
     <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "'Nunito', sans-serif", color: "#111827" }}>
@@ -674,6 +681,7 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
           <p style={{ fontSize: 11, color: "#9ca3af" }}>Panel de administración</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn" style={{ background: "#fff7ed", color: "#f97316", padding: "8px 14px", fontSize: 12, border: "1px solid #fed7aa" }} onClick={() => setModalTienda(true)}>🏪 Mi Tienda</button>
           <button className="btn" style={{ background: "#eff6ff", color: "#1d4ed8", padding: "8px 14px", fontSize: 12, border: "1px solid #bfdbfe" }} onClick={() => setModalPago(true)}>💳 Datos de pago</button>
           {kiosko.plan !== "Básico" ? (
             <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "8px 14px", fontSize: 12 }}
@@ -826,6 +834,79 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
           ))}
         </div>
       </div>
+
+     {/* Modal Mi Tienda */}
+{modalTienda && (
+  <div className="modal-bg" onClick={() => setModalTienda(false)}>
+    <div className="modal fade" onClick={e => e.stopPropagation()}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <span style={{ fontWeight: 900, fontSize: 16 }}>🏪 Mi Tienda</span>
+        <button className="btn" style={{ background: "#f3f4f6", color: "#6b7280", padding: "6px 12px", fontSize: 11, border: "1px solid #e5e7eb" }} onClick={() => setModalTienda(false)}>✕</button>
+      </div>
+      <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 18, lineHeight: 1.6 }}>
+        Esta información aparecerá en el header de tu catálogo para que tus clientes sepan más de tu tienda.
+      </p>
+
+      {/* Descripción */}
+      <p style={{ fontSize: 12, fontWeight: 800, color: "#111827", marginBottom: 6 }}>📋 Descripción corta</p>
+      <input className="inp" style={{ marginBottom: 16 }}
+        placeholder="Ej: Tu súper del barrio"
+        value={infoTienda.descripcion || ""}
+        onChange={e => setInfoTienda(p => ({ ...p, descripcion: e.target.value }))} />
+
+      {/* Dirección */}
+      <p style={{ fontSize: 12, fontWeight: 800, color: "#111827", marginBottom: 6 }}>📍 Dirección</p>
+      <input className="inp" style={{ marginBottom: 16 }}
+        placeholder="Ej: Av. Los Pinos 123, Miraflores"
+        value={infoTienda.direccion || ""}
+        onChange={e => setInfoTienda(p => ({ ...p, direccion: e.target.value }))} />
+
+      {/* Horario */}
+      <p style={{ fontSize: 12, fontWeight: 800, color: "#111827", marginBottom: 6 }}>🕐 Horario de atención</p>
+      <input className="inp" style={{ marginBottom: 16 }}
+        placeholder="Ej: Lun-Vie 9am-10pm · Sáb 9am-8pm"
+        value={infoTienda.horario || ""}
+        onChange={e => setInfoTienda(p => ({ ...p, horario: e.target.value }))} />
+
+      {/* Delivery */}
+      <p style={{ fontSize: 12, fontWeight: 800, color: "#111827", marginBottom: 8 }}>🛵 Delivery</p>
+      <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+        {[{ id: "si", label: "✅ Sí ofrezco delivery" }, { id: "no", label: "❌ No por ahora" }].map(op => (
+          <button key={op.id} className="btn"
+            onClick={() => setInfoTienda(p => ({ ...p, delivery: op.id }))}
+            style={{ flex: 1, padding: "10px", fontSize: 12, borderRadius: 10,
+              background: infoTienda.delivery === op.id ? "#fff7ed" : "#f3f4f6",
+              color: infoTienda.delivery === op.id ? "#f97316" : "#6b7280",
+              border: `1.5px solid ${infoTienda.delivery === op.id ? "#fed7aa" : "#e5e7eb"}` }}>
+            {op.label}
+          </button>
+        ))}
+      </div>
+
+      {infoTienda.delivery === "si" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16, background: "#fff7ed", borderRadius: 12, padding: "14px", border: "1px solid #fed7aa" }}>
+          <input className="inp"
+            placeholder="Zonas de delivery (Ej: Miraflores, San Isidro)"
+            value={infoTienda.delivery_zonas || ""}
+            onChange={e => setInfoTienda(p => ({ ...p, delivery_zonas: e.target.value }))} />
+          <input className="inp"
+            placeholder="Costo de delivery (Ej: S/. 5 · Gratis desde S/. 50)"
+            value={infoTienda.delivery_costo || ""}
+            onChange={e => setInfoTienda(p => ({ ...p, delivery_costo: e.target.value }))} />
+          <input className="inp"
+            placeholder="Tiempo estimado (Ej: 30-45 min)"
+            value={infoTienda.delivery_tiempo || ""}
+            onChange={e => setInfoTienda(p => ({ ...p, delivery_tiempo: e.target.value }))} />
+        </div>
+      )}
+
+      <button className="btn" style={{ width: "100%", background: "#f97316", color: "#fff", padding: 13, fontSize: 14 }}
+        onClick={guardarInfoTienda}>
+        💾 Guardar info de tienda
+      </button>
+    </div>
+  </div>
+)}
 
       {/* Modal datos de pago */}
       {modalPago && (
@@ -1092,71 +1173,103 @@ function CatalogoCliente({ kiosko, onSalir }) {
         html, body, #root { overflow-x: hidden !important; max-width: 100vw; }
       `}</style>
 
-      {/* ✅ NUEVO HEADER NARANJA CON BUSCADOR */}
-      <div style={{
-        background: "linear-gradient(135deg, #f97316 0%, #ea6000 100%)",
-        padding: "10px 14px 10px",
-        position: "sticky", top: 0, zIndex: 40,
-        boxShadow: "0 2px 12px rgba(249,115,22,0.25)"
-      }}>
-        {/* Fila 1: Nombre del negocio + carrito */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {/* Botón volver al panel — solo para admin */}
-{onSalir && (
-  <button onClick={onSalir}
-    style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-    ←
-  </button>
-)}
-
-{/* Botón volver si está dentro de una madre */}
-{madreActiva && madreActiva !== "sin_madre" && (
-  <button onClick={volverInicio}
-    style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-    ←
-  </button>
-)}
-            <div>
-              <h2 style={{ margin: 0, color: "#fff", fontSize: 17, fontWeight: 900, lineHeight: 1.2 }}>{kiosko.nombre}</h2>
-              {madreActiva && madreActiva !== "sin_madre" && (
-                <p style={{ margin: 0, color: "rgba(255,255,255,0.8)", fontSize: 11, fontWeight: 600 }}>{madreActiva}</p>
-              )}
-            </div>
-          </div>
-          {/* Carrito */}
-          <button onClick={() => totalItems > 0 && setVerCarrito(true)}
-            style={{ position: "relative", background: "#fff", border: "none", color: "#f97316", width: 42, height: 42, borderRadius: 12, fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            🛒
-            {totalItems > 0 && (
-              <span style={{ position: "absolute", top: -4, right: -4, background: "#fff", color: "#f97316", fontSize: 10, fontWeight: 900, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {totalItems}
-              </span>
-            )}
-          </button>
-        </div>
-
-        {/* Fila 2: Buscador */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", borderRadius: 12, padding: "9px 14px" }}>
-          <span style={{ fontSize: 15, flexShrink: 0 }}>🔍</span>
-          <input
-            style={{ border: "none", outline: "none", fontSize: 14, background: "transparent", flex: 1, minWidth: 0, color: "#111827", fontFamily: "Nunito, sans-serif" }}
-            placeholder="Buscar productos..."
-            value={busqueda}
-            onChange={e => {
-              setBusqueda(e.target.value);
-              if (e.target.value.trim() && madreActiva === null) {
-                window.history.pushState({ madre: "sin_madre" }, "");
-                setMadreActiva("sin_madre");
-              }
-            }}
-          />
-          {busqueda && (
-            <button onClick={() => setBusqueda("")}
-              style={{ border: "none", background: "#f3f4f6", borderRadius: 6, padding: "3px 7px", fontSize: 11, cursor: "pointer", color: "#6b7280", flexShrink: 0 }}>✕</button>
-          )}
-        </div>
+      {/* ✅ HEADER NARANJA MEJORADO */}
+<div style={{
+  background: "linear-gradient(135deg, #f97316 0%, #ea6000 100%)",
+  padding: "10px 14px 10px",
+  position: "sticky", top: 0, zIndex: 40,
+  boxShadow: "0 2px 12px rgba(249,115,22,0.25)"
+}}>
+  {/* Fila 1: Logo + nombre + delivery + carrito */}
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+      {/* Botón volver al panel — solo admin */}
+      {onSalir && (
+        <button onClick={onSalir}
+          style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          ←
+        </button>
+      )}
+      {/* Botón volver a madres */}
+      {madreActiva && madreActiva !== "sin_madre" && (
+        <button onClick={volverInicio}
+          style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          ←
+        </button>
+      )}
+      {/* Nombre + descripción */}
+      <div style={{ minWidth: 0 }}>
+        <h2 style={{ margin: 0, color: "#fff", fontSize: 16, fontWeight: 900, lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {kiosko.nombre}
+        </h2>
+        {kiosko.info_tienda?.descripcion && (
+          <p style={{ margin: 0, color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {kiosko.info_tienda.descripcion}
+          </p>
+        )}
       </div>
+    </div>
+
+    {/* Delivery info + carrito */}
+    <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+      {kiosko.info_tienda?.delivery === "si" && (
+        <div style={{ textAlign: "center", background: "rgba(255,255,255,0.15)", borderRadius: 10, padding: "5px 10px" }}>
+          <div style={{ fontSize: 16 }}>🛵</div>
+          <p style={{ margin: 0, color: "#fff", fontSize: 9, fontWeight: 800, lineHeight: 1.2 }}>
+            {kiosko.info_tienda?.delivery_tiempo || "Delivery"}
+          </p>
+        </div>
+      )}
+      {/* Carrito */}
+      <button onClick={() => totalItems > 0 && setVerCarrito(true)}
+        style={{ position: "relative", background: "#fff", border: "none", color: "#f97316", width: 42, height: 42, borderRadius: 12, fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        🛒
+        {totalItems > 0 && (
+          <span style={{ position: "absolute", top: -4, right: -4, background: "#f97316", color: "#fff", fontSize: 10, fontWeight: 900, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {totalItems}
+          </span>
+        )}
+      </button>
+    </div>
+  </div>
+
+  {/* Fila 2: Horario + dirección */}
+  {(kiosko.info_tienda?.horario || kiosko.info_tienda?.direccion) && (
+    <div style={{ display: "flex", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
+      {kiosko.info_tienda?.horario && (
+        <span style={{ color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+          🕐 {kiosko.info_tienda.horario}
+        </span>
+      )}
+      {kiosko.info_tienda?.direccion && (
+        <span style={{ color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+          📍 {kiosko.info_tienda.direccion}
+        </span>
+      )}
+    </div>
+  )}
+
+  {/* Fila 3: Buscador */}
+  <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", borderRadius: 12, padding: "9px 14px" }}>
+    <span style={{ fontSize: 15, flexShrink: 0 }}>🔍</span>
+    <input
+      style={{ border: "none", outline: "none", fontSize: 14, background: "transparent", flex: 1, minWidth: 0, color: "#111827", fontFamily: "Nunito, sans-serif" }}
+      placeholder="Buscar productos..."
+      value={busqueda}
+      onChange={e => {
+        setBusqueda(e.target.value);
+        if (e.target.value.trim() && madreActiva === null) {
+          window.history.pushState({ madre: "sin_madre" }, "");
+          setMadreActiva("sin_madre");
+        }
+      }}
+    />
+    {busqueda && (
+      <button onClick={() => setBusqueda("")}
+        style={{ border: "none", background: "#f3f4f6", borderRadius: 6, padding: "3px 7px", fontSize: 11, cursor: "pointer", color: "#6b7280", flexShrink: 0 }}>✕</button>
+    )}
+  </div>
+</div>
 
       {/* PANTALLA INICIAL: categorías madre */}
       {madreActiva === null ? (
