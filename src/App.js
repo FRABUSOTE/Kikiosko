@@ -147,18 +147,20 @@ function SuperAdmin({ onSalir }) {
           precioParaCatalogo = Math.min(...variacionesFinales.map(v => v.precio));
         }
         const madreVal = String(get(["madre", "categoria madre", "categoriamadre"]) || "").trim();
-        return {
-          nombre: String(get(["nombre", "producto", "name"]) || "").trim(),
-          precio: precioParaCatalogo,
-          categoria: String(get(["categoria", "tipo"]) || "Otros").trim(),
-          madre: madreVal || null,
-          emoji: String(get(["emoji", "icono"]) || "🛒").trim(),
-          stock: true,
-          cantidad: parseInt(get(["cantidad", "stock_actual"])) || 0,
-          kiosko_id: kioskoid,
-          foto: null,
-          variaciones: variacionesFinales
-        };
+        const descripcionVal = String(get(["descripcion", "descripción", "detalle", "detalle producto"]) || "").trim();
+      return {
+  nombre: String(get(["nombre", "producto", "name"]) || "").trim(),
+  precio: precioParaCatalogo,
+  categoria: String(get(["categoria", "tipo"]) || "Otros").trim(),
+  madre: madreVal || null,
+  emoji: String(get(["emoji", "icono"]) || "🛒").trim(),
+  descripcion: descripcionVal || null,
+  stock: true,
+  cantidad: parseInt(get(["cantidad", "stock_actual"])) || 0,
+  kiosko_id: kioskoid,
+  foto: null,
+  variaciones: variacionesFinales
+};
       }).filter(p => p.nombre);
       if (productos.length === 0) { mostrarToast("❌ No se encontraron productos con nombre", "error"); return; }
       const { data, error } = await supabase.from("productos").upsert(productos, { onConflict: 'nombre' }).select();
@@ -782,7 +784,7 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
                       🔥
                     </button>
                   )}
-                  <button className="btn" onClick={() => { setModalProducto(p); setNuevoProducto({ ...p, madre: p.madre || "" }); }} style={{ background: "#fff7ed", color: "#f97316", padding: "5px 10px" }}>✏️</button>
+                  <button className="btn" onClick={() => { setModalProducto(p); setNuevoProducto({ ...p, madre: p.madre || "", fotos: p.fotos || [] }); }} style={{ background: "#fff7ed", color: "#f97316", padding: "5px 10px" }}>✏️</button>
                   <button className="btn" onClick={() => eliminar(p.id)} style={{ background: "#fee2e2", color: "#dc2626", padding: "5px 10px" }}>🗑️</button>
                 </div>
               </div>
@@ -964,6 +966,59 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
                   </div>
                 </div>
               </div>
+
+              {/* ✅ FOTOS ADICIONALES — solo Premium */}
+              {kiosko.plan === "Premium" && (
+                <div>
+                  <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 8 }}>
+                    Fotos adicionales <span style={{ color: "#9ca3af", fontWeight: 400, textTransform: "none" }}>(hasta 5)</span>
+                  </label>
+                  {(nuevoProducto.fotos || []).length > 0 && (
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+                      {(nuevoProducto.fotos || []).map((url, idx) => (
+                        <div key={idx} style={{ position: "relative", width: 62, height: 62 }}>
+                          <img src={url} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8, border: "1.5px solid #fed7aa" }} />
+                          <button onClick={async () => {
+                            const nuevasFotos = (nuevoProducto.fotos || []).filter((_, i) => i !== idx);
+                            setNuevoProducto(p => ({ ...p, fotos: nuevasFotos }));
+                            if (modalProducto?.id) {
+                              await supabase.from("productos").update({ fotos: nuevasFotos }).eq("id", modalProducto.id);
+                              actualizarProductos(productos.map(pr => pr.id === modalProducto.id ? { ...pr, fotos: nuevasFotos } : pr));
+                            }
+                          }}
+                            style={{ position: "absolute", top: -6, right: -6, background: "#dc2626", color: "#fff", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {(nuevoProducto.fotos || []).length < 5 && (
+                    <>
+                      <input type="file" accept="image/jpeg,image/png,image/webp" id="foto-extra-upload" style={{ display: "none" }}
+                        onChange={async e => {
+                          const file = e.target.files[0]; if (!file) return;
+                          mostrarToast("⏳ Comprimiendo foto...", "ok");
+                          const fileComprimido = await comprimirImagen(file, "producto");
+                          const fileName = `${kiosko.id}_extra_${Date.now()}.jpg`;
+                          const { error: uploadError } = await supabase.storage.from("fotos-productos").upload(fileName, fileComprimido, { upsert: true, contentType: "image/jpeg" });
+                          if (uploadError) { mostrarToast("❌ Error subiendo foto", "error"); return; }
+                          const { data: urlData } = supabase.storage.from("fotos-productos").getPublicUrl(fileName);
+                          const nuevasFotos = [...(nuevoProducto.fotos || []), urlData.publicUrl];
+                          setNuevoProducto(p => ({ ...p, fotos: nuevasFotos }));
+                          if (modalProducto?.id) {
+                            await supabase.from("productos").update({ fotos: nuevasFotos }).eq("id", modalProducto.id);
+                            actualizarProductos(productos.map(pr => pr.id === modalProducto.id ? { ...pr, fotos: nuevasFotos } : pr));
+                          }
+                          mostrarToast(`✅ Foto ${nuevasFotos.length}/5 agregada`);
+                          e.target.value = "";
+                        }} />
+                      <button className="btn" style={{ width: "100%", background: "#fff7ed", color: "#f97316", padding: "10px", fontSize: 12, border: "1.5px dashed #fed7aa", borderRadius: 8 }}
+                        onClick={() => document.getElementById("foto-extra-upload").click()}>
+                        📸 + Agregar foto ({(nuevoProducto.fotos || []).length}/5)
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
               {[["Nombre", "nombre", "Juice 250ml"], ["Emoji (si no hay foto)", "emoji", "🥤"], ["Precio (S/.)", "precio", "1.50"]].map(([label, key, ph]) => (
                 <div key={key}>
                   <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>{label}</label>
@@ -1122,14 +1177,93 @@ function CatalogoCliente({ kiosko, onSalir }) {
     .filter(p => busqueda === "" || p.nombre.toLowerCase().includes(busqueda.toLowerCase()));
 
   const ProductoCard = ({ p }) => {
-    const [varSel, setVarSel] = useState(p.variaciones?.length > 0 ? p.variaciones[0] : null);
-    const precioDisplay = varSel ? Number(varSel.precio) : Number(p.precio);
-    return (
+  const [varSel, setVarSel] = useState(p.variaciones?.length > 0 ? p.variaciones[0] : null);
+  const [modalFoto, setModalFoto] = useState(false);
+  const [fotoActiva, setFotoActiva] = useState(0);
+  const precioDisplay = varSel ? Number(varSel.precio) : Number(p.precio);
+  const todasFotos = [p.foto, ...(p.fotos || [])].filter(Boolean);
+  const esPremium = kiosko.plan === "Premium";
+
+  return (
+    <>
+      {/* ✅ MODAL GALERÍA — solo Premium */}
+      {modalFoto && esPremium && todasFotos.length > 0 && (
+        <div onClick={() => setModalFoto(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 420, overflow: "hidden", maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
+
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderBottom: "1px solid #e5e7eb", flexShrink: 0 }}>
+              <p style={{ fontWeight: 800, fontSize: 14, margin: 0, color: "#111827" }}>{p.nombre}</p>
+              <button onClick={() => setModalFoto(false)}
+                style={{ background: "#f3f4f6", border: "none", borderRadius: "50%", width: 30, height: 30, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+            </div>
+
+            {/* Foto principal */}
+            <div style={{ position: "relative", background: "#f9fafb", flexShrink: 0 }}>
+              <img src={todasFotos[fotoActiva]} alt={p.nombre}
+                style={{ width: "100%", aspectRatio: "1/1", objectFit: "contain", display: "block" }} />
+
+              {/* Flechas */}
+              {todasFotos.length > 1 && (
+                <>
+                  <button onClick={() => setFotoActiva(i => (i - 1 + todasFotos.length) % todasFotos.length)}
+                    style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: 36, height: 36, fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>‹</button>
+                  <button onClick={() => setFotoActiva(i => (i + 1) % todasFotos.length)}
+                    style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: 36, height: 36, fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>›</button>
+                </>
+              )}
+
+              {/* Contador */}
+              {todasFotos.length > 1 && (
+                <div style={{ position: "absolute", bottom: 10, right: 12, background: "rgba(0,0,0,0.5)", color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 999 }}>
+                  {fotoActiva + 1}/{todasFotos.length}
+                </div>
+              )}
+            </div>
+
+            {/* Miniaturas */}
+            {todasFotos.length > 1 && (
+              <div style={{ display: "flex", gap: 8, padding: "10px 14px", overflowX: "auto", flexShrink: 0, borderBottom: p.descripcion ? "1px solid #e5e7eb" : "none" }}>
+                {todasFotos.map((url, idx) => (
+                  <img key={idx} src={url} alt={`foto ${idx + 1}`}
+                    onClick={() => setFotoActiva(idx)}
+                    style={{ width: 54, height: 54, objectFit: "cover", borderRadius: 8, flexShrink: 0, cursor: "pointer",
+                      border: fotoActiva === idx ? "2.5px solid #f97316" : "2px solid #e5e7eb",
+                      opacity: fotoActiva === idx ? 1 : 0.65,
+                      transition: "all 0.15s" }} />
+                ))}
+              </div>
+            )}
+
+            {/* ✅ Descripción — solo si existe y es Premium */}
+            {p.descripcion && (
+              <div style={{ padding: "12px 16px 16px", overflowY: "auto" }}>
+                <p style={{ fontSize: 11, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Descripción</p>
+                <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.65 }}>{p.descripcion}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tarjeta producto */}
       <div className="prod-card" style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
         <div style={{ position: "relative" }}>
           {p.oferta && <span style={{ position: "absolute", top: 8, left: 8, background: "#f97316", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 999, zIndex: 1 }}>🔥 Oferta</span>}
-          <div style={{ width: "100%", aspectRatio: "1 / 1", background: "#ffffff", display: "flex", alignItems: "flex-start", justifyContent: "center", overflow: "hidden" }}>
-            {p.foto ? <img src={p.foto} style={{ width: "100%", objectFit: "contain", display: "block" }} /> : <span style={{ fontSize: "40px", opacity: 0.6, marginTop: 20 }}>{p.emoji || "📦"}</span>}
+          {/* Indicador múltiples fotos — solo Premium */}
+          {esPremium && todasFotos.length > 1 && (
+            <span style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.45)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "3px 7px", borderRadius: 999, zIndex: 1 }}>
+              📷 {todasFotos.length}
+            </span>
+          )}
+          <div
+            onClick={() => { if (esPremium && todasFotos.length > 0) { setFotoActiva(0); setModalFoto(true); } }}
+            style={{ width: "100%", aspectRatio: "1/1", background: "#fff", display: "flex", alignItems: "flex-start", justifyContent: "center", overflow: "hidden", cursor: esPremium && todasFotos.length > 0 ? "pointer" : "default" }}>
+            {p.foto
+              ? <img src={p.foto} style={{ width: "100%", objectFit: "contain", display: "block" }} />
+              : <span style={{ fontSize: "40px", opacity: 0.6, marginTop: 20 }}>{p.emoji || "📦"}</span>}
           </div>
         </div>
         <div style={{ padding: 12 }}>
@@ -1162,8 +1296,9 @@ function CatalogoCliente({ kiosko, onSalir }) {
           </div>
         </div>
       </div>
-    );
-  };
+    </>
+  );
+};
 
   return (
     <div style={{ minHeight: "100vh", background: "#fff7ed", fontFamily: "Nunito, sans-serif", overflowX: "hidden", width: "100%", maxWidth: "100vw" }}>
