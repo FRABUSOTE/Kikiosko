@@ -163,7 +163,7 @@ function SuperAdmin({ onSalir }) {
 };
       }).filter(p => p.nombre);
       if (productos.length === 0) { mostrarToast("❌ No se encontraron productos con nombre", "error"); return; }
-      const { data, error } = await supabase.from("productos").upsert(productos, { onConflict: 'nombre' }).select();
+      const { data, error } = await supabase.from("productos").upsert(productos, { onConflict: 'nombre,kiosko_id' }).select();
       if (error) { mostrarToast("❌ Error guardando: " + error.message, "error"); return; }
       const madresUnicas = [...new Set(productos.map(p => p.madre).filter(Boolean))];
       if (madresUnicas.length > 0) {
