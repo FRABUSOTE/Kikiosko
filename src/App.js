@@ -1419,16 +1419,16 @@ function CatalogoCliente({ kiosko, onSalir }) {
             </div>
 
             {/* ✅ BOTONES FIJOS ABAJO */}
-            <div style={{ padding: "12px 16px", borderTop: "1px solid #e5e7eb", display: "flex", gap: 10, flexShrink: 0, background: "#fff" }}>
+            <div style={{ padding: "10px 14px", borderTop: "1px solid #e5e7eb", display: "flex", gap: 8, flexShrink: 0, background: "#fff" }}>
               {/* Consultar WhatsApp */}
               <button onClick={consultarWhatsApp}
-                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#f0fdf4", color: "#059669", border: "1.5px solid #bbf7d0", borderRadius: 12, padding: "13px", fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>
+                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, background: "#f0fdf4", color: "#059669", border: "1.5px solid #bbf7d0", borderRadius: 10, padding: "10px", fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>
                 💬 Consultar
               </button>
               {/* Agregar al carrito */}
               <button onClick={agregarDesdeModal}
                 disabled={!puedeAgregar()}
-                style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: puedeAgregar() ? "#f97316" : "#e5e7eb", color: puedeAgregar() ? "#fff" : "#9ca3af", border: "none", borderRadius: 12, padding: "13px", fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: 13, cursor: puedeAgregar() ? "pointer" : "not-allowed", boxShadow: puedeAgregar() ? "0 4px 12px rgba(249,115,22,0.3)" : "none" }}>
+                style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, background: puedeAgregar() ? "#f97316" : "#e5e7eb", color: puedeAgregar() ? "#fff" : "#9ca3af", border: "none", borderRadius: 10, padding: "10px", fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: 13, cursor: puedeAgregar() ? "pointer" : "not-allowed", boxShadow: puedeAgregar() ? "0 4px 12px rgba(249,115,22,0.3)" : "none" }}>
                 🛒 Agregar al carrito
               </button>
             </div>
