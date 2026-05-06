@@ -148,6 +148,8 @@ function SuperAdmin({ onSalir }) {
         }
         const madreVal = String(get(["madre", "categoria madre", "categoriamadre"]) || "").trim();
         const descripcionVal = String(get(["descripcion", "descripción", "detalle", "detalle producto"]) || "").trim();
+        const coloresTexto = String(get(["colores", "color", "colors"]) || "").trim();
+        const coloresFinales = coloresTexto ? coloresTexto.split(',').map(c => c.trim()).filter(Boolean) : [];
       return {
   nombre: String(get(["nombre", "producto", "name"]) || "").trim(),
   precio: precioParaCatalogo,
@@ -159,7 +161,8 @@ function SuperAdmin({ onSalir }) {
   cantidad: parseInt(get(["cantidad", "stock_actual"])) || 0,
   kiosko_id: kioskoid,
   foto: null,
-  variaciones: variacionesFinales
+  variaciones: variacionesFinales,
+  colores: coloresFinales.length > 0 ? coloresFinales : []
 };
       }).filter(p => p.nombre);
       if (productos.length === 0) { mostrarToast("❌ No se encontraron productos con nombre", "error"); return; }
@@ -784,7 +787,7 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
                       🔥
                     </button>
                   )}
-                  <button className="btn" onClick={() => { setModalProducto(p); setNuevoProducto({ ...p, madre: p.madre || "", fotos: p.fotos || [] }); }} style={{ background: "#fff7ed", color: "#f97316", padding: "5px 10px" }}>✏️</button>
+                  <button className="btn" onClick={() => { setModalProducto(p); setNuevoProducto({ ...p, madre: p.madre || "", fotos: p.fotos || [], colores: p.colores || [] }); }} style={{ background: "#fff7ed", color: "#f97316", padding: "5px 10px" }}>✏️</button>
                   <button className="btn" onClick={() => eliminar(p.id)} style={{ background: "#fee2e2", color: "#dc2626", padding: "5px 10px" }}>🗑️</button>
                 </div>
               </div>
@@ -1019,6 +1022,70 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
                   )}
                 </div>
               )}
+
+              {/* ✅ COLORES — solo Premium */}
+              {kiosko.plan === "Premium" && (
+                <div>
+                  <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 8 }}>
+                    Colores disponibles <span style={{ color: "#9ca3af", fontWeight: 400, textTransform: "none" }}>(opcional)</span>
+                  </label>
+                  {/* Chips de colores existentes */}
+                  {(nuevoProducto.colores || []).length > 0 && (
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                      {(nuevoProducto.colores || []).map((color, idx) => (
+                        <div key={idx} style={{ display: "flex", alignItems: "center", gap: 4, background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 999, padding: "4px 10px" }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#f97316" }}>{color}</span>
+                          <button onClick={async () => {
+                            const nuevosColores = (nuevoProducto.colores || []).filter((_, i) => i !== idx);
+                            setNuevoProducto(p => ({ ...p, colores: nuevosColores }));
+                            if (modalProducto?.id) {
+                              await supabase.from("productos").update({ colores: nuevosColores }).eq("id", modalProducto.id);
+                              actualizarProductos(productos.map(pr => pr.id === modalProducto.id ? { ...pr, colores: nuevosColores } : pr));
+                            }
+                          }}
+                            style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 12, padding: 0, lineHeight: 1 }}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Input para agregar color */}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      className="inp"
+                      placeholder="Ej: Blanco, Negro, Azul..."
+                      id="color-input"
+                      onKeyDown={async e => {
+                        if (e.key === "Enter" || e.key === ",") {
+                          e.preventDefault();
+                          const val = e.target.value.trim().replace(/,$/, "");
+                          if (!val) return;
+                          const nuevosColores = [...(nuevoProducto.colores || []), val];
+                          setNuevoProducto(p => ({ ...p, colores: nuevosColores }));
+                          e.target.value = "";
+                          if (modalProducto?.id) {
+                            await supabase.from("productos").update({ colores: nuevosColores }).eq("id", modalProducto.id);
+                            actualizarProductos(productos.map(pr => pr.id === modalProducto.id ? { ...pr, colores: nuevosColores } : pr));
+                          }
+                        }
+                      }} />
+                    <button className="btn" style={{ background: "#f97316", color: "#fff", padding: "10px 14px", fontSize: 12, flexShrink: 0 }}
+                      onClick={async () => {
+                        const input = document.getElementById("color-input");
+                        const val = input.value.trim();
+                        if (!val) return;
+                        const nuevosColores = [...(nuevoProducto.colores || []), val];
+                        setNuevoProducto(p => ({ ...p, colores: nuevosColores }));
+                        input.value = "";
+                        if (modalProducto?.id) {
+                          await supabase.from("productos").update({ colores: nuevosColores }).eq("id", modalProducto.id);
+                          actualizarProductos(productos.map(pr => pr.id === modalProducto.id ? { ...pr, colores: nuevosColores } : pr));
+                        }
+                      }}>+ Agregar</button>
+                  </div>
+                  <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 5 }}>Escribe un color y presiona Enter o el botón +</p>
+                </div>
+              )}
+
               {[["Nombre", "nombre", "Juice 250ml"], ["Emoji (si no hay foto)", "emoji", "🥤"], ["Precio (S/.)", "precio", "1.50"]].map(([label, key, ph]) => (
                 <div key={key}>
                   <label style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>{label}</label>
@@ -1180,18 +1247,69 @@ function CatalogoCliente({ kiosko, onSalir }) {
   const [varSel, setVarSel] = useState(p.variaciones?.length > 0 ? p.variaciones[0] : null);
   const [modalFoto, setModalFoto] = useState(false);
   const [fotoActiva, setFotoActiva] = useState(0);
+  const [colorSel, setColorSel] = useState(null);
+  const [cantidadModal, setCantidadModal] = useState(1);
   const precioDisplay = varSel ? Number(varSel.precio) : Number(p.precio);
   const todasFotos = [p.foto, ...(p.fotos || [])].filter(Boolean);
+  const colores = p.colores || [];
   const esPremium = kiosko.plan === "Premium";
+
+  // Clave única para el carrito incluyendo color si existe
+  const carritoKey = () => {
+    const base = varSel ? `${p.id}-${varSel.nombre}` : `${p.id}-unica`;
+    return colorSel ? `${base}-${colorSel}` : base;
+  };
+
+  const agregarDesdeModal = () => {
+    const key = carritoKey();
+    const nombreCompleto = [
+      p.nombre,
+      varSel ? `Talla: ${varSel.nombre}` : null,
+      colorSel ? `Color: ${colorSel}` : null
+    ].filter(Boolean).join(" · ");
+    setCarrito(prev => {
+      const existente = prev[key];
+      const nuevaCantidad = (existente?.cantidad || 0) + cantidadModal;
+      return {
+        ...prev,
+        [key]: {
+          id: p.id,
+          nombre: nombreCompleto,
+          precio: varSel ? Number(varSel.precio) : Number(p.precio),
+          cantidad: nuevaCantidad,
+          variacionObj: varSel
+        }
+      };
+    });
+    setModalFoto(false);
+    setCantidadModal(1);
+  };
+
+  const consultarWhatsApp = () => {
+    const detalle = [
+      `Producto: ${p.nombre}`,
+      varSel ? `Talla: ${varSel.nombre}` : null,
+      colorSel ? `Color: ${colorSel}` : null,
+      `Precio: S/. ${precioDisplay.toFixed(2)}`
+    ].filter(Boolean).join("\n");
+    const msg = encodeURIComponent(`Hola! Me interesa este producto 👇\n\n${detalle}\n\n¿Tienen disponible?`);
+    window.open(`https://wa.me/51${kiosko.whatsapp}?text=${msg}`, "_blank");
+  };
+
+  const puedeAgregar = () => {
+    if (p.variaciones?.length > 0 && !varSel) return false;
+    if (colores.length > 0 && !colorSel) return false;
+    return true;
+  };
 
   return (
     <>
-      {/* ✅ MODAL GALERÍA — solo Premium */}
+      {/* ✅ MODAL GALERÍA MEJORADO — solo Premium */}
       {modalFoto && esPremium && todasFotos.length > 0 && (
         <div onClick={() => setModalFoto(false)}
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
           <div onClick={e => e.stopPropagation()}
-            style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 420, overflow: "hidden", maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
+            style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 420, overflow: "hidden", maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
 
             {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderBottom: "1px solid #e5e7eb", flexShrink: 0 }}>
@@ -1200,50 +1318,120 @@ function CatalogoCliente({ kiosko, onSalir }) {
                 style={{ background: "#f3f4f6", border: "none", borderRadius: "50%", width: 30, height: 30, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
             </div>
 
-            {/* Foto principal */}
-            <div style={{ position: "relative", background: "#f9fafb", flexShrink: 0 }}>
-              <img src={todasFotos[fotoActiva]} alt={p.nombre}
-                style={{ width: "100%", aspectRatio: "1/1", objectFit: "contain", display: "block" }} />
+            {/* Scroll interno */}
+            <div style={{ overflowY: "auto", flex: 1 }}>
 
-              {/* Flechas */}
-              {todasFotos.length > 1 && (
-                <>
-                  <button onClick={() => setFotoActiva(i => (i - 1 + todasFotos.length) % todasFotos.length)}
-                    style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: 36, height: 36, fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>‹</button>
-                  <button onClick={() => setFotoActiva(i => (i + 1) % todasFotos.length)}
-                    style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: 36, height: 36, fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>›</button>
-                </>
-              )}
+              {/* Foto principal */}
+              <div style={{ position: "relative", background: "#f9fafb", flexShrink: 0 }}>
+                <img src={todasFotos[fotoActiva]} alt={p.nombre}
+                  style={{ width: "100%", aspectRatio: "1/1", objectFit: "contain", display: "block" }} />
+                {todasFotos.length > 1 && (
+                  <>
+                    <button onClick={() => setFotoActiva(i => (i - 1 + todasFotos.length) % todasFotos.length)}
+                      style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: 36, height: 36, fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>‹</button>
+                    <button onClick={() => setFotoActiva(i => (i + 1) % todasFotos.length)}
+                      style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: 36, height: 36, fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>›</button>
+                    <div style={{ position: "absolute", bottom: 10, right: 12, background: "rgba(0,0,0,0.5)", color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 999 }}>
+                      {fotoActiva + 1}/{todasFotos.length}
+                    </div>
+                  </>
+                )}
+              </div>
 
-              {/* Contador */}
+              {/* Miniaturas */}
               {todasFotos.length > 1 && (
-                <div style={{ position: "absolute", bottom: 10, right: 12, background: "rgba(0,0,0,0.5)", color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 999 }}>
-                  {fotoActiva + 1}/{todasFotos.length}
+                <div style={{ display: "flex", gap: 8, padding: "10px 14px", overflowX: "auto", borderBottom: "1px solid #e5e7eb" }}>
+                  {todasFotos.map((url, idx) => (
+                    <img key={idx} src={url} alt={`foto ${idx + 1}`}
+                      onClick={() => setFotoActiva(idx)}
+                      style={{ width: 54, height: 54, objectFit: "cover", borderRadius: 8, flexShrink: 0, cursor: "pointer",
+                        border: fotoActiva === idx ? "2.5px solid #f97316" : "2px solid #e5e7eb",
+                        opacity: fotoActiva === idx ? 1 : 0.65, transition: "all 0.15s" }} />
+                  ))}
                 </div>
               )}
+
+              {/* Descripción */}
+              {p.descripcion && (
+                <div style={{ padding: "12px 16px", borderBottom: "1px solid #e5e7eb" }}>
+                  <p style={{ fontSize: 11, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Descripción</p>
+                  <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.65 }}>{p.descripcion}</p>
+                </div>
+              )}
+
+              {/* ✅ SELECTOR TALLAS */}
+              {p.variaciones?.length > 0 && (
+                <div style={{ padding: "12px 16px", borderBottom: "1px solid #e5e7eb" }}>
+                  <p style={{ fontSize: 11, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Talla</p>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {p.variaciones.map((v, i) => (
+                      <button key={i} onClick={() => setVarSel(v)}
+                        style={{ padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: 13,
+                          background: varSel?.nombre === v.nombre ? "#f97316" : "#f3f4f6",
+                          color: varSel?.nombre === v.nombre ? "#fff" : "#374151",
+                          boxShadow: varSel?.nombre === v.nombre ? "0 2px 8px rgba(249,115,22,0.3)" : "none" }}>
+                        {v.nombre}
+                        {v.precio !== Number(p.precio) && <span style={{ fontSize: 10, opacity: 0.8, marginLeft: 4 }}>S/{v.precio}</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ✅ SELECTOR COLORES */}
+              {colores.length > 0 && (
+                <div style={{ padding: "12px 16px", borderBottom: "1px solid #e5e7eb" }}>
+                  <p style={{ fontSize: 11, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Color</p>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {colores.map((color, i) => (
+                      <button key={i} onClick={() => setColorSel(color)}
+                        style={{ padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: 13,
+                          background: colorSel === color ? "#f97316" : "#f3f4f6",
+                          color: colorSel === color ? "#fff" : "#374151",
+                          boxShadow: colorSel === color ? "0 2px 8px rgba(249,115,22,0.3)" : "none" }}>
+                        {color}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ✅ PRECIO + CANTIDAD */}
+              <div style={{ padding: "12px 16px", borderBottom: "1px solid #e5e7eb" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontWeight: 900, color: "#f97316", fontSize: 22 }}>S/. {precioDisplay.toFixed(2)}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff7ed", borderRadius: 10, padding: "6px 10px", border: "1px solid #fed7aa" }}>
+                    <button onClick={() => setCantidadModal(q => Math.max(1, q - 1))}
+                      style={{ width: 28, height: 28, border: "none", background: "#f97316", color: "#fff", borderRadius: 6, fontWeight: 900, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                    <span style={{ fontWeight: 900, fontSize: 15, color: "#f97316", minWidth: 24, textAlign: "center" }}>{cantidadModal}</span>
+                    <button onClick={() => setCantidadModal(q => q + 1)}
+                      style={{ width: 28, height: 28, border: "none", background: "#f97316", color: "#fff", borderRadius: 6, fontWeight: 900, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                  </div>
+                </div>
+                {/* Aviso si falta elegir talla o color */}
+                {!puedeAgregar() && (
+                  <p style={{ fontSize: 11, color: "#f97316", marginTop: 8, fontWeight: 600 }}>
+                    ⚠️ {p.variaciones?.length > 0 && !varSel ? "Elige una talla" : ""}
+                    {colores.length > 0 && !colorSel ? (p.variaciones?.length > 0 && !varSel ? " y un color" : "Elige un color") : ""}
+                  </p>
+                )}
+              </div>
             </div>
 
-            {/* Miniaturas */}
-            {todasFotos.length > 1 && (
-              <div style={{ display: "flex", gap: 8, padding: "10px 14px", overflowX: "auto", flexShrink: 0, borderBottom: p.descripcion ? "1px solid #e5e7eb" : "none" }}>
-                {todasFotos.map((url, idx) => (
-                  <img key={idx} src={url} alt={`foto ${idx + 1}`}
-                    onClick={() => setFotoActiva(idx)}
-                    style={{ width: 54, height: 54, objectFit: "cover", borderRadius: 8, flexShrink: 0, cursor: "pointer",
-                      border: fotoActiva === idx ? "2.5px solid #f97316" : "2px solid #e5e7eb",
-                      opacity: fotoActiva === idx ? 1 : 0.65,
-                      transition: "all 0.15s" }} />
-                ))}
-              </div>
-            )}
-
-            {/* ✅ Descripción — solo si existe y es Premium */}
-            {p.descripcion && (
-              <div style={{ padding: "12px 16px 16px", overflowY: "auto" }}>
-                <p style={{ fontSize: 11, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Descripción</p>
-                <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.65 }}>{p.descripcion}</p>
-              </div>
-            )}
+            {/* ✅ BOTONES FIJOS ABAJO */}
+            <div style={{ padding: "12px 16px", borderTop: "1px solid #e5e7eb", display: "flex", gap: 10, flexShrink: 0, background: "#fff" }}>
+              {/* Consultar WhatsApp */}
+              <button onClick={consultarWhatsApp}
+                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#f0fdf4", color: "#059669", border: "1.5px solid #bbf7d0", borderRadius: 12, padding: "13px", fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>
+                💬 Consultar
+              </button>
+              {/* Agregar al carrito */}
+              <button onClick={agregarDesdeModal}
+                disabled={!puedeAgregar()}
+                style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: puedeAgregar() ? "#f97316" : "#e5e7eb", color: puedeAgregar() ? "#fff" : "#9ca3af", border: "none", borderRadius: 12, padding: "13px", fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: 13, cursor: puedeAgregar() ? "pointer" : "not-allowed", boxShadow: puedeAgregar() ? "0 4px 12px rgba(249,115,22,0.3)" : "none" }}>
+                🛒 Agregar al carrito
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1252,14 +1440,12 @@ function CatalogoCliente({ kiosko, onSalir }) {
       <div className="prod-card" style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
         <div style={{ position: "relative" }}>
           {p.oferta && <span style={{ position: "absolute", top: 8, left: 8, background: "#f97316", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 999, zIndex: 1 }}>🔥 Oferta</span>}
-          {/* Indicador múltiples fotos — solo Premium */}
           {esPremium && todasFotos.length > 1 && (
             <span style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.45)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "3px 7px", borderRadius: 999, zIndex: 1 }}>
               📷 {todasFotos.length}
             </span>
           )}
-          <div
-            onClick={() => { if (esPremium && todasFotos.length > 0) { setFotoActiva(0); setModalFoto(true); } }}
+          <div onClick={() => { if (esPremium && todasFotos.length > 0) { setFotoActiva(0); setColorSel(null); setCantidadModal(1); setModalFoto(true); } }}
             style={{ width: "100%", aspectRatio: "1/1", background: "#fff", display: "flex", alignItems: "flex-start", justifyContent: "center", overflow: "hidden", cursor: esPremium && todasFotos.length > 0 ? "pointer" : "default" }}>
             {p.foto
               ? <img src={p.foto} style={{ width: "100%", objectFit: "contain", display: "block" }} />
