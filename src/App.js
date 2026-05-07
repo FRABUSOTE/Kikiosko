@@ -1397,13 +1397,16 @@ function CatalogoCliente({ kiosko, onSalir }) {
               )}
 
               {/* ✅ PRECIO + CANTIDAD */}
-              <div style={{ padding: "12px 16px", borderBottom: "1px solid #e5e7eb" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontWeight: 900, color: "#f97316", fontSize: 22 }}>S/. {precioDisplay.toFixed(2)}</span>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff7ed", borderRadius: 10, padding: "6px 10px", border: "1px solid #fed7aa" }}>
-                    <button onClick={() => setCantidadModal(q => Math.max(1, q - 1))}
-                      style={{ width: 28, height: 28, border: "none", background: "#f97316", color: "#fff", borderRadius: 6, fontWeight: 900, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                    <span style={{ fontWeight: 900, fontSize: 15, color: "#f97316", minWidth: 24, textAlign: "center" }}>{cantidadModal}</span>
+              <div style={{ padding: "10px 16px", borderBottom: "1px solid #e5e7eb" }}>
+               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                 <span style={{ fontWeight: 900, color: "#f97316", fontSize: 18 }}>
+  S/. {(precioDisplay * cantidadModal).toFixed(2)}
+  {cantidadModal > 1 && <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, marginLeft: 4 }}>({cantidadModal} x S/.{precioDisplay.toFixed(2)})</span>}
+</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff7ed", borderRadius: 8, padding: "4px 8px", border: "1px solid #fed7aa" }}>
+                 <button onClick={() => setCantidadModal(q => Math.max(1, q - 1))}
+                 style={{ width: 24, height: 24, border: "none", background: "#f97316", color: "#fff", borderRadius: 6, fontWeight: 900, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                    <span style={{ fontWeight: 900, fontSize: 13, color: "#f97316", minWidth: 20, textAlign: "center" }}>{cantidadModal}</span>
                     <button onClick={() => setCantidadModal(q => q + 1)}
                       style={{ width: 28, height: 28, border: "none", background: "#f97316", color: "#fff", borderRadius: 6, fontWeight: 900, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
                   </div>
