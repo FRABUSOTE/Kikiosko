@@ -1336,21 +1336,21 @@ function CatalogoCliente({ kiosko, onSalir }) {
               <div style={{ display: "flex", gap: 5, margin: "8px 0", flexWrap: "wrap" }}>
                 {p.variaciones.map((v, i) => (
                   <button key={i} onClick={() => setVarSel(v)}
-                    style={{ fontSize: 10, padding: "4px 8px", borderRadius: 6, border: "none", cursor: "pointer", background: varSel?.nombre === v.nombre ? "#2563EB" : "#F8FAFC", color: varSel?.nombre === v.nombre ? "#fff" : "#6B7280" }}>
+                    style={{ fontSize: 10, padding: "4px 8px", borderRadius: 6, border: "none", cursor: "pointer", background: varSel?.nombre === v.nombre ? "#2563EB" : "#f3f4f6", color: varSel?.nombre === v.nombre ? "#fff" : "#374151" }}>
                     {v.nombre}
                   </button>
                 ))}
               </div>
             )}
             <div style={{ marginTop: 10 }}>
-              <span style={{ fontWeight: 900, color: "#2563EB", fontSize: 15 }}>S/. {precioDisplay.toFixed(2)}</span>
+              <span style={{ fontWeight: 900, color: "#1d4ed8", fontSize: 15 }}>S/. {precioDisplay.toFixed(2)}</span>
               {(() => {
                 const key = varSel ? `${p.id}-${varSel.nombre}` : `${p.id}-unica`;
                 const cantidad = carrito[key]?.cantidad || 0;
                 return cantidad === 0 ? (
                   <button onClick={() => agregar(p, varSel)} style={{ width: "100%", marginTop: 8, background: "#2563EB", color: "#fff", border: "none", padding: "10px", borderRadius: 8, fontWeight: 800, cursor: "pointer", fontSize: 13 }}>+ Agregar</button>
                 ) : (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, background: "#eff6ff", borderRadius: 8, padding: "4px" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, background: "#f3f4f6", borderRadius: 8, padding: "4px" }}>
                     <button onClick={() => quitar(key)} style={{ width: 26, height: 26, border: "none", background: "#2563EB", color: "#fff", borderRadius: 6, fontWeight: 900, cursor: "pointer", fontSize: 13 }}>−</button>
                     <span style={{ fontWeight: 900, fontSize: 13, color: "#2563EB" }}>{cantidad}</span>
                     <button onClick={() => agregar(p, varSel)} style={{ width: 26, height: 26, border: "none", background: "#2563EB", color: "#fff", borderRadius: 6, fontWeight: 900, cursor: "pointer", fontSize: 13 }}>+</button>
@@ -1365,7 +1365,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F8FAFC", fontFamily: "Nunito, sans-serif", overflowX: "hidden", width: "100%", maxWidth: "100vw" }}>
+    <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "Nunito, sans-serif", overflowX: "hidden", width: "100%", maxWidth: "100vw" }}>
       <style>{`
         @media (min-width: 600px) { .productos-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; } }
         * { box-sizing: border-box; }
@@ -1437,7 +1437,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
             {catMadres.map(madre => (
               <button key={madre.id} onClick={() => entrarMadre(madre.nombre)}
                 style={{ background: "#fff", borderRadius: 18, overflow: "hidden", border: "none", cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.08)", padding: 0, textAlign: "left" }}>
-                <div style={{ width: "100%", aspectRatio: "16/9", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                <div style={{ width: "100%", aspectRatio: "16/9", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
                   {madre.imagen_url ? <img src={madre.imagen_url} alt={madre.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 48 }}>🗂</span>}
                 </div>
                 <div style={{ padding: "10px 14px 12px" }}>
@@ -1458,13 +1458,13 @@ function CatalogoCliente({ kiosko, onSalir }) {
             </div>
           )}
 
-          <div style={{ display: "flex", gap: 8, padding: "10px 12px", overflowX: "auto", overflowY: "hidden", background: "#F8FAFC", width: "100%", maxWidth: "100vw", boxSizing: "border-box" }}>
+          <div style={{ display: "flex", gap: 8, padding: "10px 12px", overflowX: "auto", overflowY: "hidden", background: "#f9fafb", width: "100%", maxWidth: "100vw", boxSizing: "border-box" }}>
             {categoriasDeMadre.map(cat => (
               <button key={cat} onClick={() => setCategoria(cat)}
                 style={{ flexShrink: 0, padding: "7px 16px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: 13,
                   background: categoria === cat ? "#2563EB" : "#fff",
-                  color: categoria === cat ? "#fff" : "#2563EB",
-                  boxShadow: categoria === cat ? "0 2px 8px rgba(37,99,235,0.3)" : "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  color: categoria === cat ? "#fff" : "#374151",
+                   boxShadow: categoria === cat ? "0 2px 8px rgba(37,99,235,0.3)" : "0 1px 4px rgba(0,0,0,0.06)" }}>
                 {cat}
               </button>
             ))}
@@ -1578,7 +1578,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
               </div>
 
               <div style={{ padding: "14px 20px" }}>
-                <input style={{ width: "100%", padding: 14, borderRadius: 12, border: "1.5px solid #bfdbfe", boxSizing: "border-box", outline: "none", fontSize: 14, background: "#eff6ff" }}
+                <input style={{ width: "100%", padding: 14, borderRadius: 12, border: "1.5px solid #e5e7eb", boxSizing: "border-box", outline: "none", fontSize: 14, background: "#f9fafb" }}
                   placeholder="Escribe tu nombre aquí..." value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} />
               </div>
             </div>
