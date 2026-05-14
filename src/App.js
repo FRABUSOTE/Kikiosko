@@ -1397,7 +1397,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
               </div>
             )}
             <button onClick={() => totalItems > 0 && setVerCarrito(true)}
-              style={{ position: "relative", background: "#fff", border: "none", color: "#2563EB", width: 42, height: 42, borderRadius: 12, fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              style={{ position: "relative", background: "#fff", border: "none", color: "#1D4ED8", width: 42, height: 42, borderRadius: 12, fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               🛒
               {totalItems > 0 && (
                 <span style={{ position: "absolute", top: -4, right: -4, background: "#F59E0B", color: "#fff", fontSize: 10, fontWeight: 900, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>{totalItems}</span>
@@ -1462,7 +1462,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
             {categoriasDeMadre.map(cat => (
               <button key={cat} onClick={() => setCategoria(cat)}
                 style={{ flexShrink: 0, padding: "7px 16px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: 13,
-                  background: categoria === cat ? "#2563EB" : "#fff",
+                  background: categoria === cat ? "#1D4ED8" : "#fff",
                   color: categoria === cat ? "#fff" : "#374151",
                    boxShadow: categoria === cat ? "0 2px 8px rgba(37,99,235,0.3)" : "0 1px 4px rgba(0,0,0,0.06)" }}>
                 {cat}
@@ -1481,7 +1481,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
 
       {totalItems > 0 && (
         <button onClick={() => setVerCarrito(true)}
-          style={{ position: "fixed", bottom: 16, left: 16, right: 16, background: "#2563EB", color: "#fff", padding: "14px 16px", borderRadius: 12, border: "none", fontWeight: 800, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14, boxShadow: "0 4px 12px rgba(37,99,235,0.35)", zIndex: 50 }}>
+          style={{ position: "fixed", bottom: 16, left: 16, right: 16, background: "#1D4ED8", color: "#fff", padding: "14px 16px", borderRadius: 12, border: "none", fontWeight: 800, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14, boxShadow: "0 4px 12px rgba(37,99,235,0.35)", zIndex: 50 }}>
           <span>🛒 Pedido ({totalItems})</span>
           <span>S/. {totalPrecio.toFixed(2)}</span>
         </button>
@@ -1500,12 +1500,12 @@ function CatalogoCliente({ kiosko, onSalir }) {
                   <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #E5E7EB" }}>
                     <div style={{ flex: 1 }}>
                       <p style={{ margin: 0, fontWeight: 800, fontSize: 14 }}>{item.nombre}</p>
-                      <p style={{ margin: 0, color: "#2563EB", fontSize: 13, fontWeight: 700 }}>S/. {(item.precio * item.cantidad).toFixed(2)}</p>
+                      <p style={{ margin: 0, color: "#1D4ED8", fontSize: 13, fontWeight: 700 }}>S/. {(item.precio * item.cantidad).toFixed(2)}</p>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <button onClick={() => quitar(key)} style={{ border: "1.5px solid #E5E7EB", background: "#F8FAFC", width: 30, height: 30, borderRadius: 8, fontWeight: 900, cursor: "pointer", fontSize: 16 }}>−</button>
                       <span style={{ fontWeight: 900, minWidth: 20, textAlign: "center" }}>{item.cantidad}</span>
-                      <button onClick={() => agregar({ id: item.id, nombre: item.nombre.split(' (')[0] }, item.variacionObj)} style={{ border: "none", background: "#2563EB", color: "#fff", width: 30, height: 30, borderRadius: 8, fontWeight: 900, cursor: "pointer", fontSize: 16 }}>+</button>
+                      <button onClick={() => agregar({ id: item.id, nombre: item.nombre.split(' (')[0] }, item.variacionObj)} style={{ border: "none", background: "#1D4ED8", color: "#fff", width: 30, height: 30, borderRadius: 8, fontWeight: 900, cursor: "pointer", fontSize: 16 }}>+</button>
                     </div>
                   </div>
                 ))}
@@ -1524,7 +1524,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
                 <div style={{ display: "flex", gap: 10 }}>
                   {[{ id: "delivery", label: "🚚 Delivery" }, { id: "tienda", label: "🏪 Recojo en tienda" }].map(opt => (
                     <button key={opt.id} onClick={() => setTipoEntrega(opt.id)}
-                      style={{ flex: 1, padding: "10px 0", borderRadius: 12, border: `1.5px solid ${tipoEntrega === opt.id ? "#2563EB" : "#E5E7EB"}`, background: tipoEntrega === opt.id ? "#eff6ff" : "#F8FAFC", fontWeight: 600, fontSize: 13, cursor: "pointer", color: tipoEntrega === opt.id ? "#2563EB" : "#6B7280" }}>
+                      style={{ flex: 1, padding: "10px 0", borderRadius: 12, border: `1.5px solid ${tipoEntrega === opt.id ? "#1D4ED8" : "#E5E7EB"}`, background: tipoEntrega === opt.id ? "#eff6ff" : "#F8FAFC", fontWeight: 600, fontSize: 13, cursor: "pointer", color: tipoEntrega === opt.id ? "#1D4ED8" : "#6B7280" }}>
                       {opt.label}
                     </button>
                   ))}
@@ -1547,7 +1547,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
                 <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
                   {[{ id: "efectivo", label: "Efectivo", icon: "💵" }, { id: "yape", label: "Yape / Plin", icon: "📱" }, { id: "transferencia", label: "Transferencia", icon: "🏦" }].map(op => (
                     <button key={op.id} onClick={() => setMedioPago(op.id)}
-                      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "12px 4px", borderRadius: 12, border: `1.5px solid ${medioPago === op.id ? "#2563EB" : "#E5E7EB"}`, background: medioPago === op.id ? "#eff6ff" : "#F8FAFC", cursor: "pointer" }}>
+                      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "12px 4px", borderRadius: 12, border: `1.5px solid ${medioPago === op.id ? "#1D4ED8" : "#E5E7EB"}`, background: medioPago === op.id ? "#eff6ff" : "#F8FAFC", cursor: "pointer" }}>
                       <span style={{ fontSize: 22, marginBottom: 4 }}>{op.icon}</span>
                       <span style={{ fontSize: 11, fontWeight: 700, color: "#111827" }}>{op.label}</span>
                     </button>
@@ -1626,7 +1626,7 @@ export default function App() {
 
   if (cargandoPublico) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#eff6ff", fontFamily: "'Nunito', sans-serif" }}>
-      <p style={{ fontSize: 16, fontWeight: 700, color: "#2563EB" }}>⏳ Cargando catálogo...</p>
+      <p style={{ fontSize: 16, fontWeight: 700, color: "#1D4ED8" }}>⏳ Cargando catálogo...</p>
     </div>
   );
 
@@ -1684,14 +1684,14 @@ export default function App() {
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         .inp2 { width: 100%; background: #fff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 13px 16px; font-size: 14px; color: #111827; font-family: inherit; outline: none; transition: border 0.2s; }
-        .inp2:focus { border-color: #2563EB; }
+        .inp2:focus { border-color: #1D4ED8; }
         .fade { animation: fade 0.4s ease both; }
         @keyframes fade { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
       `}</style>
       <div className="fade" style={{ background: "#fff", borderRadius: 22, padding: "40px 32px", width: "100%", maxWidth: 400, boxShadow: "0 8px 40px rgba(37,99,235,0.12)" }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <div style={{ fontSize: 52, marginBottom: 8 }}>🏪</div>
-          <h1 style={{ fontSize: 26, fontWeight: 900, color: "#111827", letterSpacing: "-0.02em" }}>Ki<span style={{ color: "#2563EB" }}>Kiosko</span></h1>
+          <h1 style={{ fontSize: 26, fontWeight: 900, color: "#111827", letterSpacing: "-0.02em" }}>Ki<span style={{ color: "#1D4ED8" }}>Kiosko</span></h1>
           <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>Tu catálogo digital con pedidos por WhatsApp</p>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
@@ -1699,11 +1699,11 @@ export default function App() {
           <input className="inp2" type="password" placeholder="Contraseña" value={loginForm.clave} onChange={e => setLoginForm({ ...loginForm, clave: e.target.value })} onKeyDown={e => e.key === "Enter" && handleLogin()} />
         </div>
         {loginError && <p style={{ fontSize: 12, color: "#dc2626", marginBottom: 12, textAlign: "center" }}>⚠️ {loginError}</p>}
-        <button onClick={handleLogin} style={{ width: "100%", background: "#2563EB", border: "none", borderRadius: 12, padding: "14px", fontSize: 15, fontWeight: 900, color: "#fff", cursor: "pointer", fontFamily: "inherit" }}>
+        <button onClick={handleLogin} style={{ width: "100%", background: "#1D4ED8", border: "none", borderRadius: 12, padding: "14px", fontSize: 15, fontWeight: 900, color: "#fff", cursor: "pointer", fontFamily: "inherit" }}>
           Ingresar →
         </button>
         <div style={{ marginTop: 20, padding: "14px", background: "#eff6ff", borderRadius: 10, fontSize: 12, color: "#9ca3af", textAlign: "center" }}>
-          <p style={{ fontSize: 13, fontWeight: 800, color: "#2563EB", marginBottom: 6 }}>🏪 ¿Tienes un kiosko?</p>
+          <p style={{ fontSize: 13, fontWeight: 800, color: "#1D4ED8", marginBottom: 6 }}>🏪 ¿Tienes un kiosko?</p>
           <p style={{ lineHeight: 1.6 }}>Ingresa con el correo y contraseña que te enviamos por WhatsApp.</p>
           <p style={{ marginTop: 8, lineHeight: 1.6 }}>¿Problemas para ingresar? Escríbenos al WhatsApp de soporte.</p>
         </div>
