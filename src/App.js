@@ -1322,8 +1322,8 @@ function CatalogoCliente({ kiosko, onSalir }) {
         <div className="prod-card" style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
           <div style={{ position: "relative" }}>
             {p.oferta && <span style={{ position: "absolute", top: 8, left: 8, background: "#10B981", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 999, zIndex: 1 }}>🔥 Oferta</span>}
-            {esPremium && todasFotos.length > 1 && (
-              <span style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.45)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "3px 7px", borderRadius: 999, zIndex: 1 }}>📷 {todasFotos.length}</span>
+            {esPremium && todasFotos.length > 0 && (
+              <span style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.45)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "3px 7px", borderRadius: 999, zIndex: 1 }}>🔍 {todasFotos.length}</span>
             )}
             <div onClick={() => { if (esPremium && todasFotos.length > 0) { setFotoActiva(0); setColorSel(null); setCantidadModal(1); setModalFoto(true); } }}
               style={{ width: "100%", aspectRatio: "1/1", background: "#fff", display: "flex", alignItems: "flex-start", justifyContent: "center", overflow: "hidden", cursor: esPremium && todasFotos.length > 0 ? "pointer" : "default" }}>
