@@ -36,6 +36,22 @@ function diasRestantes(f) {
   return Math.ceil((new Date(f) - new Date()) / (1000 * 60 * 60 * 24));
 }
 
+// ─── SELECTOR DE RUBRO ───
+function RubroSelector({ condominioId, rubroId, onChange }) {
+  const [rubros, setRubros] = useState([]);
+  useEffect(() => {
+    if (!condominioId) return;
+    supabase.from("rubros").select("*").eq("condominio_id", condominioId).order("orden")
+      .then(({ data }) => setRubros(data || []));
+  }, [condominioId]);
+  return (
+    <select value={rubroId || ""} onChange={e => onChange(e.target.value || null)}>
+      <option value="">— Sin rubro —</option>
+      {rubros.map(r => <option key={r.id} value={r.id}>{r.emoji} {r.nombre}</option>)}
+    </select>
+  );
+}
+
 // ─── SUPER ADMIN ───
 function SuperAdmin({ onSalir }) {
   const [kioskos, setKioskos] = useState([]);
@@ -49,11 +65,76 @@ function SuperAdmin({ onSalir }) {
   const [modalCatMadre, setModalCatMadre] = useState(null);
   const [catMadres, setCatMadres] = useState([]);
   const [nuevoKiosko, setNuevoKiosko] = useState({ nombre: "", dueno: "", email: "", clave: "", whatsapp: "", plan: "Pro", vence: "" });
+  const [vistaCondominios, setVistaCondominios] = useState(false);
+  const [condominios, setCondominios] = useState([]);
+  const [modalNuevoCondominio, setModalNuevoCondominio] = useState(false);
+  const [nuevoCondominio, setNuevoCondominio] = useState({ nombre: "", slug: "" });
+  const [condominioDetalle, setCondominioDetalle] = useState(null);
+  const [rubrosCondominio, setRubrosCondominio] = useState([]);
+  const [nuevoRubro, setNuevoRubro] = useState({ nombre: "", emoji: "🏪", color: "#2563EB" });
   const fileRef = useRef();
 
   const mostrarToast = (msg, tipo = "ok") => { setToast({ msg, tipo }); setTimeout(() => setToast(null), 2500); };
 
-  useEffect(() => { cargarKioskos(); }, []);
+  useEffect(() => { cargarKioskos(); cargarCondominios(); }, []);
+
+  const cargarCondominios = async () => {
+    const { data } = await supabase.from("condominios").select("*").order("created_at", { ascending: false });
+    setCondominios(data || []);
+  };
+
+  const crearCondominio = async () => {
+    if (!nuevoCondominio.nombre || !nuevoCondominio.slug) return;
+    const slug = nuevoCondominio.slug.toLowerCase().replace(/\s+/g, "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const { data, error } = await supabase.from("condominios").insert([{ nombre: nuevoCondominio.nombre, slug, activo: true }]).select();
+    if (error) { mostrarToast("❌ Error: " + error.message, "error"); return; }
+    setCondominios(prev => [...prev, data[0]]);
+    setModalNuevoCondominio(false);
+    setNuevoCondominio({ nombre: "", slug: "" });
+    mostrarToast("✅ Condominio creado");
+  };
+
+  const abrirCondominioDetalle = async (cond) => {
+    setCondominioDetalle(cond);
+    const { data } = await supabase.from("rubros").select("*").eq("condominio_id", cond.id).order("orden");
+    setRubrosCondominio(data || []);
+  };
+
+  const crearRubro = async () => {
+    if (!nuevoRubro.nombre || !condominioDetalle) return;
+    const { data, error } = await supabase.from("rubros").insert([{
+      condominio_id: condominioDetalle.id,
+      nombre: nuevoRubro.nombre,
+      emoji: nuevoRubro.emoji || "🏪",
+      color: nuevoRubro.color || "#2563EB",
+      orden: rubrosCondominio.length
+    }]).select();
+    if (error) { mostrarToast("❌ Error: " + error.message, "error"); return; }
+    setRubrosCondominio(prev => [...prev, data[0]]);
+    setNuevoRubro({ nombre: "", emoji: "🏪", color: "#2563EB" });
+    mostrarToast("✅ Rubro agregado");
+  };
+
+  const eliminarRubro = async (id) => {
+    await supabase.from("rubros").delete().eq("id", id);
+    setRubrosCondominio(prev => prev.filter(r => r.id !== id));
+    mostrarToast("🗑 Rubro eliminado");
+  };
+
+  const subirBannerCondominio = async (condId, file) => {
+    if (!file) return;
+    mostrarToast("⏳ Comprimiendo y subiendo...", "ok");
+    const fileComprimido = await comprimirImagen(file, "banner");
+    const fileName = `cond_${condId}_${Date.now()}.jpg`;
+    const { error: uploadError } = await supabase.storage.from("fotos-productos").upload(fileName, fileComprimido, { upsert: true, contentType: "image/jpeg" });
+    if (uploadError) { mostrarToast("❌ Error subiendo banner", "error"); return; }
+    const { data: urlData } = supabase.storage.from("fotos-productos").getPublicUrl(fileName);
+    const bannerUrl = urlData.publicUrl;
+    await supabase.from("condominios").update({ banner: bannerUrl }).eq("id", condId);
+    setCondominios(prev => prev.map(c => c.id === condId ? { ...c, banner: bannerUrl } : c));
+    if (condominioDetalle?.id === condId) setCondominioDetalle(prev => ({ ...prev, banner: bannerUrl }));
+    mostrarToast("✅ Banner actualizado");
+  };
 
   const cargarKioskos = async () => {
     setCargando(true);
@@ -241,6 +322,7 @@ function SuperAdmin({ onSalir }) {
         <span style={{ fontWeight: 900, fontSize: 18 }}>Ki<span style={{ color: "#2563EB" }}>Kiosko</span></span>
         <span style={{ fontSize: 11, background: "#dbeafe", color: "#1d4ed8", padding: "3px 10px", borderRadius: 999, fontWeight: 700 }}>👑 SÚPER ADMIN</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          <button className="btn" style={{ background: vistaCondominios ? "#2563EB" : "#eff6ff", color: vistaCondominios ? "#fff" : "#2563EB", padding: "9px 14px", fontSize: 12, border: "1px solid #bfdbfe" }} onClick={() => setVistaCondominios(!vistaCondominios)}>🏘 Condominios</button>
           <button className="btn" style={{ background: "#2563EB", color: "#fff", padding: "9px 18px", fontSize: 12 }} onClick={() => setModalNuevo(true)}>+ Nuevo kiosko</button>
           <button className="btn" style={{ background: "#F8FAFC", color: "#6B7280", padding: "9px 14px", fontSize: 12, border: "1px solid #E5E7EB" }} onClick={onSalir}>Salir</button>
         </div>
@@ -276,6 +358,50 @@ function SuperAdmin({ onSalir }) {
             <button key={id} className="btn" style={{ padding: "8px 14px", fontSize: 11, background: filtro === id ? "#eff6ff" : "#F8FAFC", color: filtro === id ? "#2563EB" : "#6B7280", border: `1px solid ${filtro === id ? "#bfdbfe" : "#E5E7EB"}` }} onClick={() => setFiltro(id)}>{label}</button>
           ))}
         </div>
+
+        {/* ✅ VISTA CONDOMINIOS */}
+        {vistaCondominios && (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div>
+                <p style={{ fontWeight: 900, fontSize: 16 }}>🏘 Condominios</p>
+                <p style={{ fontSize: 12, color: "#9ca3af" }}>{condominios.length} condominios registrados</p>
+              </div>
+              <button className="btn" style={{ background: "#2563EB", color: "#fff", padding: "9px 16px", fontSize: 12 }} onClick={() => setModalNuevoCondominio(true)}>+ Nuevo condominio</button>
+            </div>
+            {condominios.length === 0 ? (
+              <div className="card" style={{ padding: "32px", textAlign: "center", color: "#9ca3af" }}>
+                <p style={{ fontSize: 32, marginBottom: 8 }}>🏘</p>
+                <p style={{ fontSize: 13, fontWeight: 700 }}>Sin condominios aún</p>
+                <p style={{ fontSize: 12, marginTop: 4 }}>Crea el primero con el botón de arriba</p>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
+                {condominios.map(cond => (
+                  <div key={cond.id} className="card" style={{ overflow: "hidden", cursor: "pointer" }} onClick={() => abrirCondominioDetalle(cond)}>
+                    {cond.banner ? (
+                      <img src={cond.banner} alt={cond.nombre} style={{ width: "100%", height: 100, objectFit: "cover", display: "block" }} />
+                    ) : (
+                      <div style={{ width: "100%", height: 100, background: "linear-gradient(135deg, #2563EB, #1d4ed8)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40 }}>🏘</div>
+                    )}
+                    <div style={{ padding: "12px 14px" }}>
+                      <p style={{ fontWeight: 900, fontSize: 14, color: "#111827" }}>{cond.nombre}</p>
+                      <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>/{cond.slug}</p>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                        <span style={{ fontSize: 11, color: "#2563EB", fontWeight: 700 }}>
+                          {kioskos.filter(k => k.condominio_id === cond.id).length} negocios
+                        </span>
+                        <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 999, background: cond.activo ? "#dcfce7" : "#fee2e2", color: cond.activo ? "#059669" : "#dc2626", fontWeight: 700 }}>
+                          {cond.activo ? "✅ Activo" : "❌ Inactivo"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="card" style={{ overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -394,6 +520,33 @@ function SuperAdmin({ onSalir }) {
                   <span style={{ color: "#9ca3af" }}>{k}</span><span style={{ fontWeight: 700 }}>{v}</span>
                 </div>
               ))}
+            </div>
+
+            {/* ✅ ASIGNAR CONDOMINIO Y RUBRO */}
+            <div style={{ padding: "12px 0", borderBottom: "1px solid #E5E7EB" }}>
+              <p style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>🏘 Condominio</p>
+              <select value={detalle.condominio_id || ""} onChange={async e => {
+                const val = e.target.value || null;
+                await supabase.from("kioskos").update({ condominio_id: val, rubro_id: null }).eq("id", detalle.id);
+                setKioskos(prev => prev.map(k => k.id === detalle.id ? { ...k, condominio_id: val, rubro_id: null } : k));
+                setDetalle(prev => ({ ...prev, condominio_id: val, rubro_id: null }));
+                mostrarToast("✅ Condominio asignado");
+              }}>
+                <option value="">— Sin condominio —</option>
+                {condominios.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
+              {detalle.condominio_id && (
+                <div style={{ marginTop: 10 }}>
+                  <p style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>🏷 Rubro</p>
+                  <RubroSelector condominioId={detalle.condominio_id} rubroId={detalle.rubro_id}
+                    onChange={async (rubroId) => {
+                      await supabase.from("kioskos").update({ rubro_id: rubroId }).eq("id", detalle.id);
+                      setKioskos(prev => prev.map(k => k.id === detalle.id ? { ...k, rubro_id: rubroId } : k));
+                      setDetalle(prev => ({ ...prev, rubro_id: rubroId }));
+                      mostrarToast("✅ Rubro asignado");
+                    }} />
+                </div>
+              )}
             </div>
 
             <div style={{ padding: "12px 0", borderBottom: "1px solid #E5E7EB" }}>
@@ -553,6 +706,98 @@ function SuperAdmin({ onSalir }) {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+{/* Modal nuevo condominio */}
+      {modalNuevoCondominio && (
+        <div className="modal-bg" onClick={() => setModalNuevoCondominio(false)}>
+          <div className="modal fade" onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <span style={{ fontWeight: 900, fontSize: 16 }}>🏘 Nuevo condominio</span>
+              <button className="btn" style={{ background: "#F8FAFC", color: "#6B7280", padding: "6px 12px", fontSize: 11, border: "1px solid #E5E7EB" }} onClick={() => setModalNuevoCondominio(false)}>✕</button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 11, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>Nombre del condominio</label>
+                <input className="inp" placeholder="Ej: Condominio Vista Sol" value={nuevoCondominio.nombre}
+                  onChange={e => setNuevoCondominio(p => ({ ...p, nombre: e.target.value }))} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>Slug (para el link)</label>
+                <input className="inp" placeholder="Ej: vistasol" value={nuevoCondominio.slug}
+                  onChange={e => setNuevoCondominio(p => ({ ...p, slug: e.target.value.toLowerCase().replace(/\s+/g, "") }))} />
+                <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 4 }}>Link: kikiosko-vyvv.vercel.app/#/c/{nuevoCondominio.slug || "vistasol"}</p>
+              </div>
+            </div>
+            <button className="btn" style={{ width: "100%", background: "#2563EB", color: "#fff", padding: 13, fontSize: 14, marginTop: 20 }}
+              onClick={crearCondominio} disabled={!nuevoCondominio.nombre || !nuevoCondominio.slug}>
+              ✅ Crear condominio
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal detalle condominio */}
+      {condominioDetalle && (
+        <div className="modal-bg" onClick={() => setCondominioDetalle(null)}>
+          <div className="modal fade" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div>
+                <p style={{ fontWeight: 900, fontSize: 16 }}>🏘 {condominioDetalle.nombre}</p>
+                <p style={{ fontSize: 11, color: "#9ca3af" }}>kikiosko-vyvv.vercel.app/#/c/{condominioDetalle.slug}</p>
+              </div>
+              <button className="btn" style={{ background: "#F8FAFC", color: "#6B7280", padding: "6px 12px", fontSize: 11, border: "1px solid #E5E7EB" }} onClick={() => setCondominioDetalle(null)}>✕</button>
+            </div>
+
+            {/* Banner condominio */}
+            <div style={{ padding: "12px 0", borderBottom: "1px solid #E5E7EB" }}>
+              <p style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Banner / Foto fachada</p>
+              {condominioDetalle.banner && (
+                <div style={{ marginBottom: 10, borderRadius: 12, overflow: "hidden", height: 120 }}>
+                  <img src={condominioDetalle.banner} alt="banner" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                </div>
+              )}
+              <input type="file" accept="image/jpeg,image/png,image/webp" id="cond-banner-upload" style={{ display: "none" }}
+                onChange={async e => { const file = e.target.files[0]; if (!file) return; await subirBannerCondominio(condominioDetalle.id, file); e.target.value = ""; }} />
+              <button className="btn" style={{ width: "100%", background: "#eff6ff", color: "#2563EB", padding: "10px", fontSize: 12, border: "1.5px dashed #bfdbfe", borderRadius: 8 }}
+                onClick={() => document.getElementById("cond-banner-upload").click()}>
+                🖼️ {condominioDetalle.banner ? "Cambiar foto fachada" : "Subir foto fachada"}
+              </button>
+            </div>
+
+            {/* Rubros */}
+            <div style={{ padding: "12px 0" }}>
+              <p style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12 }}>Rubros del condominio</p>
+              {rubrosCondominio.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+                  {rubrosCondominio.map(r => (
+                    <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#F8FAFC", borderRadius: 10, border: "1px solid #E5E7EB" }}>
+                      <span style={{ fontSize: 20 }}>{r.emoji}</span>
+                      <span style={{ flex: 1, fontWeight: 700, fontSize: 13 }}>{r.nombre}</span>
+                      <span style={{ fontSize: 11, color: "#9ca3af" }}>{kioskos.filter(k => k.rubro_id === r.id).length} negocios</span>
+                      <button className="btn" style={{ background: "#fee2e2", color: "#dc2626", padding: "5px 8px", fontSize: 11, border: "1px solid #fecaca" }}
+                        onClick={() => eliminarRubro(r.id)}>🗑</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Agregar rubro */}
+              <div style={{ background: "#F8FAFC", borderRadius: 12, padding: "12px", border: "1px solid #E5E7EB" }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 10 }}>+ Agregar rubro</p>
+                <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                  <input className="inp" placeholder="Emoji" value={nuevoRubro.emoji}
+                    onChange={e => setNuevoRubro(p => ({ ...p, emoji: e.target.value }))}
+                    style={{ width: 60, textAlign: "center", fontSize: 18 }} />
+                  <input className="inp" placeholder="Nombre del rubro" value={nuevoRubro.nombre}
+                    onChange={e => setNuevoRubro(p => ({ ...p, nombre: e.target.value }))} />
+                </div>
+                <button className="btn" style={{ width: "100%", background: "#2563EB", color: "#fff", padding: "10px", fontSize: 12 }}
+                  onClick={crearRubro} disabled={!nuevoRubro.nombre}>
+                  ✅ Agregar rubro
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -1599,6 +1844,191 @@ function CatalogoCliente({ kiosko, onSalir }) {
   );
 }
 
+// ─── CONDOMINIO PÚBLICO ───
+function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, rubroActivo, setRubroActivo }) {
+  const [kioskoSeleccionado, setKioskoSeleccionado] = useState(null);
+  const [busqueda, setBusqueda] = useState("");
+
+  // Si seleccionó un kiosko → mostrar su catálogo
+  if (kioskoSeleccionado) {
+    return <CatalogoCliente kiosko={kioskoSeleccionado} onSalir={() => setKioskoSeleccionado(null)} />;
+  }
+
+  const kioskosDelRubro = rubroActivo
+    ? kioskos.filter(k => k.rubro_id === rubroActivo.id)
+    : kioskos;
+
+  const kioskosFiltered = busqueda
+    ? kioskos.filter(k => k.nombre.toLowerCase().includes(busqueda.toLowerCase()))
+    : kioskosDelRubro;
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "Nunito, sans-serif" }}>
+      <style>{`* { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
+
+      {/* HEADER */}
+      <div style={{ background: "linear-gradient(135deg, #2563EB 0%, #1d4ed8 100%)", padding: "12px 16px 10px", position: "sticky", top: 0, zIndex: 40, boxShadow: "0 2px 12px rgba(37,99,235,0.25)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {rubroActivo && (
+              <button onClick={() => { setRubroActivo(null); setBusqueda(""); }}
+                style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
+            )}
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 14, fontWeight: 900, color: "#fff" }}>Ki<span style={{ color: "#93c5fd" }}>Kiosko</span></span>
+                <span style={{ width: 1, height: 12, background: "rgba(255,255,255,0.3)" }}></span>
+                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>{condominio.nombre}</span>
+              </div>
+              {rubroActivo && <p style={{ margin: 0, color: "rgba(255,255,255,0.7)", fontSize: 10, fontWeight: 600 }}>{rubroActivo.emoji} {rubroActivo.nombre}</p>}
+            </div>
+          </div>
+          <div style={{ fontSize: 10, background: "rgba(255,255,255,0.15)", color: "#fff", padding: "4px 10px", borderRadius: 999, fontWeight: 700 }}>
+            {kioskos.length} negocios
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", borderRadius: 12, padding: "8px 13px" }}>
+          <span style={{ fontSize: 14 }}>🔍</span>
+          <input style={{ border: "none", outline: "none", fontSize: 13, background: "transparent", flex: 1, color: "#111827", fontFamily: "Nunito, sans-serif" }}
+            placeholder="Buscar negocios o productos..." value={busqueda}
+            onChange={e => { setBusqueda(e.target.value); if (e.target.value) setRubroActivo(null); }} />
+          {busqueda && <button onClick={() => setBusqueda("")} style={{ border: "none", background: "#f3f4f6", borderRadius: 6, padding: "3px 7px", fontSize: 11, cursor: "pointer", color: "#6B7280" }}>✕</button>}
+        </div>
+      </div>
+
+      {!rubroActivo && !busqueda ? (
+        <div>
+          {/* BANNER FACHADA */}
+          <div style={{ position: "relative", height: 180, overflow: "hidden", background: "linear-gradient(160deg, #1e3a5f 0%, #2563eb 60%, #0369a1 100%)" }}>
+            {condominio.banner
+              ? <img src={condominio.banner} alt={condominio.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 80, opacity: 0.2 }}>🏢</div>
+            }
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.55) 100%)", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "16px" }}>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(16,185,129,0.85)", borderRadius: 999, padding: "3px 10px", width: "fit-content", marginBottom: 6 }}>
+                <div style={{ width: 5, height: 5, background: "#fff", borderRadius: "50%" }}></div>
+                <span style={{ color: "#fff", fontSize: 9, fontWeight: 800 }}>{kioskos.filter(k => k.activo).length} negocios disponibles</span>
+              </div>
+              <p style={{ fontSize: 22, fontWeight: 900, color: "#fff", textShadow: "0 2px 8px rgba(0,0,0,0.4)", lineHeight: 1.1 }}>{condominio.nombre}</p>
+              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.8)", fontWeight: 600, marginTop: 3 }}>📍 {rubros.length} rubros disponibles</p>
+            </div>
+          </div>
+
+          {/* RUBROS GRID */}
+          <div style={{ padding: "16px 14px 0" }}>
+            <p style={{ fontSize: 13, fontWeight: 900, color: "#111827", marginBottom: 12 }}>¿Qué necesitas hoy?</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
+              {rubros.map(r => {
+                const totalNegocios = kioskos.filter(k => k.rubro_id === r.id).length;
+                return (
+                  <button key={r.id} onClick={() => setRubroActivo(r)}
+                    style={{ background: "#fff", borderRadius: 14, padding: "12px 8px", textAlign: "center", border: "1.5px solid #f1f5f9", cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.05)", position: "relative", overflow: "hidden" }}>
+                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 3, background: r.color || "#2563EB", borderRadius: 0 }}></div>
+                    <span style={{ fontSize: 26, display: "block", marginBottom: 5 }}>{r.emoji}</span>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: "#111827", display: "block", lineHeight: 1.2 }}>{r.nombre}</span>
+                    <span style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600 }}>{totalNegocios} tiendas</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* PRODUCTOS DESTACADOS */}
+          {productosDestacados.length > 0 && (
+            <div style={{ padding: "0 14px 16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
+                <div style={{ background: "#fff7ed", borderRadius: 8, padding: "3px 7px", fontSize: 14 }}>🔥</div>
+                <span style={{ fontSize: 13, fontWeight: 900, color: "#111827" }}>Lo más pedido</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                {productosDestacados.map((prod, idx) => {
+                  const kiosko = kioskos.find(k => k.id === prod.kiosko_id);
+                  return (
+                    <div key={prod.id} onClick={() => kiosko && setKioskoSeleccionado(kiosko)}
+                      style={{ background: "#fff", borderRadius: 14, overflow: "hidden", border: "1px solid #f1f5f9", cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.05)" }}>
+                      <div style={{ position: "relative", aspectRatio: "1/1", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <img src={prod.foto} alt={prod.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        <div style={{ position: "absolute", top: 5, left: 5, width: 18, height: 18, borderRadius: 6, background: idx === 0 ? "#f59e0b" : idx === 1 ? "#6b7280" : "#b45309", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 900, color: "#fff" }}>{idx + 1}</div>
+                      </div>
+                      <div style={{ padding: "7px 8px 9px" }}>
+                        <p style={{ fontSize: 10, fontWeight: 800, color: "#111827", marginBottom: 2, lineHeight: 1.2 }}>{prod.nombre}</p>
+                        <p style={{ fontSize: 12, fontWeight: 900, color: "#2563EB", marginBottom: 3 }}>S/. {Number(prod.precio).toFixed(2)}</p>
+                        {kiosko && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                            <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#2563EB", flexShrink: 0 }}></div>
+                            <span style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600 }}>{kiosko.nombre}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* LISTA DE NEGOCIOS DEL RUBRO */
+        <div style={{ padding: "16px 14px" }}>
+          {rubroActivo && (
+            <p style={{ fontSize: 13, fontWeight: 700, color: "#9ca3af", marginBottom: 14 }}>
+              {kioskosFiltered.length} negocio{kioskosFiltered.length !== 1 ? "s" : ""} en {rubroActivo.emoji} {rubroActivo.nombre}
+            </p>
+          )}
+          {kioskosFiltered.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 0", color: "#9ca3af" }}>
+              <p style={{ fontSize: 32 }}>🏪</p>
+              <p style={{ fontSize: 13, fontWeight: 700, marginTop: 8 }}>Sin negocios disponibles</p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {kioskosFiltered.map(k => {
+                const rubro = rubros.find(r => r.id === k.rubro_id);
+                return (
+                  <div key={k.id} style={{ background: "#fff", borderRadius: 18, overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", border: "1px solid #f1f5f9", cursor: "pointer" }}
+                    onClick={() => setKioskoSeleccionado(k)}>
+                    {/* Banner negocio */}
+                    <div style={{ height: 100, position: "relative", overflow: "hidden", background: rubro ? `linear-gradient(135deg, ${rubro.color}22, ${rubro.color}44)` : "#eff6ff" }}>
+                      {k.banner
+                        ? <img src={k.banner} alt={k.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, opacity: 0.3 }}>{rubro?.emoji || "🏪"}</div>
+                      }
+                      {/* Badge abierto/cerrado */}
+                      <div style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 4, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)", borderRadius: 999, padding: "3px 10px" }}>
+                        <div style={{ width: 5, height: 5, background: "#4ade80", borderRadius: "50%" }}></div>
+                        <span style={{ color: "#fff", fontSize: 10, fontWeight: 700 }}>Abierto</span>
+                      </div>
+                    </div>
+                    {/* Info negocio */}
+                    <div style={{ padding: "12px 14px 14px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                        <div>
+                          <p style={{ fontSize: 14, fontWeight: 800, color: "#111827", margin: 0, marginBottom: 4 }}>{k.nombre}</p>
+                          {rubro && (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: `${rubro.color}15`, border: `1px solid ${rubro.color}30`, borderRadius: 999, padding: "2px 8px", fontSize: 10, fontWeight: 700, color: rubro.color }}>
+                              {rubro.emoji} {rubro.nombre}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ width: 30, height: 30, background: "#f8fafc", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#9ca3af", flexShrink: 0 }}>›</div>
+                      </div>
+                      <div style={{ display: "flex", gap: 14, fontSize: 10, color: "#9ca3af", fontWeight: 600 }}>
+                        {k.info_tienda?.horario && <span>🕐 {k.info_tienda.horario}</span>}
+                        <span>📦 {(k.productos || []).length} productos</span>
+                        {k.plan === "Premium" && <span style={{ color: "#f59e0b" }}>⭐ Premium</span>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── APP PRINCIPAL ───
 export default function App() {
   const [pantalla, setPantalla] = useState("login");
@@ -1610,9 +2040,36 @@ export default function App() {
   const [kioskoPorSlug, setKioskoPorSlug] = useState(null);
 
   const hash = window.location.hash;
-  const slug = hash.replace(/^#\/?/, "").replace(/\/$/, "").toLowerCase().trim();
+  const rawSlug = hash.replace(/^#\/?/, "").replace(/\/$/, "").toLowerCase().trim();
+  const esCondominio = rawSlug.startsWith("c/");
+  const slug = esCondominio ? rawSlug.replace("c/", "") : rawSlug;
 
-  useEffect(() => { if (slug && slug.length > 0) cargarKioskoPorSlug(slug); }, [slug]);
+  const [condominioPublico, setCondominioPublico] = useState(null);
+  const [rubrosPublicos, setRubrosPublicos] = useState([]);
+  const [rubroActivo, setRubroActivo] = useState(null);
+  const [kioskosPorRubro, setKioskosPorRubro] = useState([]);
+  const [productosDestacados, setProductosDestacados] = useState([]);
+
+  useEffect(() => {
+    if (esCondominio && slug.length > 0) cargarCondominio(slug);
+    else if (!esCondominio && slug.length > 0) cargarKioskoPorSlug(slug);
+  }, [slug]);
+
+  const cargarCondominio = async (slugCond) => {
+    setCargandoPublico(true);
+    const { data: cond } = await supabase.from("condominios").select("*").eq("slug", slugCond).single();
+    if (cond) {
+      const { data: rubros } = await supabase.from("rubros").select("*").eq("condominio_id", cond.id).order("orden");
+      const { data: ks } = await supabase.from("kioskos").select("*, productos(*)").eq("condominio_id", cond.id).eq("activo", true);
+      setCondominioPublico(cond);
+      setRubrosPublicos(rubros || []);
+      setKioskosPorRubro(ks || []);
+      // productos destacados — los primeros 3 con foto
+      const conFoto = (ks || []).flatMap(k => (k.productos || []).filter(p => p.foto && p.stock)).slice(0, 3);
+      setProductosDestacados(conFoto);
+    }
+    setCargandoPublico(false);
+  };
 
   const cargarKioskoPorSlug = async (slug) => {
     setCargandoPublico(true);
@@ -1629,6 +2086,28 @@ export default function App() {
       <p style={{ fontSize: 16, fontWeight: 700, color: "#1D4ED8" }}>⏳ Cargando catálogo...</p>
     </div>
   );
+
+  // ✅ PANTALLA PÚBLICA CONDOMINIO
+  if (condominioPublico) {
+    if (!condominioPublico.activo) return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Nunito', sans-serif", background: "#eff6ff" }}>
+        <div style={{ textAlign: "center", padding: 40 }}>
+          <p style={{ fontSize: 48, marginBottom: 16 }}>🔒</p>
+          <p style={{ fontSize: 18, fontWeight: 900, color: "#dc2626" }}>Condominio no disponible</p>
+        </div>
+      </div>
+    );
+    return (
+      <CondominioPublico
+        condominio={condominioPublico}
+        rubros={rubrosPublicos}
+        kioskos={kioskosPorRubro}
+        productosDestacados={productosDestacados}
+        rubroActivo={rubroActivo}
+        setRubroActivo={setRubroActivo}
+      />
+    );
+  }
 
   if (kioskoPorSlug) {
     if (!kioskoPorSlug.activo) return (
