@@ -1924,7 +1924,25 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, r
                   <button key={r.id} onClick={() => setRubroActivo(r)}
                     style={{ background: "#fff", borderRadius: 14, padding: "12px 8px", textAlign: "center", border: "1.5px solid #f1f5f9", cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.05)", position: "relative", overflow: "hidden" }}>
                     <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 3, background: r.color || "#2563EB", borderRadius: 0 }}></div>
-                    <span style={{ fontSize: 26, display: "block", marginBottom: 5 }}>{r.emoji}</span>
+                    <span style={{ fontSize: 26, display: "block", marginBottom: 5 }}>
+  {r.emoji && r.emoji !== "🏪" ? r.emoji : (() => {
+    const n = r.nombre.toLowerCase();
+    if (n.includes("bodega")) return "🛒";
+    if (n.includes("farmacia")) return "💊";
+    if (n.includes("licor")) return "🍾";
+    if (n.includes("libreria") || n.includes("librería")) return "📚";
+    if (n.includes("peluquer")) return "✂️";
+    if (n.includes("ferreteri") || n.includes("ferretería")) return "🔧";
+    if (n.includes("polleria") || n.includes("pollería")) return "🍗";
+    if (n.includes("panaderia") || n.includes("panadería")) return "🥖";
+    if (n.includes("carnicer")) return "🥩";
+    if (n.includes("restaurant") || n.includes("comida")) return "🍽️";
+    if (n.includes("fruteria") || n.includes("frutas")) return "🍎";
+    if (n.includes("lavanderia") || n.includes("lavandería")) return "👕";
+    if (n.includes("zapateria") || n.includes("zapatería")) return "👟";
+    return "🏪";
+  })()}
+</span>
                     <span style={{ fontSize: 10, fontWeight: 800, color: "#111827", display: "block", lineHeight: 1.2 }}>{r.nombre}</span>
                     <span style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600 }}>{totalNegocios} tiendas</span>
                   </button>
