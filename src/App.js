@@ -1877,22 +1877,15 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, r
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ fontSize: 14, fontWeight: 900, color: "#fff" }}>Ki<span style={{ color: "#93c5fd" }}>Kiosko</span></span>
-                <span style={{ width: 1, height: 12, background: "rgba(255,255,255,0.3)" }}></span>
-                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>{condominio.nombre}</span>
+                {rubroActivo && (
+                  <>
+                    <span style={{ width: 1, height: 12, background: "rgba(255,255,255,0.3)" }}></span>
+                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>{rubroActivo.emoji} {rubroActivo.nombre}</span>
+                  </>
+                )}
               </div>
-              {rubroActivo && <p style={{ margin: 0, color: "rgba(255,255,255,0.7)", fontSize: 10, fontWeight: 600 }}>{rubroActivo.emoji} {rubroActivo.nombre}</p>}
             </div>
           </div>
-          <div style={{ fontSize: 10, background: "rgba(255,255,255,0.15)", color: "#fff", padding: "4px 10px", borderRadius: 999, fontWeight: 700 }}>
-            {kioskos.length} negocios
-          </div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", borderRadius: 12, padding: "8px 13px" }}>
-          <span style={{ fontSize: 14 }}>🔍</span>
-          <input style={{ border: "none", outline: "none", fontSize: 13, background: "transparent", flex: 1, color: "#111827", fontFamily: "Nunito, sans-serif" }}
-            placeholder="Buscar negocios o productos..." value={busqueda}
-            onChange={e => { setBusqueda(e.target.value); if (e.target.value) setRubroActivo(null); }} />
-          {busqueda && <button onClick={() => setBusqueda("")} style={{ border: "none", background: "#f3f4f6", borderRadius: 6, padding: "3px 7px", fontSize: 11, cursor: "pointer", color: "#6B7280" }}>✕</button>}
         </div>
       </div>
 
@@ -1904,13 +1897,20 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, r
               ? <img src={condominio.banner} alt={condominio.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 80, opacity: 0.2 }}>🏢</div>
             }
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.55) 100%)", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "16px" }}>
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%)", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "16px" }}>
               <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(16,185,129,0.85)", borderRadius: 999, padding: "3px 10px", width: "fit-content", marginBottom: 6 }}>
                 <div style={{ width: 5, height: 5, background: "#fff", borderRadius: "50%" }}></div>
                 <span style={{ color: "#fff", fontSize: 9, fontWeight: 800 }}>{kioskos.filter(k => k.activo).length} negocios disponibles</span>
               </div>
-              <p style={{ fontSize: 22, fontWeight: 900, color: "#fff", textShadow: "0 2px 8px rgba(0,0,0,0.4)", lineHeight: 1.1 }}>{condominio.nombre}</p>
-              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.8)", fontWeight: 600, marginTop: 3 }}>📍 {rubros.length} rubros disponibles</p>
+              <p style={{ fontSize: 22, fontWeight: 900, color: "#fff", textShadow: "0 2px 8px rgba(0,0,0,0.4)", lineHeight: 1.1, marginBottom: 10 }}>{condominio.nombre}</p>
+              {/* BUSCADOR FLOTANTE */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.92)", backdropFilter: "blur(8px)", borderRadius: 12, padding: "9px 13px", border: "1px solid rgba(255,255,255,0.6)" }}>
+                <span style={{ fontSize: 14 }}>🔍</span>
+                <input style={{ border: "none", outline: "none", fontSize: 13, background: "transparent", flex: 1, color: "#111827", fontFamily: "Nunito, sans-serif" }}
+                  placeholder="Buscar negocios o productos..." value={busqueda}
+                  onChange={e => { setBusqueda(e.target.value); if (e.target.value) setRubroActivo(null); }} />
+                {busqueda && <button onClick={() => setBusqueda("")} style={{ border: "none", background: "#f3f4f6", borderRadius: 6, padding: "3px 7px", fontSize: 11, cursor: "pointer", color: "#6B7280" }}>✕</button>}
+              </div>
             </div>
           </div>
 
