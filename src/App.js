@@ -318,8 +318,7 @@ function SuperAdmin({ onSalir }) {
       )}
 
       <div style={{ background: "#fff", borderBottom: "1px solid #E5E7EB", padding: "13px 24px", display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ fontSize: 24 }}>🏪</span>
-        <span style={{ fontWeight: 900, fontSize: 18 }}>Ki<span style={{ color: "#2563EB" }}>Kiosko</span></span>
+        <img src="/logo.png" style={{ height: 32, objectFit: "contain" }} alt="KiKiosko" />
         <span style={{ fontSize: 11, background: "#dbeafe", color: "#1d4ed8", padding: "3px 10px", borderRadius: 999, fontWeight: 700 }}>👑 SÚPER ADMIN</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
           <button className="btn" style={{ background: vistaCondominios ? "#2563EB" : "#eff6ff", color: vistaCondominios ? "#fff" : "#2563EB", padding: "9px 14px", fontSize: 12, border: "1px solid #bfdbfe" }} onClick={() => setVistaCondominios(!vistaCondominios)}>🏘 Condominios</button>
@@ -2187,8 +2186,7 @@ export default function App() {
       `}</style>
       <div className="fade" style={{ background: "#fff", borderRadius: 22, padding: "40px 32px", width: "100%", maxWidth: 400, boxShadow: "0 8px 40px rgba(37,99,235,0.12)" }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ fontSize: 52, marginBottom: 8 }}>🏪</div>
-          <h1 style={{ fontSize: 26, fontWeight: 900, color: "#111827", letterSpacing: "-0.02em" }}>Ki<span style={{ color: "#1D4ED8" }}>Kiosko</span></h1>
+          <img src="/logo.png" style={{ height: 48, objectFit: "contain", marginBottom: 8 }} alt="KiKiosko" />
           <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>Tu catálogo digital con pedidos por WhatsApp</p>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
