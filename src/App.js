@@ -1875,7 +1875,7 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, r
             )}
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 14, fontWeight: 900, color: "#fff" }}>Ki<span style={{ color: "#93c5fd" }}>Kiosko</span></span>
+                <img src="/logo.png" style={{ height: 26, objectFit: "contain" }} alt="KiKiosko" />
                 {rubroActivo && (
                   <>
                     <span style={{ width: 1, height: 12, background: "rgba(255,255,255,0.3)" }}></span>
