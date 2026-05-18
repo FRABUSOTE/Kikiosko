@@ -1866,22 +1866,19 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, r
       <style>{`* { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
 
       {/* HEADER */}
-      <div style={{ background: "linear-gradient(135deg, #2563EB 0%, #1d4ed8 100%)", padding: "12px 16px 10px", position: "sticky", top: 0, zIndex: 40, boxShadow: "0 2px 12px rgba(37,99,235,0.25)" }}>
+      <div style={{ background: "#fff", padding: "12px 16px 10px", display: "flex", alignItems: "center", justifyContent: "center", position: "sticky", top: 0, zIndex: 40, boxShadow: "0 2px 12px rgba(0,0,0,0.08)", borderBottom: "1px solid #f1f5f9" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {rubroActivo && (
-              <button onClick={() => { setRubroActivo(null); setBusqueda(""); }}
-                style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
-            )}
+  <button onClick={() => { setRubroActivo(null); setBusqueda(""); }}
+    style={{ position: "absolute", left: 16, background: "#f1f5f9", border: "none", color: "#374151", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
+)}
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <img src="/logo.png" style={{ height: 26, objectFit: "contain" }} alt="KiKiosko" />
+                <img src="/logo.png" style={{ height: 30, objectFit: "contain" }} alt="KiKiosko" />
                 {rubroActivo && (
-                  <>
-                    <span style={{ width: 1, height: 12, background: "rgba(255,255,255,0.3)" }}></span>
-                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>{rubroActivo.emoji} {rubroActivo.nombre}</span>
-                  </>
-                )}
+  <span style={{ position: "absolute", right: 16, fontSize: 11, color: "#6B7280", fontWeight: 700 }}>{rubroActivo.emoji} {rubroActivo.nombre}</span>
+)}
               </div>
             </div>
           </div>
