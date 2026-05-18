@@ -1617,60 +1617,55 @@ function CatalogoCliente({ kiosko, onSalir }) {
       `}</style>
 
       {/* HEADER AZUL */}
-      <div style={{ background: "linear-gradient(135deg, #2563EB 0%, #1d4ed8 100%)", padding: "10px 14px", position: "sticky", top: 0, zIndex: 40, boxShadow: "0 2px 12px rgba(37,99,235,0.25)" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-            {onSalir && (
-              <button onClick={onSalir} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>←</button>
-            )}
-            {madreActiva && madreActiva !== "sin_madre" && (
-              <button onClick={volverInicio} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>←</button>
-            )}
-            <div style={{ minWidth: 0 }}>
-              <h2 style={{ margin: 0, color: "#fff", fontSize: 16, fontWeight: 900, lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{kiosko.nombre}</h2>
-              {kiosko.info_tienda?.descripcion && (
-                <p style={{ margin: 0, color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{kiosko.info_tienda.descripcion}</p>
-              )}
-            </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            {kiosko.info_tienda?.delivery === "si" && (
-              <div style={{ textAlign: "center", background: "rgba(255,255,255,0.15)", borderRadius: 10, padding: "5px 10px" }}>
-                <div style={{ fontSize: 16 }}>🛵</div>
-                <p style={{ margin: 0, color: "#fff", fontSize: 9, fontWeight: 800, lineHeight: 1.2 }}>{kiosko.info_tienda?.delivery_tiempo || "Delivery"}</p>
-              </div>
-            )}
-            <button onClick={() => totalItems > 0 && setVerCarrito(true)}
-              style={{ position: "relative", background: "#fff", border: "none", color: "#1D4ED8", width: 42, height: 42, borderRadius: 12, fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              🛒
-              {totalItems > 0 && (
-                <span style={{ position: "absolute", top: -4, right: -4, background: "#F59E0B", color: "#fff", fontSize: 10, fontWeight: 900, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>{totalItems}</span>
-              )}
-            </button>
-          </div>
-        </div>
+      <div style={{ background: "#fff", position: "sticky", top: 0, zIndex: 40, boxShadow: "0 4px 16px rgba(0,0,0,0.08)", borderRadius: "0 0 20px 20px" }}>
+  {/* FILA 1 — Logo + Nombre negocio + Carrito */}
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px 8px" }}>
+    {/* Izquierda — Logo + botón volver */}
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      {onSalir && (
+        <button onClick={onSalir} style={{ background: "#f1f5f9", border: "none", color: "#374151", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>←</button>
+      )}
+      {madreActiva && madreActiva !== "sin_madre" && (
+        <button onClick={volverInicio} style={{ background: "#f1f5f9", border: "none", color: "#374151", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>←</button>
+      )}
+      <img src="/logo.png" style={{ height: 28, objectFit: "contain" }} alt="KiKiosko" />
+    </div>
 
-        {(kiosko.info_tienda?.horario || kiosko.info_tienda?.direccion) && (
-          <div style={{ display: "flex", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
-            {kiosko.info_tienda?.horario && <span style={{ color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>🕐 {kiosko.info_tienda.horario}</span>}
-            {kiosko.info_tienda?.direccion && <span style={{ color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>📍 {kiosko.info_tienda.direccion}</span>}
-          </div>
-        )}
+    {/* Centro — Nombre y descripción negocio */}
+    <div style={{ flex: 1, textAlign: "center", minWidth: 0, padding: "0 8px" }}>
+      <p style={{ margin: 0, fontSize: 13, fontWeight: 900, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{kiosko.nombre}</p>
+      {kiosko.info_tienda?.descripcion && (
+        <p style={{ margin: 0, fontSize: 10, color: "#9ca3af", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{kiosko.info_tienda.descripcion}</p>
+      )}
+    </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", borderRadius: 12, padding: "9px 14px" }}>
-          <span style={{ fontSize: 15, flexShrink: 0 }}>🔍</span>
-          <input style={{ border: "none", outline: "none", fontSize: 14, background: "transparent", flex: 1, minWidth: 0, color: "#111827", fontFamily: "Nunito, sans-serif" }}
-            placeholder="Buscar productos..." value={busqueda}
-            onChange={e => {
-              setBusqueda(e.target.value);
-              if (e.target.value.trim() && madreActiva === null) {
-                window.history.pushState({ madre: "sin_madre" }, "");
-                setMadreActiva("sin_madre");
-              }
-            }} />
-          {busqueda && <button onClick={() => setBusqueda("")} style={{ border: "none", background: "#F8FAFC", borderRadius: 6, padding: "3px 7px", fontSize: 11, cursor: "pointer", color: "#6B7280", flexShrink: 0 }}>✕</button>}
-        </div>
-      </div>
+    {/* Derecha — Carrito */}
+    <button onClick={() => totalItems > 0 && setVerCarrito(true)}
+      style={{ position: "relative", background: "#eff6ff", border: "none", color: "#2563EB", width: 38, height: 38, borderRadius: 10, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      🛒
+      {totalItems > 0 && (
+        <span style={{ position: "absolute", top: -4, right: -4, background: "#F59E0B", color: "#fff", fontSize: 10, fontWeight: 900, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>{totalItems}</span>
+      )}
+    </button>
+  </div>
+
+  {/* FILA 2 — Buscador */}
+  <div style={{ padding: "0 14px 12px" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f8fafc", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "8px 14px" }}>
+      <span style={{ fontSize: 14, flexShrink: 0 }}>🔍</span>
+      <input style={{ border: "none", outline: "none", fontSize: 13, background: "transparent", flex: 1, minWidth: 0, color: "#111827", fontFamily: "Nunito, sans-serif" }}
+        placeholder="Buscar productos..." value={busqueda}
+        onChange={e => {
+          setBusqueda(e.target.value);
+          if (e.target.value.trim() && madreActiva === null) {
+            window.history.pushState({ madre: "sin_madre" }, "");
+            setMadreActiva("sin_madre");
+          }
+        }} />
+      {busqueda && <button onClick={() => setBusqueda("")} style={{ border: "none", background: "#e5e7eb", borderRadius: 6, padding: "3px 7px", fontSize: 11, cursor: "pointer", color: "#6B7280", flexShrink: 0 }}>✕</button>}
+    </div>
+  </div>
+</div>
 
       {madreActiva === null ? (
         <div style={{ padding: "16px" }}>
@@ -1695,12 +1690,26 @@ function CatalogoCliente({ kiosko, onSalir }) {
       ) : (
         <>
           {kiosko.banner && kiosko.plan !== "Básico" && (
-            <div style={{ padding: "10px 12px 0" }}>
-              <div style={{ borderRadius: 20, overflow: "hidden", boxShadow: "0 6px 20px rgba(0,0,0,0.12)" }}>
-                <img src={kiosko.banner} alt="banner" style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }} />
-              </div>
-            </div>
+  <div style={{ padding: "10px 12px 0" }}>
+    <div style={{ borderRadius: 20, overflow: "hidden", boxShadow: "0 6px 20px rgba(0,0,0,0.12)", position: "relative" }}>
+      <img src={kiosko.banner} alt="banner" style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }} />
+      {/* OVERLAY con horario y dirección */}
+      {(kiosko.info_tienda?.horario || kiosko.info_tienda?.direccion || kiosko.info_tienda?.delivery === "si") && (
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.65) 100%)", padding: "20px 14px 12px", display: "flex", gap: 12, flexWrap: "wrap" }}>
+          {kiosko.info_tienda?.horario && (
+            <span style={{ color: "#fff", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>🕐 {kiosko.info_tienda.horario}</span>
           )}
+          {kiosko.info_tienda?.direccion && (
+            <span style={{ color: "#fff", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>📍 {kiosko.info_tienda.direccion}</span>
+          )}
+          {kiosko.info_tienda?.delivery === "si" && (
+            <span style={{ color: "#fff", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>🛵 {kiosko.info_tienda?.delivery_tiempo || "Delivery disponible"}</span>
+          )}
+        </div>
+      )}
+    </div>
+  </div>
+)}
 
           <div style={{ display: "flex", gap: 8, padding: "10px 12px", overflowX: "auto", overflowY: "hidden", background: "#f9fafb", width: "100%", maxWidth: "100vw", boxSizing: "border-box" }}>
             {categoriasDeMadre.map(cat => (
