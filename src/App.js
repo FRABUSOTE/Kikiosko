@@ -1388,6 +1388,22 @@ function CatalogoCliente({ kiosko, onSalir }) {
     const msg = encodeURIComponent(`*Nuevo Pedido*\n\n${lineas}\n\n*Total: S/. ${totalPrecio.toFixed(2)}*\n*Cliente:* ${nombreCliente}\n*Entrega:* ${entregaTexto}\n*Pago:* ${pagoTexto}${nota ? `\n*Nota:* ${nota}` : ""}`);
     await supabase.from("pedidos").insert([{ kiosko_id: kiosko.id, nombre_cliente: nombreCliente, detalle: lineas, total: totalPrecio }]);
     window.open(`https://wa.me/51${kiosko.whatsapp}?text=${msg}`, "_blank");
+    // ✅ Limpiar todo y volver a inicio
+    setCarrito({});
+    setVerCarrito(false);
+    setNombreCliente("");
+    setDireccion("");
+    setNota("");
+    setMedioPago("efectivo");
+    setTipoEntrega("delivery");
+    // ✅ Volver a pantalla principal (categorías madre)
+    setMadreActiva(null);
+    setBusqueda("");
+    setCategoria("Todos");
+    // ✅ Si vino del condominio → volver al condominio
+    if (onSalir) {
+      setTimeout(() => onSalir(), 300);
+    }
   };
 
   const productosFiltradosPorMadre = (madreActiva && madreActiva !== "sin_madre")
