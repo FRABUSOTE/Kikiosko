@@ -1866,7 +1866,7 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, r
       <style>{`* { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
 
       {/* HEADER */}
-      <div style={{ background: "#fff", padding: "12px 16px 10px", display: "flex", alignItems: "center", justifyContent: "center", position: "sticky", top: 0, zIndex: 40, boxShadow: "0 2px 12px rgba(0,0,0,0.08)", borderBottom: "1px solid #f1f5f9" }}>
+      <div style={{ background: "#fff", padding: "12px 16px 14px", display: "flex", alignItems: "center", justifyContent: "center", position: "sticky", top: 0, zIndex: 40, boxShadow: "0 4px 16px rgba(0,0,0,0.08)", borderRadius: "0 0 20px 20px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {rubroActivo && (
@@ -1888,7 +1888,7 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, r
       {!rubroActivo && !busqueda ? (
         <div>
           {/* BANNER FACHADA */}
-          <div style={{ position: "relative", height: 180, overflow: "hidden", background: "linear-gradient(160deg, #1e3a5f 0%, #2563eb 60%, #0369a1 100%)" }}>
+          <div style={{ position: "relative", height: 200, overflow: "hidden", borderRadius: "0 0 24px 24px", margin: "0 0 4px 0", background: "linear-gradient(160deg, #1e3a5f 0%, #2563eb 60%, #0369a1 100%)" }}>
             {condominio.banner
               ? <img src={condominio.banner} alt={condominio.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 80, opacity: 0.2 }}>🏢</div>
@@ -1900,7 +1900,7 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, r
               </div>
               <p style={{ fontSize: 22, fontWeight: 900, color: "#fff", textShadow: "0 2px 8px rgba(0,0,0,0.4)", lineHeight: 1.1, marginBottom: 10 }}>{condominio.nombre}</p>
               {/* BUSCADOR FLOTANTE */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.92)", backdropFilter: "blur(8px)", borderRadius: 12, padding: "9px 13px", border: "1px solid rgba(255,255,255,0.6)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.92)", backdropFilter: "blur(8px)", borderRadius: 999, padding: "9px 13px", border: "1px solid rgba(255,255,255,0.6)" }}>
                 <span style={{ fontSize: 14 }}>🔍</span>
                 <input style={{ border: "none", outline: "none", fontSize: 13, background: "transparent", flex: 1, color: "#111827", fontFamily: "Nunito, sans-serif" }}
                   placeholder="Buscar negocios o productos..." value={busqueda}
