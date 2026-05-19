@@ -2022,44 +2022,70 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, r
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {kioskosFiltered.map(k => {
-                const rubro = rubros.find(r => r.id === k.rubro_id);
-                return (
-                  <div key={k.id} style={{ background: "#fff", borderRadius: 18, overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", border: "1px solid #f1f5f9", cursor: "pointer" }}
-                    onClick={() => setKioskoSeleccionado(k)}>
-                    {/* Banner negocio */}
-                    <div style={{ height: 100, position: "relative", overflow: "hidden", background: rubro ? `linear-gradient(135deg, ${rubro.color}22, ${rubro.color}44)` : "#eff6ff" }}>
-                      {k.banner
-                        ? <img src={k.banner} alt={k.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, opacity: 0.3 }}>{rubro?.emoji || "🏪"}</div>
-                      }
-                      {/* Badge abierto/cerrado */}
-                      <div style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 4, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)", borderRadius: 999, padding: "3px 10px" }}>
-                        <div style={{ width: 5, height: 5, background: "#4ade80", borderRadius: "50%" }}></div>
-                        <span style={{ color: "#fff", fontSize: 10, fontWeight: 700 }}>Abierto</span>
-                      </div>
-                    </div>
-                    {/* Info negocio */}
-                    <div style={{ padding: "12px 14px 14px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                        <div>
-                          <p style={{ fontSize: 14, fontWeight: 800, color: "#111827", margin: 0, marginBottom: 4 }}>{k.nombre}</p>
-                          {rubro && (
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: `${rubro.color}15`, border: `1px solid ${rubro.color}30`, borderRadius: 999, padding: "2px 8px", fontSize: 10, fontWeight: 700, color: rubro.color }}>
-                              {rubro.emoji} {rubro.nombre}
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ width: 30, height: 30, background: "#f8fafc", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#9ca3af", flexShrink: 0 }}>›</div>
-                      </div>
-                      <div style={{ display: "flex", gap: 14, fontSize: 10, color: "#9ca3af", fontWeight: 600 }}>
-                        {k.info_tienda?.horario && <span>🕐 {k.info_tienda.horario}</span>}
-                        <span>📦 {(k.productos || []).length} productos</span>
-                        {k.plan === "Premium" && <span style={{ color: "#f59e0b" }}>⭐ Premium</span>}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+  const rubro = rubros.find(r => r.id === k.rubro_id);
+  return (
+    <div key={k.id}
+      style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,0.07)", border: "1px solid #f1f5f9", cursor: "pointer", display: "flex" }}
+      onClick={() => setKioskoSeleccionado(k)}>
+
+      {/* IMAGEN LATERAL */}
+      <div style={{ width: 110, flexShrink: 0, position: "relative", background: rubro ? `linear-gradient(135deg, ${rubro.color}33, ${rubro.color}66)` : "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 44 }}>
+        {k.banner
+          ? <img src={k.banner} alt={k.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          : <span style={{ opacity: 0.5 }}>{rubro?.emoji || "🏪"}</span>
+        }
+        {/* Badge abierto/cerrado */}
+        <div style={{ position: "absolute", bottom: 6, left: 6, display: "flex", alignItems: "center", gap: 3, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", borderRadius: 999, padding: "2px 7px" }}>
+          <div style={{ width: 4, height: 4, background: "#4ade80", borderRadius: "50%" }}></div>
+          <span style={{ color: "#fff", fontSize: 8, fontWeight: 800 }}>Abierto</span>
+        </div>
+      </div>
+
+      {/* INFO DERECHA */}
+      <div style={{ flex: 1, padding: "11px 12px 11px 13px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 4 }}>
+
+        {/* Nombre + flecha */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <p style={{ fontSize: 14, fontWeight: 900, color: "#111827", margin: 0, lineHeight: 1.2 }}>{k.nombre}</p>
+          <div style={{ width: 24, height: 24, background: "#f1f5f9", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#9ca3af", flexShrink: 0 }}>›</div>
+        </div>
+
+        {/* Descripción */}
+        {k.info_tienda?.descripcion && (
+          <p style={{ fontSize: 10, color: "#6b7280", fontWeight: 600, margin: 0, lineHeight: 1.3 }}>{k.info_tienda.descripcion}</p>
+        )}
+
+        {/* Rubro badge */}
+        {rubro && (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: `${rubro.color}15`, border: `1px solid ${rubro.color}30`, borderRadius: 999, padding: "2px 8px", fontSize: 9, fontWeight: 800, color: rubro.color, width: "fit-content" }}>
+            {rubro.emoji} {rubro.nombre}
+          </span>
+        )}
+
+        {/* Horario */}
+        {k.info_tienda?.horario && (
+          <span style={{ fontSize: 9, color: "#6b7280", fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}>
+            🕐 {k.info_tienda.horario}
+          </span>
+        )}
+
+        {/* Delivery + productos */}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          {k.info_tienda?.delivery === "si" && (
+            <span style={{ fontSize: 9, color: "#059669", fontWeight: 800, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 999, padding: "2px 7px", display: "flex", alignItems: "center", gap: 3 }}>
+              🛵 {k.info_tienda?.delivery_tiempo || "Delivery"}
+            </span>
+          )}
+          <span style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600 }}>📦 {(k.productos || []).length} productos</span>
+          {k.plan === "Premium" && (
+            <span style={{ fontSize: 9, color: "#f59e0b", fontWeight: 800 }}>⭐ Premium</span>
+          )}
+        </div>
+
+      </div>
+    </div>
+  );
+})}
             </div>
           )}
         </div>
