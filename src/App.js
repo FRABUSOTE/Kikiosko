@@ -1869,7 +1869,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
 }
 
 // ─── CONDOMINIO PÚBLICO ───
-function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, rubroActivo, setRubroActivo }) {
+function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, productosOferta, rubroActivo, setRubroActivo }) {
   const [kioskoSeleccionado, setKioskoSeleccionado] = useState(null);
   const [busqueda, setBusqueda] = useState("");
 
@@ -1971,6 +1971,58 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, r
               })}
             </div>
           </div>
+
+          {/* ✅ SECCIÓN OFERTAS */}
+      {productosOferta && productosOferta.length > 0 && (
+        <div style={{ background: "#fff", padding: "14px 14px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ background: "#fef2f2", borderRadius: 8, padding: "3px 7px", fontSize: 14 }}>🏷️</div>
+              <span style={{ fontSize: 13, fontWeight: 900, color: "#111827" }}>Ofertas</span>
+              <span style={{ fontSize: 10, background: "#fee2e2", color: "#dc2626", fontWeight: 800, padding: "2px 8px", borderRadius: 999 }}>{productosOferta.length} productos</span>
+            </div>
+          </div>
+
+          {/* Scroll horizontal de ofertas */}
+          <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4 }}>
+            {productosOferta.map((prod, idx) => {
+              const kiosko = kioskos.find(k => k.id === prod.kiosko_id);
+              return (
+                <div key={`${prod.id}-${idx}`}
+                  onClick={() => kiosko && setKioskoSeleccionado(kiosko)}
+                  style={{ flexShrink: 0, width: 140, background: "#fff", borderRadius: 14, overflow: "hidden", border: "1.5px solid #fee2e2", boxShadow: "0 2px 8px rgba(220,38,38,0.08)", cursor: "pointer" }}>
+
+                  {/* Foto producto */}
+                  <div style={{ position: "relative", width: "100%", aspectRatio: "1/1", background: "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {prod.foto
+                      ? <img src={prod.foto} alt={prod.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : <span style={{ fontSize: 36 }}>{prod.emoji || "🏷️"}</span>
+                    }
+                    {/* Badge oferta */}
+                    <div style={{ position: "absolute", top: 6, left: 6, background: "#dc2626", color: "#fff", fontSize: 9, fontWeight: 900, padding: "2px 7px", borderRadius: 999 }}>
+                      🏷️ OFERTA
+                    </div>
+                  </div>
+
+                  {/* Info */}
+                  <div style={{ padding: "8px 9px 10px" }}>
+                    <p style={{ fontSize: 11, fontWeight: 800, color: "#111827", margin: "0 0 3px", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prod.nombre}</p>
+                    <p style={{ fontSize: 13, fontWeight: 900, color: "#dc2626", margin: "0 0 4px" }}>S/. {Number(prod.precio).toFixed(2)}</p>
+                    {kiosko && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#dc2626", flexShrink: 0 }}></div>
+                        <span style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{kiosko.nombre}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div style={{ height: 8, background: "#f1f5f9" }} />
 
           {/* PRODUCTOS DESTACADOS */}
           {productosDestacados.length > 0 && (
@@ -2114,6 +2166,7 @@ export default function App() {
   const [rubroActivo, setRubroActivo] = useState(null);
   const [kioskosPorRubro, setKioskosPorRubro] = useState([]);
   const [productosDestacados, setProductosDestacados] = useState([]);
+  const [productosOferta, setProductosOferta] = useState([]);
 
   useEffect(() => {
     if (esCondominio && slug.length > 0) cargarCondominio(slug);
@@ -2131,7 +2184,14 @@ export default function App() {
       setKioskosPorRubro(ks || []);
       // productos destacados — los primeros 3 con foto
       const conFoto = (ks || []).flatMap(k => (k.productos || []).filter(p => p.foto && p.stock)).slice(0, 3);
-      setProductosDestacados(conFoto);
+    setProductosDestacados(conFoto);
+    // ✅ Productos en oferta
+    const enOferta = (ks || []).flatMap(k =>
+      (k.productos || [])
+        .filter(p => p.oferta && p.stock)
+        .map(p => ({ ...p, kiosko_nombre: k.nombre, kiosko_wa: k.whatsapp }))
+    );
+    setProductosOferta(enOferta);
     }
     setCargandoPublico(false);
   };
@@ -2163,15 +2223,16 @@ export default function App() {
       </div>
     );
     return (
-      <CondominioPublico
-        condominio={condominioPublico}
-        rubros={rubrosPublicos}
-        kioskos={kioskosPorRubro}
-        productosDestacados={productosDestacados}
-        rubroActivo={rubroActivo}
-        setRubroActivo={setRubroActivo}
-      />
-    );
+  <CondominioPublico
+    condominio={condominioPublico}
+    rubros={rubrosPublicos}
+    kioskos={kioskosPorRubro}
+    productosDestacados={productosDestacados}
+    productosOferta={productosOferta}
+    rubroActivo={rubroActivo}
+    setRubroActivo={setRubroActivo}
+  />
+);
   }
 
   if (kioskoPorSlug) {
