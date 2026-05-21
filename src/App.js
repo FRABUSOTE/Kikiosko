@@ -2286,7 +2286,7 @@ export default function App() {
     const { data: cond } = await supabase.from("condominios").select("*").eq("slug", slugCond).single();
     if (cond) {
       const { data: rubros } = await supabase.from("rubros").select("*").eq("condominio_id", cond.id).order("orden");
-      const { data: kioskosConProductos } = await supabase.from("kioskos").select("*").eq("condominio_id", cond.id).eq("activo", true);
+      const { data: ks } = await supabase.from("kioskos").select("*").eq("condominio_id", cond.id).eq("activo", true);
       // Cargar productos de cada kiosko por separado
       const kioskosConProductos = await Promise.all(
         (kioskosConProductos || []).map(async (k) => {
