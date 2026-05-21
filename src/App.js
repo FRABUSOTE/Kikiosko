@@ -1897,6 +1897,18 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
   const [busqueda, setBusqueda] = useState("");
   const [resultadosBusqueda, setResultadosBusqueda] = useState([]);
 
+  // ✅ Búsqueda en tiempo real
+  useEffect(() => {
+    if (!busqueda.trim()) { setResultadosBusqueda([]); return; }
+    const termino = busqueda.toLowerCase().trim();
+    const resultados = kioskos.flatMap(k =>
+      (k.productos || [])
+        .filter(p => p.stock && p.nombre.toLowerCase().includes(termino))
+        .map(p => ({ ...p, kiosko_obj: k }))
+    );
+    setResultadosBusqueda(resultados);
+  }, [busqueda, kioskos]);
+
   // Si seleccionó un kiosko → mostrar su catálogo
   if (kioskoSeleccionado) {
     return <CatalogoCliente 
@@ -1907,7 +1919,6 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
       onSalir={() => setKioskoSeleccionado(null)} 
     />;
   }
-// ✅ Búsqueda en tiempo real
   useEffect(() => {
     if (!busqueda.trim()) { setResultadosBusqueda([]); return; }
     const termino = busqueda.toLowerCase().trim();
