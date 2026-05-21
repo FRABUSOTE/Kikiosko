@@ -2281,124 +2281,299 @@ export default function App() {
     else if (!esCondominio && slug.length > 0) cargarKioskoPorSlug(slug);
   }, [slug]);
 
-  const cargarCondominio = async (slugCond) => {
-    setCargandoPublico(true);
-    const { data: cond } = await supabase.from("condominios").select("*").eq("slug", slugCond).single();
-    if (cond) {
-      const { data: rubros } = await supabase.from("rubros").select("*").eq("condominio_id", cond.id).order("orden");
-      const { data: kioskosConProductos } = await supabase.from("kioskos").select("*").eq("condominio_id", cond.id).eq("activo", true);
-      // Cargar productos de cada kiosko por separado
-      const kioskosConProductos = await Promise.all(
-        (kioskosConProductos || []).map(async (k) => {
-          const { data: prods } = await supabase.from("productos").select("*").eq("kiosko_id", k.id);
-          return { ...k, productos: prods || [] };
-        })
-      );
-      setCondominioPublico(cond);
-      setRubrosPublicos(rubros || []);
-      setKioskosPorRubro(kioskosConProductos || []);
-      // productos destacados — los primeros 3 con foto
-      const conFoto = (kioskosConProductos || []).flatMap(k => (k.productos || []).filter(p => p.foto && p.stock)).slice(0, 3);
-    setProductosDestacados(conFoto);
-    // ✅ Productos en oferta
-    const enOferta = (kioskosConProductos || []).flatMap(k =>
-      (k.productos || [])
-        .filter(p => p.oferta && p.stock)
-        .map(p => ({ ...p, kiosko_nombre: k.nombre, kiosko_wa: k.whatsapp }))
+ const cargarCondominio = async (slugCond) => {
+  setCargandoPublico(true);
+
+  const { data: cond } = await supabase
+    .from("condominios")
+    .select("*")
+    .eq("slug", slugCond)
+    .single();
+
+  if (cond) {
+
+    const { data: rubros } = await supabase
+      .from("rubros")
+      .select("*")
+      .eq("condominio_id", cond.id)
+      .order("orden");
+
+    // ✅ Obtener kioskos básicos
+    const { data: kioskos } = await supabase
+      .from("kioskos")
+      .select("*")
+      .eq("condominio_id", cond.id)
+      .eq("activo", true);
+
+    // ✅ Agregar productos a cada kiosko
+    const kioskosConProductos = await Promise.all(
+      (kioskos || []).map(async (k) => {
+
+        const { data: prods } = await supabase
+          .from("productos")
+          .select("*")
+          .eq("kiosko_id", k.id);
+
+        return {
+          ...k,
+          productos: prods || []
+        };
+      })
     );
+
+    setCondominioPublico(cond);
+    setRubrosPublicos(rubros || []);
+    setKioskosPorRubro(kioskosConProductos || []);
+
+    // ✅ Productos destacados
+    const conFoto = (kioskosConProductos || [])
+      .flatMap(k =>
+        (k.productos || []).filter(p => p.foto && p.stock)
+      )
+      .slice(0, 3);
+
+    setProductosDestacados(conFoto);
+
+    // ✅ Productos en oferta
+    const enOferta = (kioskosConProductos || [])
+      .flatMap(k =>
+        (k.productos || [])
+          .filter(p => p.oferta && p.stock)
+          .map(p => ({
+            ...p,
+            kiosko_nombre: k.nombre,
+            kiosko_wa: k.whatsapp
+          }))
+      );
+
     setProductosOferta(enOferta);
-    }
-    setCargandoPublico(false);
-  };
+  }
 
-  const cargarKioskoPorSlug = async (slug) => {
-    setCargandoPublico(true);
-    const { data: kioskosConProductos } = await supabase.from("kioskos").select("*").eq("slug", slug).single();
-    if (kioskosConProductos) {
-      const { data: prods } = await supabase.from("productos").select("*").eq("kiosko_id", kioskosConProductos.id);
-      setKioskoPorSlug({ ...kioskosConProductos, productos: prods || [] });
-    }
-    setCargandoPublico(false);
-  };
+  setCargandoPublico(false);
+};
 
-  if (cargandoPublico) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#eff6ff", fontFamily: "'Nunito', sans-serif" }}>
-      <p style={{ fontSize: 16, fontWeight: 700, color: "#1D4ED8" }}>⏳ Cargando catálogo...</p>
+const cargarKioskoPorSlug = async (slug) => {
+  setCargandoPublico(true);
+
+  const { data: kiosko } = await supabase
+    .from("kioskos")
+    .select("*")
+    .eq("slug", slug)
+    .single();
+
+  if (kiosko) {
+
+    const { data: prods } = await supabase
+      .from("productos")
+      .select("*")
+      .eq("kiosko_id", kiosko.id);
+
+    setKioskoPorSlug({
+      ...kiosko,
+      productos: prods || []
+    });
+  }
+
+  setCargandoPublico(false);
+};
+
+if (cargandoPublico) return (
+  <div
+    style={{
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: "#eff6ff",
+      fontFamily: "'Nunito', sans-serif"
+    }}
+  >
+    <p
+      style={{
+        fontSize: 16,
+        fontWeight: 700,
+        color: "#1D4ED8"
+      }}
+    >
+      ⏳ Cargando catálogo...
+    </p>
+  </div>
+);
+
+// ✅ PANTALLA PÚBLICA CONDOMINIO
+if (condominioPublico) {
+
+  if (!condominioPublico.activo) return (
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: "'Nunito', sans-serif",
+        background: "#eff6ff"
+      }}
+    >
+      <div style={{ textAlign: "center", padding: 40 }}>
+        <p style={{ fontSize: 48, marginBottom: 16 }}>🔒</p>
+
+        <p
+          style={{
+            fontSize: 18,
+            fontWeight: 900,
+            color: "#dc2626"
+          }}
+        >
+          Condominio no disponible
+        </p>
+      </div>
     </div>
   );
 
-  // ✅ PANTALLA PÚBLICA CONDOMINIO
-  if (condominioPublico) {
-    if (!condominioPublico.activo) return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Nunito', sans-serif", background: "#eff6ff" }}>
-        <div style={{ textAlign: "center", padding: 40 }}>
-          <p style={{ fontSize: 48, marginBottom: 16 }}>🔒</p>
-          <p style={{ fontSize: 18, fontWeight: 900, color: "#dc2626" }}>Condominio no disponible</p>
-        </div>
-      </div>
-    );
-    return (
-  <CondominioPublico
-    condominio={condominioPublico}
-    rubros={rubrosPublicos}
-    kioskos={kioskosPorRubro}
-    productosDestacados={productosDestacados}
-    productosOferta={productosOferta}
-    rubroActivo={rubroActivo}
-    setRubroActivo={setRubroActivo}
-  />
-);
-  }
-
-  if (kioskoPorSlug) {
-    if (!kioskoPorSlug.activo) return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Nunito', sans-serif", background: "#eff6ff" }}>
-        <div style={{ textAlign: "center", padding: 40 }}>
-          <p style={{ fontSize: 48, marginBottom: 16 }}>🔒</p>
-          <p style={{ fontSize: 18, fontWeight: 900, color: "#dc2626" }}>Kiosko no disponible</p>
-          <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 8 }}>Contacta al administrador</p>
-        </div>
-      </div>
-    );
-    return <CatalogoCliente kiosko={kioskoPorSlug} onSalir={null} />;
-  }
-
-  const handleLogin = async () => {
-    if (loginForm.email === SUPERADMIN.email && loginForm.clave === SUPERADMIN.clave) {
-      setPantalla("superadmin"); setLoginError(""); return;
-    }
-    const { data: kioskosConProductos } = await supabase.from("kioskos").select("*").eq("email", loginForm.email).eq("clave", loginForm.clave).single();
-    if (kioskosConProductos) {
-      if (!kioskosConProductos.activo) { setLoginError("Tu acceso está inactivo. Contacta al administrador."); return; }
-      const { data: prods } = await supabase.from("productos").select("*").eq("kiosko_id", kioskosConProductos.id);
-      setKioskoCurrent(kioskosConProductos);
-      setProductosActuales(prods || []);
-      setPantalla("adminkiosko");
-      setLoginError("");
-      return;
-    }
-    setLoginError("Correo o clave incorrectos");
-  };
-
-  if (pantalla === "superadmin") return <SuperAdmin onSalir={() => { setPantalla("login"); setLoginForm({ email: "", clave: "" }); }} />;
-
-  if (pantalla === "adminkiosko" && kioskoCurrent) return (
-    <AdminKiosko
-      kiosko={{ ...kioskoCurrent, productos: productosActuales }}
-      onProductosChange={setProductosActuales}
-      onSalir={() => { setPantalla("login"); setKioskoCurrent(null); setLoginForm({ email: "", clave: "" }); }}
-      onVerCatalogo={() => setPantalla("catalogo")}
+  return (
+    <CondominioPublico
+      condominio={condominioPublico}
+      rubros={rubrosPublicos}
+      kioskos={kioskosPorRubro}
+      productosDestacados={productosDestacados}
+      productosOferta={productosOferta}
+      rubroActivo={rubroActivo}
+      setRubroActivo={setRubroActivo}
     />
   );
+}
 
-  if (pantalla === "catalogo" && kioskoCurrent) return (
-    <CatalogoCliente
-      kiosko={{ ...kioskoCurrent, productos: productosActuales }}
-      onSalir={() => setPantalla("adminkiosko")}
-    />
+if (kioskoPorSlug) {
+
+  if (!kioskoPorSlug.activo) return (
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: "'Nunito', sans-serif",
+        background: "#eff6ff"
+      }}
+    >
+      <div style={{ textAlign: "center", padding: 40 }}>
+
+        <p style={{ fontSize: 48, marginBottom: 16 }}>🔒</p>
+
+        <p
+          style={{
+            fontSize: 18,
+            fontWeight: 900,
+            color: "#dc2626"
+          }}
+        >
+          Kiosko no disponible
+        </p>
+
+        <p
+          style={{
+            fontSize: 13,
+            color: "#9ca3af",
+            marginTop: 8
+          }}
+        >
+          Contacta al administrador
+        </p>
+
+      </div>
+    </div>
   );
 
   return (
+    <CatalogoCliente
+      kiosko={kioskoPorSlug}
+      onSalir={null}
+    />
+  );
+}
+
+const handleLogin = async () => {
+
+  if (
+    loginForm.email === SUPERADMIN.email &&
+    loginForm.clave === SUPERADMIN.clave
+  ) {
+    setPantalla("superadmin");
+    setLoginError("");
+    return;
+  }
+
+  const { data: kioskoLogin } = await supabase
+    .from("kioskos")
+    .select("*")
+    .eq("email", loginForm.email)
+    .eq("clave", loginForm.clave)
+    .single();
+
+  if (kioskoLogin) {
+
+    if (!kioskoLogin.activo) {
+      setLoginError("Tu acceso está inactivo. Contacta al administrador.");
+      return;
+    }
+
+    const { data: prods } = await supabase
+      .from("productos")
+      .select("*")
+      .eq("kiosko_id", kioskoLogin.id);
+
+    setKioskoCurrent(kioskoLogin);
+    setProductosActuales(prods || []);
+    setPantalla("adminkiosko");
+    setLoginError("");
+    return;
+  }
+
+  setLoginError("Correo o clave incorrectos");
+};
+
+if (pantalla === "superadmin") {
+  return (
+    <SuperAdmin
+      onSalir={() => {
+        setPantalla("login");
+        setLoginForm({ email: "", clave: "" });
+      }}
+    />
+  );
+}
+
+if (pantalla === "adminkiosko" && kioskoCurrent) {
+  return (
+    <AdminKiosko
+      kiosko={{
+        ...kioskoCurrent,
+        productos: productosActuales
+      }}
+      onProductosChange={setProductosActuales}
+      onSalir={() => {
+        setPantalla("login");
+        setKioskoCurrent(null);
+        setLoginForm({ email: "", clave: "" });
+      }}
+      onVerCatalogo={() => setPantalla("catalogo")}
+    />
+  );
+}
+
+if (pantalla === "catalogo" && kioskoCurrent) {
+  return (
+    <CatalogoCliente
+      kiosko={{
+        ...kioskoCurrent,
+        productos: productosActuales
+      }}
+      onSalir={() => setPantalla("adminkiosko")}
+    />
+  );
+}
+
+return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Nunito', sans-serif", padding: 20 }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
