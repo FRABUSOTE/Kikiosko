@@ -1899,7 +1899,13 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
 
   // Si seleccionó un kiosko → mostrar su catálogo
   if (kioskoSeleccionado) {
-    return <CatalogoCliente kiosko={kioskoSeleccionado} onSalir={() => setKioskoSeleccionado(null)} />;
+    return <CatalogoCliente 
+      kiosko={{ 
+        ...kioskoSeleccionado, 
+        productos: kioskoSeleccionado.productos || [] 
+      }} 
+      onSalir={() => setKioskoSeleccionado(null)} 
+    />;
   }
 // ✅ Búsqueda en tiempo real
   useEffect(() => {
@@ -2279,7 +2285,7 @@ export default function App() {
     const { data: cond } = await supabase.from("condominios").select("*").eq("slug", slugCond).single();
     if (cond) {
       const { data: rubros } = await supabase.from("rubros").select("*").eq("condominio_id", cond.id).order("orden");
-      const { data: ks } = await supabase.from("kioskos").select("*, productos(*)").eq("condominio_id", cond.id).eq("activo", true);
+      const { data: ks } = await supabase.from("kioskos").select("*, productos(*), info_tienda, datos_pago").eq("condominio_id", cond.id).eq("activo", true);
       setCondominioPublico(cond);
       setRubrosPublicos(rubros || []);
       setKioskosPorRubro(ks || []);
