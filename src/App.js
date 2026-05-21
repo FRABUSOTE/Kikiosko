@@ -830,7 +830,7 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
   const [infoTienda, setInfoTienda] = useState(kiosko.info_tienda || {});
 
   const categoriasExistentes = [...new Set(productos.map(p => p.categoria))].filter(Boolean);
-  const categoriasParaMostrar = categoriasExistentes.length > 0 ? categoriasExistentes : ["Bebidas", "Snacks", "Abarrotes", "Otros"];
+  const categoriasParaMostrar = categoriasExistentes.length > 0 ? categoriasExistentes : ["Bebidas", "SnackioskosConProductos", "Abarrotes", "Otros"];
   const madresExistentes = [...new Set(productos.map(p => p.madre).filter(Boolean))];
 
   const [nuevoProducto, setNuevoProducto] = useState({
@@ -2285,15 +2285,22 @@ export default function App() {
     const { data: cond } = await supabase.from("condominios").select("*").eq("slug", slugCond).single();
     if (cond) {
       const { data: rubros } = await supabase.from("rubros").select("*").eq("condominio_id", cond.id).order("orden");
-      const { data: ks } = await supabase.from("kioskos").select("*, productos(*), info_tienda, datos_pago").eq("condominio_id", cond.id).eq("activo", true);
+      const { data: kioskosConProductos } = await supabase.from("kioskos").select("*").eq("condominio_id", cond.id).eq("activo", true);
+      // Cargar productos de cada kiosko por separado
+      const kioskosConProductos = await Promise.all(
+        (kioskosConProductos || []).map(async (k) => {
+          const { data: prods } = await supabase.from("productos").select("*").eq("kiosko_id", k.id);
+          return { ...k, productos: prods || [] };
+        })
+      );
       setCondominioPublico(cond);
       setRubrosPublicos(rubros || []);
-      setKioskosPorRubro(ks || []);
+      setKioskosPorRubro(kioskosConProductos || []);
       // productos destacados — los primeros 3 con foto
-      const conFoto = (ks || []).flatMap(k => (k.productos || []).filter(p => p.foto && p.stock)).slice(0, 3);
+      const conFoto = (kioskosConProductos || []).flatMap(k => (k.productos || []).filter(p => p.foto && p.stock)).slice(0, 3);
     setProductosDestacados(conFoto);
     // ✅ Productos en oferta
-    const enOferta = (ks || []).flatMap(k =>
+    const enOferta = (kioskosConProductos || []).flatMap(k =>
       (k.productos || [])
         .filter(p => p.oferta && p.stock)
         .map(p => ({ ...p, kiosko_nombre: k.nombre, kiosko_wa: k.whatsapp }))
@@ -2305,10 +2312,10 @@ export default function App() {
 
   const cargarKioskoPorSlug = async (slug) => {
     setCargandoPublico(true);
-    const { data: ks } = await supabase.from("kioskos").select("*").eq("slug", slug).single();
-    if (ks) {
-      const { data: prods } = await supabase.from("productos").select("*").eq("kiosko_id", ks.id);
-      setKioskoPorSlug({ ...ks, productos: prods || [] });
+    const { data: kioskosConProductos } = await supabase.from("kioskos").select("*").eq("slug", slug).single();
+    if (kioskosConProductos) {
+      const { data: prods } = await supabase.from("productos").select("*").eq("kiosko_id", kioskosConProductos.id);
+      setKioskoPorSlug({ ...kioskosConProductos, productos: prods || [] });
     }
     setCargandoPublico(false);
   };
@@ -2359,11 +2366,11 @@ export default function App() {
     if (loginForm.email === SUPERADMIN.email && loginForm.clave === SUPERADMIN.clave) {
       setPantalla("superadmin"); setLoginError(""); return;
     }
-    const { data: ks } = await supabase.from("kioskos").select("*").eq("email", loginForm.email).eq("clave", loginForm.clave).single();
-    if (ks) {
-      if (!ks.activo) { setLoginError("Tu acceso está inactivo. Contacta al administrador."); return; }
-      const { data: prods } = await supabase.from("productos").select("*").eq("kiosko_id", ks.id);
-      setKioskoCurrent(ks);
+    const { data: kioskosConProductos } = await supabase.from("kioskos").select("*").eq("email", loginForm.email).eq("clave", loginForm.clave).single();
+    if (kioskosConProductos) {
+      if (!kioskosConProductos.activo) { setLoginError("Tu acceso está inactivo. Contacta al administrador."); return; }
+      const { data: prods } = await supabase.from("productos").select("*").eq("kiosko_id", kioskosConProductos.id);
+      setKioskoCurrent(kioskosConProductos);
       setProductosActuales(prods || []);
       setPantalla("adminkiosko");
       setLoginError("");
