@@ -1919,16 +1919,6 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
       onSalir={() => setKioskoSeleccionado(null)} 
     />;
   }
-  useEffect(() => {
-    if (!busqueda.trim()) { setResultadosBusqueda([]); return; }
-    const termino = busqueda.toLowerCase().trim();
-    const resultados = kioskos.flatMap(k =>
-      (k.productos || [])
-        .filter(p => p.stock && p.nombre.toLowerCase().includes(termino))
-        .map(p => ({ ...p, kiosko_obj: k }))
-    );
-    setResultadosBusqueda(resultados);
-  }, [busqueda, kioskos]);
 
   const kioskosDelRubro = rubroActivo
     ? kioskos.filter(k => k.rubro_id === rubroActivo.id)
