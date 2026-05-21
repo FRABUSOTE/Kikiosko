@@ -1898,25 +1898,31 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
   const [resultadosBusqueda, setResultadosBusqueda] = useState([]);
 
   // ✅ Búsqueda en tiempo real
-  useEffect(() => {
+ useEffect(() => {
 
-  const termino = busqueda.toLowerCase().trim();
+  const termino = busqueda
+    .toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 
-  // ✅ Esperar mínimo 2 letras
-  if (termino.length < 2) {
+  if (termino.length === 0) {
     setResultadosBusqueda([]);
     return;
   }
 
-  // ✅ Delay suave
   const timeout = setTimeout(() => {
 
     const resultados = kioskos.flatMap(k =>
       (k.productos || [])
-        .filter(p =>
-          p.stock &&
-          p.nombre.toLowerCase().includes(termino)
-        )
+        .filter(p => {
+          const nombre = p.nombre
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
+
+          return p.stock && nombre.includes(termino);
+        })
         .map(p => ({
           ...p,
           kiosko_obj: k
