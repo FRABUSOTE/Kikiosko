@@ -1899,15 +1899,37 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
 
   // ✅ Búsqueda en tiempo real
   useEffect(() => {
-    if (!busqueda.trim()) { setResultadosBusqueda([]); return; }
-    const termino = busqueda.toLowerCase().trim();
+
+  const termino = busqueda.toLowerCase().trim();
+
+  // ✅ Esperar mínimo 2 letras
+  if (termino.length < 2) {
+    setResultadosBusqueda([]);
+    return;
+  }
+
+  // ✅ Delay suave
+  const timeout = setTimeout(() => {
+
     const resultados = kioskos.flatMap(k =>
       (k.productos || [])
-        .filter(p => p.stock && p.nombre.toLowerCase().includes(termino))
-        .map(p => ({ ...p, kiosko_obj: k }))
+        .filter(p =>
+          p.stock &&
+          p.nombre.toLowerCase().includes(termino)
+        )
+        .map(p => ({
+          ...p,
+          kiosko_obj: k
+        }))
     );
+
     setResultadosBusqueda(resultados);
-  }, [busqueda, kioskos]);
+
+  }, 250);
+
+  return () => clearTimeout(timeout);
+
+}, [busqueda, kioskos]);
 
   // Si seleccionó un kiosko → mostrar su catálogo
   if (kioskoSeleccionado) {
@@ -1924,9 +1946,7 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
     ? kioskos.filter(k => k.rubro_id === rubroActivo.id)
     : kioskos;
 
-  const kioskosFiltered = busqueda
-    ? kioskos.filter(k => k.nombre.toLowerCase().includes(busqueda.toLowerCase()))
-    : kioskosDelRubro;
+const kioskosFiltered = kioskosDelRubro;
 
   return (
     <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "Nunito, sans-serif" }}>
