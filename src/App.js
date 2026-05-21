@@ -35,6 +35,19 @@ function diasRestantes(f) {
   if (!f) return 999;
   return Math.ceil((new Date(f) - new Date()) / (1000 * 60 * 60 * 24));
 }
+// ─── HELPER HORARIO ───
+function estaAbierto(infoTienda) {
+  if (!infoTienda?.hora_apertura || !infoTienda?.hora_cierre) return null; // null = no sabe
+  const ahora = new Date();
+  const [hAp, mAp] = infoTienda.hora_apertura.split(":").map(Number);
+  const [hCi, mCi] = infoTienda.hora_cierre.split(":").map(Number);
+  const minActual = ahora.getHours() * 60 + ahora.getMinutes();
+  const minAp = hAp * 60 + mAp;
+  const minCi = hCi * 60 + mCi;
+  // Maneja cierre después de medianoche
+  if (minCi < minAp) return minActual >= minAp || minActual < minCi;
+  return minActual >= minAp && minActual < minCi;
+}
 
 // ─── SELECTOR DE RUBRO ───
 function RubroSelector({ condominioId, rubroId, onChange }) {
@@ -1078,7 +1091,17 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
             <p style={{ fontSize: 12, fontWeight: 800, color: "#111827", marginBottom: 6 }}>📍 Dirección</p>
             <input className="inp" style={{ marginBottom: 16 }} placeholder="Ej: Av. Los Pinos 123, Miraflores" value={infoTienda.direccion || ""} onChange={e => setInfoTienda(p => ({ ...p, direccion: e.target.value }))} />
             <p style={{ fontSize: 12, fontWeight: 800, color: "#111827", marginBottom: 6 }}>🕐 Horario de atención</p>
-            <input className="inp" style={{ marginBottom: 16 }} placeholder="Ej: Lun-Vie 9am-10pm · Sáb 9am-8pm" value={infoTienda.horario || ""} onChange={e => setInfoTienda(p => ({ ...p, horario: e.target.value }))} />
+            <input className="inp" style={{ marginBottom: 10 }} placeholder="Ej: Lun-Vie 9am-10pm · Sáb 9am-8pm" value={infoTienda.horario || ""} onChange={e => setInfoTienda(p => ({ ...p, horario: e.target.value }))} />
+            <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 10, color: "#9ca3af", fontWeight: 700, display: "block", marginBottom: 4 }}>🟢 Hora apertura</label>
+                <input className="inp" type="time" value={infoTienda.hora_apertura || ""} onChange={e => setInfoTienda(p => ({ ...p, hora_apertura: e.target.value }))} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 10, color: "#9ca3af", fontWeight: 700, display: "block", marginBottom: 4 }}>🔴 Hora cierre</label>
+                <input className="inp" type="time" value={infoTienda.hora_cierre || ""} onChange={e => setInfoTienda(p => ({ ...p, hora_cierre: e.target.value }))} />
+              </div>
+            </div>
             <p style={{ fontSize: 12, fontWeight: 800, color: "#111827", marginBottom: 8 }}>🛵 Delivery</p>
             <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
               {[{ id: "si", label: "✅ Sí ofrezco delivery" }, { id: "no", label: "❌ No por ahora" }].map(op => (
@@ -1919,10 +1942,18 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
               : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 80, opacity: 0.2 }}>🏢</div>
             }
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%)", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "16px" }}>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(16,185,129,0.85)", borderRadius: 999, padding: "3px 10px", width: "fit-content", marginBottom: 6 }}>
-                <div style={{ width: 5, height: 5, background: "#fff", borderRadius: "50%" }}></div>
-                <span style={{ color: "#fff", fontSize: 9, fontWeight: 800 }}>{kioskos.filter(k => k.activo).length} negocios disponibles</span>
-              </div>
+              {(() => {
+                const total = kioskos.length;
+                const abiertos = kioskos.filter(k => estaAbierto(k.info_tienda) !== false).length;
+                return (
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(16,185,129,0.85)", borderRadius: 999, padding: "3px 10px", width: "fit-content", marginBottom: 6 }}>
+                    <div style={{ width: 5, height: 5, background: "#fff", borderRadius: "50%" }}></div>
+                    <span style={{ color: "#fff", fontSize: 9, fontWeight: 800 }}>
+                      {total} negocios · {abiertos} abiertos ahora
+                    </span>
+                  </div>
+                );
+              })()}
               <p style={{ fontSize: 22, fontWeight: 900, color: "#fff", textShadow: "0 2px 8px rgba(0,0,0,0.4)", lineHeight: 1.1, marginBottom: 10 }}>{condominio.nombre}</p>
               {/* BUSCADOR FLOTANTE */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.92)", backdropFilter: "blur(8px)", borderRadius: 999, padding: "9px 13px", border: "1px solid rgba(255,255,255,0.6)" }}>
@@ -2086,11 +2117,18 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
           ? <img src={k.banner} alt={k.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           : <span style={{ opacity: 0.5 }}>{rubro?.emoji || "🏪"}</span>
         }
-        {/* Badge abierto/cerrado */}
-        <div style={{ position: "absolute", bottom: 6, left: 6, display: "flex", alignItems: "center", gap: 3, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", borderRadius: 999, padding: "2px 7px" }}>
-          <div style={{ width: 4, height: 4, background: "#4ade80", borderRadius: "50%" }}></div>
-          <span style={{ color: "#fff", fontSize: 8, fontWeight: 800 }}>Abierto</span>
-        </div>
+        {/* Badge abierto/cerrado DINÁMICO */}
+        {(() => {
+          const abierto = estaAbierto(k.info_tienda);
+          return (
+            <div style={{ position: "absolute", bottom: 6, left: 6, display: "flex", alignItems: "center", gap: 3, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", borderRadius: 999, padding: "2px 7px" }}>
+              <div style={{ width: 4, height: 4, background: abierto === false ? "#f87171" : "#4ade80", borderRadius: "50%" }}></div>
+              <span style={{ color: "#fff", fontSize: 8, fontWeight: 800 }}>
+                {abierto === false ? "Cerrado" : "Abierto"}
+              </span>
+            </div>
+          );
+        })()}
       </div>
 
       {/* INFO DERECHA */}
