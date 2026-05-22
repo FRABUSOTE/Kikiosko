@@ -2053,13 +2053,32 @@ const kioskosFiltered = kioskosDelRubro;
               <p style={{ fontSize: 22, fontWeight: 900, color: "#fff", textShadow: "0 2px 8px rgba(0,0,0,0.4)", lineHeight: 1.1, marginBottom: 10 }}>{condominio.nombre}</p>
               {/* BUSCADOR FLOTANTE CON AUTOCOMPLETADO */}
 <div style={{ position: "relative" }}>
-  <div style={{ display: "flex", alignItems: "center", gap: 8, background: busqueda ? "#eff6ff" : "#fff", border: busqueda ? "2px solid #2563EB" : "2px solid transparent", borderRadius: busqueda && resultadosBusqueda.length > 0 ? "12px 12px 0 0" : 999, padding: "8px 13px", transition: "all 0.2s" }}>
+  <div style={{ 
+    display: "flex", 
+    alignItems: "center", 
+    gap: 8, 
+    background: busqueda ? "#eff6ff" : "#fff", 
+    border: busqueda ? "2px solid #2563EB" : "2px solid transparent", 
+    borderRadius: busqueda && resultadosBusqueda.length > 0 ? "12px 12px 0 0" : 999, 
+    padding: "8px 13px", 
+    transition: "all 0.2s" 
+  }}>
     <span style={{ fontSize: 14 }}>🔍</span>
     <input
+      ref={inputRef} // <-- Agregamos la referencia aquí
       style={{ border: "none", outline: "none", fontSize: 13, background: "transparent", flex: 1, color: "#111827", fontFamily: "Nunito, sans-serif", fontWeight: busqueda ? 700 : 400 }}
       placeholder="Buscar productos..."
       value={busqueda}
-      onChange={e => { setBusqueda(e.target.value); if (e.target.value) setRubroActivo(null); }}
+      onChange={e => { 
+        const valor = e.target.value;
+        setBusqueda(valor); 
+        if (valor) setRubroActivo(null); 
+        
+        // Forzamos a que el input mantenga el foco después de actualizar los estados
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 0);
+      }}
       onKeyDown={e => {
         if (e.key === "Enter" && resultadosBusqueda.length > 0) {
           setKioskoSeleccionado(resultadosBusqueda[0].kiosko_obj);
@@ -2068,7 +2087,18 @@ const kioskosFiltered = kioskosDelRubro;
         }
       }}
     />
-    {busqueda && <button onClick={() => { setBusqueda(""); setResultadosBusqueda([]); }} style={{ border: "none", background: "#e5e7eb", borderRadius: 6, padding: "3px 7px", fontSize: 11, cursor: "pointer", color: "#6B7280" }}>✕</button>}
+    {busqueda && (
+      <button 
+        onClick={() => { 
+          setBusqueda(""); 
+          setResultadosBusqueda([]); 
+          inputRef.current?.focus(); // Regresa el foco al limpiar
+        }} 
+        style={{ border: "none", background: "#e5e7eb", borderRadius: 6, padding: "3px 7px", fontSize: 11, cursor: "pointer", color: "#6B7280" }}
+      >
+        ✕
+      </button>
+    )}
   </div>
 
   {/* DROPDOWN SUGERENCIAS */}
@@ -2353,6 +2383,8 @@ export default function App() {
   const [productosActuales, setProductosActuales] = useState([]);
   const [cargandoPublico, setCargandoPublico] = useState(false);
   const [kioskoPorSlug, setKioskoPorSlug] = useState(null);
+  
+  const inputRef = useRef(null);
 
   const hash = window.location.hash;
   const rawSlug = hash.replace(/^#\/?/, "").replace(/\/$/, "").toLowerCase().trim();
