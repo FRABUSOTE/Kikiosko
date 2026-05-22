@@ -15,23 +15,3 @@ root.render(
 // to log results (for example: reportWebVitals(console.log))
 // or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals();
-const loading = document.getElementById("loading-screen");
-
-if (loading) {
-
-  window.addEventListener("load", () => {
-
-    setTimeout(() => {
-
-      loading.style.opacity = "0";
-      loading.style.transition = "opacity 0.5s ease";
-
-      setTimeout(() => {
-        loading.remove();
-      }, 500);
-
-    }, 700);
-
-  });
-
-}
