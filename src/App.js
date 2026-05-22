@@ -2472,21 +2472,45 @@ if (cargandoPublico) return (
     style={{
       minHeight: "100vh",
       display: "flex",
+      flexDirection: "column", // Permite alinear el logo y el texto verticalmente
       alignItems: "center",
       justifyContent: "center",
       background: "#eff6ff",
-      fontFamily: "'Nunito', sans-serif"
+      fontFamily: "'Nunito', sans-serif",
+      gap: "16px" // Espacio entre el logo y el texto de carga
     }}
   >
+    {/* Imagen del Logo */}
+    <img 
+      src="/logo.png" // Cambia esto por el nombre y formato real de tu archivo en la carpeta public
+      alt="Logo Kiosko"
+      style={{
+        width: "120px", // Ajusta el tamaño según tu diseño
+        height: "auto",
+        objectFit: "contain",
+        animation: "pulse 1.5s infinite ease-in-out" // Opcional: un efecto sutil de parpadeo
+      }}
+    />
+
+    {/* Texto de carga opcional */}
     <p
       style={{
         fontSize: 16,
         fontWeight: 700,
-        color: "#1D4ED8"
+        color: "#1D4ED8",
+        margin: 0
       }}
     >
-      ⏳ Cargando catálogo...
+      Cargando...
     </p>
+
+    {/* Estilo CSS en línea opcional para la animación del logo */}
+    <style>{`
+      @keyframes pulse {
+        0%, 100% { opacity: 0.6; transform: scale(0.98); }
+        50% { opacity: 1; transform: scale(1); }
+      }
+    `}</style>
   </div>
 );
 
