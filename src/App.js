@@ -2030,30 +2030,48 @@ const kioskosFiltered = kioskosDelRubro;
                 );
               })()}
               <p style={{ fontSize: 22, fontWeight: 900, color: "#fff", textShadow: "0 2px 8px rgba(0,0,0,0.4)", lineHeight: 1.1, marginBottom: 10 }}>{condominio.nombre}</p>
-              {/* BUSCADOR FLOTANTE CON AUTOCOMPLETADO */}
+             {/* BUSCADOR FLOTANTE CON AUTOCOMPLETADO */}
 <div style={{ position: "relative" }}>
-  <div style={{ display: "flex", alignItems: "center", gap: 8, background: busqueda ? "#eff6ff" : "#fff", border: busqueda ? "2px solid #2563EB" : "2px solid transparent", borderRadius: busqueda && resultadosBusqueda.length > 0 ? "12px 12px 0 0" : 999, padding: "8px 13px", transition: "all 0.2s" }}>
+  {/* Ajustamos el borderRadius para que vuelva a ser ovalado (999) si mostrarResultados es true */}
+  <div style={{ display: "flex", alignItems: "center", gap: 8, background: busqueda ? "#eff6ff" : "#fff", border: busqueda ? "2px solid #2563EB" : "2px solid transparent", borderRadius: busqueda && resultadosBusqueda.length > 0 && !mostrarResultados ? "12px 12px 0 0" : 999, padding: "8px 13px", transition: "all 0.2s" }}>
     <span style={{ fontSize: 14 }}>🔍</span>
     <input
       style={{ border: "none", outline: "none", fontSize: 13, background: "transparent", flex: 1, color: "#111827", fontFamily: "Nunito, sans-serif", fontWeight: busqueda ? 700 : 400 }}
       placeholder="Buscar productos..."
       value={busqueda}
       onChange={e => { setBusqueda(e.target.value); if (e.target.value) setRubroActivo(null); setMostrarResultados(false); }}
-onKeyDown={e => { if (e.key === "Enter") setMostrarResultados(true); }}
-      onKeyDown={e => {
-        if (e.key === "Enter" && resultadosBusqueda.length > 0) {
-          setKioskoSeleccionado(resultadosBusqueda[0].kiosko_obj);
-          setBusqueda("");
-          setResultadosBusqueda([]);
-        }
-      }}
+      onKeyDown={e => { if (e.key === "Enter") setMostrarResultados(true); }}
     />
-    {busqueda && <button onClick={() => { setBusqueda(""); setResultadosBusqueda([]); }} style={{ border: "none", background: "#e5e7eb", borderRadius: 6, padding: "3px 7px", fontSize: 11, cursor: "pointer", color: "#6B7280" }}>✕</button>}
-  </div>
+    {busqueda && (
+      <button 
+        onClick={() => { 
+          setBusqueda(""); 
+          setResultadosBusqueda([]); 
+          setMostrarResultados(false); 
+        }} 
+        style={{ border: "none", background: "#e5e7eb", borderRadius: 6, padding: "3px 7px", fontSize: 11, cursor: "pointer", color: "#6B7280" }}
+      >
+        ✕
+      </button>
+    )}
+  </div> {/* <-- Este cierra la fila del input + botón */}
 
   {/* DROPDOWN SUGERENCIAS */}
 {busqueda.trim() && !mostrarResultados && resultadosBusqueda.length > 0 && (
-  <div style={{ background: "#fff", borderRadius: "0 0 14px 14px", overflow: "hidden", boxShadow: "0 12px 24px rgba(0,0,0,0.15)", marginTop: -2 }}>
+  <div
+  style={{
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+    background: "#fff",
+    borderRadius: "0 0 14px 14px",
+    overflow: "hidden",
+    boxShadow: "0 12px 24px rgba(0,0,0,0.15)",
+    marginTop: -2,
+    zIndex: 50
+  }}
+>
     {resultadosBusqueda.slice(0, 5).map((prod, idx) => (
       <div key={`${prod.id}-${idx}`}
         onClick={() => { setKioskoSeleccionado(prod.kiosko_obj); setBusqueda(""); setResultadosBusqueda([]); setMostrarResultados(false); }}
