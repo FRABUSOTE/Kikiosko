@@ -1938,19 +1938,73 @@ const kioskosFiltered = kioskosDelRubro;
       <style>{`* { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
 
       {/* HEADER */}
-      <div style={{ background: "#fff", padding: "12px 16px 14px", position: "sticky", top: 0, zIndex: 40, boxShadow: "0 4px 16px rgba(0,0,0,0.08)", borderRadius: "0 0 20px 20px", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-        {/* Botón volver — solo cuando hay rubro activo */}
-        {rubroActivo && (
-          <button onClick={() => { setRubroActivo(null); setBusqueda(""); }}
-            style={{ position: "absolute", left: 16, background: "#f1f5f9", border: "none", color: "#374151", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
-        )}
-        {/* Logo centrado */}
-        <img src="/logo.png" style={{ height: 30, objectFit: "contain" }} alt="KiKiosko" />
-        {/* Nombre rubro — solo cuando hay rubro activo */}
-        {rubroActivo && (
-          <span style={{ position: "absolute", right: 16, fontSize: 11, color: "#6B7280", fontWeight: 700 }}>{rubroActivo.emoji} {rubroActivo.nombre}</span>
-        )}
+<div style={{ background: "#fff", padding: "10px 16px 12px", position: "sticky", top: 0, zIndex: 40, boxShadow: "0 4px 16px rgba(0,0,0,0.08)", borderRadius: "0 0 20px 20px" }}>
+  
+  {/* FILA 1 — Logo + botón volver + rubro activo */}
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", position: "relative", marginBottom: 10 }}>
+    {rubroActivo && (
+      <button onClick={() => { setRubroActivo(null); setBusqueda(""); setMostrarResultados(false); }}
+        style={{ position: "absolute", left: 0, background: "#f1f5f9", border: "none", color: "#374151", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
+    )}
+    <img src="/logo.png" style={{ height: 28, objectFit: "contain" }} alt="KiKiosko" />
+    {rubroActivo && (
+      <span style={{ position: "absolute", right: 0, fontSize: 11, color: "#6B7280", fontWeight: 700 }}>{rubroActivo.emoji} {rubroActivo.nombre}</span>
+    )}
+  </div>
+
+  {/* FILA 2 — Buscador con dropdown */}
+  <div style={{ position: "relative" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, background: busqueda ? "#eff6ff" : "#f8fafc", border: busqueda ? "2px solid #2563EB" : "1.5px solid #e5e7eb", borderRadius: busqueda && resultadosBusqueda.length > 0 && !mostrarResultados ? "12px 12px 0 0" : 999, padding: "9px 14px", transition: "all 0.2s" }}>
+      <span style={{ fontSize: 14, flexShrink: 0 }}>🔍</span>
+      <input
+        style={{ border: "none", outline: "none", fontSize: 13, background: "transparent", flex: 1, color: "#111827", fontFamily: "Nunito, sans-serif", fontWeight: busqueda ? 700 : 400 }}
+        placeholder="Buscar productos en el condominio..."
+        value={busqueda}
+        onChange={e => { setBusqueda(e.target.value); if (e.target.value) setRubroActivo(null); setMostrarResultados(false); }}
+        onKeyDown={e => { if (e.key === "Enter") setMostrarResultados(true); }}
+      />
+      {busqueda && (
+        <button onClick={() => { setBusqueda(""); setResultadosBusqueda([]); setMostrarResultados(false); }}
+          style={{ border: "none", background: "#e5e7eb", borderRadius: 6, padding: "3px 7px", fontSize: 11, cursor: "pointer", color: "#6B7280", flexShrink: 0 }}>✕</button>
+      )}
+    </div>
+
+    {/* DROPDOWN SUGERENCIAS */}
+    {busqueda.trim() && !mostrarResultados && resultadosBusqueda.length > 0 && (
+      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", borderRadius: "0 0 14px 14px", border: "2px solid #2563EB", borderTop: "none", overflow: "hidden", boxShadow: "0 12px 24px rgba(0,0,0,0.12)", zIndex: 50 }}>
+        {resultadosBusqueda.slice(0, 5).map((prod, idx) => (
+          <div key={`${prod.id}-${idx}`}
+            onClick={() => { setKioskoSeleccionado(prod.kiosko_obj); setBusqueda(""); setResultadosBusqueda([]); setMostrarResultados(false); }}
+            style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 13px", cursor: "pointer", borderBottom: "1px solid #f1f5f9", background: "#fff" }}
+            onMouseEnter={e => e.currentTarget.style.background = "#eff6ff"}
+            onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
+            <div style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 8, background: "#f8fafc", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {prod.foto ? <img src={prod.foto} alt={prod.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 18 }}>{prod.emoji || "📦"}</span>}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 12, fontWeight: 800, color: "#111827", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prod.nombre}</p>
+              <p style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, margin: 0 }}>{prod.kiosko_obj.nombre}</p>
+            </div>
+            <span style={{ fontSize: 12, fontWeight: 900, color: "#2563EB", flexShrink: 0 }}>S/. {Number(prod.precio).toFixed(2)}</span>
+          </div>
+        ))}
+        <div onClick={() => setMostrarResultados(true)}
+          style={{ padding: "10px 13px", textAlign: "center", background: "#f8fafc", cursor: "pointer", borderTop: "1px solid #f1f5f9" }}>
+          <span style={{ fontSize: 11, color: "#2563EB", fontWeight: 800 }}>
+            🔍 Ver todos los resultados ({resultadosBusqueda.length}) →
+          </span>
+        </div>
       </div>
+    )}
+
+    {/* Sin resultados */}
+    {busqueda.trim().length >= 2 && !mostrarResultados && resultadosBusqueda.length === 0 && (
+      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", borderRadius: "0 0 12px 12px", border: "2px solid #2563EB", borderTop: "none", padding: "14px 13px", zIndex: 50, textAlign: "center" }}>
+        <span style={{ fontSize: 12, color: "#9ca3af", fontWeight: 600 }}>😕 Sin resultados para "{busqueda}"</span>
+      </div>
+    )}
+  </div>
+</div>
 
       {busqueda.trim() && mostrarResultados ? (
         /* ✅ RESULTADOS DE BÚSQUEDA */
@@ -2017,77 +2071,20 @@ const kioskosFiltered = kioskosDelRubro;
               : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 80, opacity: 0.2 }}>🏢</div>
             }
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%)", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "16px" }}>
-              {(() => {
-                const total = kioskos.length;
-                const abiertos = kioskos.filter(k => estaAbierto(k.info_tienda) !== false).length;
-                return (
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(16,185,129,0.85)", borderRadius: 999, padding: "3px 10px", width: "fit-content", marginBottom: 6 }}>
-                    <div style={{ width: 5, height: 5, background: "#fff", borderRadius: "50%" }}></div>
-                    <span style={{ color: "#fff", fontSize: 9, fontWeight: 800 }}>
-                      {total} negocios · {abiertos} abiertos ahora
-                    </span>
-                  </div>
-                );
-              })()}
-              <p style={{ fontSize: 22, fontWeight: 900, color: "#fff", textShadow: "0 2px 8px rgba(0,0,0,0.4)", lineHeight: 1.1, marginBottom: 10 }}>{condominio.nombre}</p>
-             {/* BUSCADOR FLOTANTE CON AUTOCOMPLETADO */}
-<div style={{ position: "relative" }}>
-  <div style={{ display: "flex", alignItems: "center", gap: 8, background: busqueda ? "#eff6ff" : "#fff", border: busqueda ? "2px solid #2563EB" : "2px solid transparent", borderRadius: busqueda && resultadosBusqueda.length > 0 ? "12px 12px 0 0" : 999, padding: "8px 13px", transition: "all 0.2s" }}>
- <span style={{ fontSize: 14 }}>🔍</span>
- <input
- style={{ border: "none", outline: "none", fontSize: 13, background: "transparent", flex: 1, color: "#111827", fontFamily: "Nunito, sans-serif", fontWeight: busqueda ? 700 : 400 }}
- placeholder="Buscar productos..."
-value={busqueda}
- onChange={e => { setBusqueda(e.target.value); if (e.target.value) setRubroActivo(null); setMostrarResultados(false); }}
-onKeyDown={e => { if (e.key === "Enter") setMostrarResultados(true); }}
- onKeyDown={e => {
- if (e.key === "Enter" && resultadosBusqueda.length > 0) {
- setKioskoSeleccionado(resultadosBusqueda[0].kiosko_obj);
- setBusqueda("");
- setResultadosBusqueda([]);
- }
- }}
- />
- {busqueda && <button onClick={() => { setBusqueda(""); setResultadosBusqueda([]); }} style={{ border: "none", background: "#e5e7eb", borderRadius: 6, padding: "3px 7px", fontSize: 11, cursor: "pointer", color: "#6B7280" }}>✕</button>}
- </div>
-
- {/* DROPDOWN SUGERENCIAS */}
-{busqueda.trim() && !mostrarResultados && resultadosBusqueda.length > 0 && (
-  <div style={{ background: "#fff", borderRadius: "0 0 14px 14px", overflow: "hidden", boxShadow: "0 12px 24px rgba(0,0,0,0.15)", marginTop: -2 }}>
-    {resultadosBusqueda.slice(0, 5).map((prod, idx) => (
-      <div key={`${prod.id}-${idx}`}
-        onClick={() => { setKioskoSeleccionado(prod.kiosko_obj); setBusqueda(""); setResultadosBusqueda([]); setMostrarResultados(false); }}
-        style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 13px", cursor: "pointer", borderBottom: "1px solid #f1f5f9", background: "#fff" }}
-        onMouseEnter={e => e.currentTarget.style.background = "#eff6ff"}
-        onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
-        <div style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 8, background: "#f8fafc", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {prod.foto ? <img src={prod.foto} alt={prod.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 18 }}>{prod.emoji || "📦"}</span>}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 12, fontWeight: 800, color: "#111827", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prod.nombre}</p>
-          <p style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, margin: 0 }}>{prod.kiosko_obj.nombre}</p>
-        </div>
-        <span style={{ fontSize: 12, fontWeight: 900, color: "#2563EB", flexShrink: 0 }}>S/. {Number(prod.precio).toFixed(2)}</span>
+  {(() => {
+    const total = kioskos.length;
+    const abiertos = kioskos.filter(k => estaAbierto(k.info_tienda) !== false).length;
+    return (
+      <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(16,185,129,0.85)", borderRadius: 999, padding: "3px 10px", width: "fit-content", marginBottom: 6 }}>
+        <div style={{ width: 5, height: 5, background: "#fff", borderRadius: "50%" }}></div>
+        <span style={{ color: "#fff", fontSize: 9, fontWeight: 800 }}>
+          {total} negocios · {abiertos} abiertos ahora
+        </span>
       </div>
-    ))}
-    {/* Ver todos */}
-    <div onClick={() => setMostrarResultados(true)}
-      style={{ padding: "10px 13px", textAlign: "center", background: "#f8fafc", cursor: "pointer", borderTop: "1px solid #f1f5f9" }}>
-      <span style={{ fontSize: 11, color: "#2563EB", fontWeight: 800 }}>
-        🔍 Ver todos los resultados ({resultadosBusqueda.length}) →
-      </span>
-    </div>
-  </div>
-)}
-
- {/* Sin resultados */}
- {busqueda.trim().length >= 2 && resultadosBusqueda.length === 0 && (
- <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", borderRadius: "0 0 12px 12px", border: "2px solid #2563EB", borderTop: "none", padding: "14px 13px", zIndex: 50, textAlign: "center" }}>
-<span style={{ fontSize: 12, color: "#9ca3af", fontWeight: 600 }}>😕 Sin resultados para "{busqueda}"</span>
- </div>
- )}
+    );
+  })()}
+  <p style={{ fontSize: 22, fontWeight: 900, color: "#fff", textShadow: "0 2px 8px rgba(0,0,0,0.4)", lineHeight: 1.1 }}>{condominio.nombre}</p>
 </div>
- </div>
  </div>
 
           {/* RUBROS GRID */}
