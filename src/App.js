@@ -2031,7 +2031,10 @@ const kioskosFiltered = kioskosDelRubro;
               })()}
               <p style={{ fontSize: 22, fontWeight: 900, color: "#fff", textShadow: "0 2px 8px rgba(0,0,0,0.4)", lineHeight: 1.1, marginBottom: 10 }}>{condominio.nombre}</p>
              {/* BUSCADOR FLOTANTE CON AUTOCOMPLETADO */}
-<div style={{ position: "relative" }}>
+<div style={{ 
+  position: "relative",
+  zIndex: 100
+}}>
   {/* Ajustamos el borderRadius para que vuelva a ser ovalado (999) si mostrarResultados es true */}
   <div style={{ display: "flex", alignItems: "center", gap: 8, background: busqueda ? "#eff6ff" : "#fff", border: busqueda ? "2px solid #2563EB" : "2px solid transparent", borderRadius: busqueda && resultadosBusqueda.length > 0 && !mostrarResultados ? "12px 12px 0 0" : 999, padding: "8px 13px", transition: "all 0.2s" }}>
     <span style={{ fontSize: 14 }}>🔍</span>
@@ -2069,7 +2072,7 @@ const kioskosFiltered = kioskosDelRubro;
     overflow: "hidden",
     boxShadow: "0 12px 24px rgba(0,0,0,0.15)",
     marginTop: -2,
-    zIndex: 50
+    zIndex: 999
   }}
 >
     {resultadosBusqueda.slice(0, 5).map((prod, idx) => (
@@ -2100,7 +2103,7 @@ const kioskosFiltered = kioskosDelRubro;
 
   {/* Sin resultados */}
   {busqueda.trim().length >= 2 && resultadosBusqueda.length === 0 && (
-    <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", borderRadius: "0 0 12px 12px", border: "2px solid #2563EB", borderTop: "none", padding: "14px 13px", zIndex: 50, textAlign: "center" }}>
+    <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", borderRadius: "0 0 12px 12px", border: "2px solid #2563EB", borderTop: "none", padding: "14px 13px", zIndex: 999, textAlign: "center" }}>
       <span style={{ fontSize: 12, color: "#9ca3af", fontWeight: 600 }}>😕 Sin resultados para "{busqueda}"</span>
     </div>
   )}
@@ -2109,7 +2112,11 @@ const kioskosFiltered = kioskosDelRubro;
           </div>
 
           {/* RUBROS GRID */}
-          <div style={{ padding: "16px 14px 0" }}>
+<div style={{ 
+  padding: "16px 14px 0",
+  position: "relative",
+  zIndex: 1
+}}>
             <p style={{ fontSize: 13, fontWeight: 900, color: "#111827", marginBottom: 12 }}>¿Qué necesitas hoy?</p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
               {rubros.map(r => {
