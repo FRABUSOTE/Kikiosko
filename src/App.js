@@ -2061,20 +2061,7 @@ const kioskosFiltered = kioskosDelRubro;
 
   {/* DROPDOWN SUGERENCIAS */}
 {busqueda.trim() && !mostrarResultados && resultadosBusqueda.length > 0 && (
-  <div
-  style={{
-    position: "absolute",
-    top: "100%",
-    left: 0,
-    right: 0,
-    background: "#fff",
-    borderRadius: "0 0 14px 14px",
-    overflow: "hidden",
-    boxShadow: "0 12px 24px rgba(0,0,0,0.15)",
-    marginTop: -2,
-    zIndex: 999
-  }}
->
+  <div style={{ background: "#fff", borderRadius: "0 0 14px 14px", overflow: "hidden", boxShadow: "0 12px 24px rgba(0,0,0,0.15)", marginTop: -2 }}>
     {resultadosBusqueda.slice(0, 5).map((prod, idx) => (
       <div key={`${prod.id}-${idx}`}
         onClick={() => { setKioskoSeleccionado(prod.kiosko_obj); setBusqueda(""); setResultadosBusqueda([]); setMostrarResultados(false); }}
