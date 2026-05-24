@@ -1349,134 +1349,81 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
         </div>
       )}
 
-      {/* ─── MODAL BIBLIOTECA ─── */}
       {modalBiblioteca && (
-        <div className="modal-bg" onClick={() => setModalBiblioteca(false)}>
-          <div
-            className="modal fade"
-            onClick={e => e.stopPropagation()}
-            style={{ maxWidth: 720 }}
-          >
-            <div style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 16
+  <div className="modal-bg" onClick={() => setModalBiblioteca(false)}>
+    <div className="modal fade" onClick={e => e.stopPropagation()}>
+      
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <span style={{ fontWeight: 900, fontSize: 16 }}>🖼️ Biblioteca de imágenes</span>
+        <button className="btn" style={{ background: "#F8FAFC", color: "#6B7280", padding: "6px 12px", fontSize: 11, border: "1px solid #E5E7EB" }} onClick={() => setModalBiblioteca(false)}>✕</button>
+      </div>
+
+      {/* Buscador */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f8fafc", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "8px 14px", marginBottom: 14 }}>
+        <span>🔍</span>
+        <input className="inp" style={{ border: "none", background: "transparent", padding: 0 }}
+          placeholder="Buscar por nombre o categoría..."
+          value={busquedaBiblioteca}
+          onChange={async e => {
+            setBusquedaBiblioteca(e.target.value);
+            const termino = e.target.value.toLowerCase().trim();
+            const query = supabase.from("imagenes_biblioteca").select("*").order("veces_usada", { ascending: false }).limit(30);
+            const { data } = termino.length > 0
+              ? await query.ilike("nombre", `%${termino}%`)
+              : await query;
+            setBibliotecaFotos(data || []);
+          }}
+        />
+        {busquedaBiblioteca && <button onClick={() => { setBusquedaBiblioteca(""); }} style={{ border: "none", background: "#e5e7eb", borderRadius: 6, padding: "3px 7px", fontSize: 11, cursor: "pointer", color: "#6B7280" }}>✕</button>}
+      </div>
+
+      {/* Cargar fotos al abrir */}
+      {bibliotecaFotos.length === 0 && busquedaBiblioteca === "" && (
+        <div style={{ textAlign: "center", padding: "20px 0" }}>
+          <button className="btn" style={{ background: "#eff6ff", color: "#2563EB", padding: "10px 20px", fontSize: 12, border: "1px solid #bfdbfe" }}
+            onClick={async () => {
+              const { data } = await supabase.from("imagenes_biblioteca").select("*").order("veces_usada", { ascending: false }).limit(30);
+              setBibliotecaFotos(data || []);
             }}>
-              <span style={{ fontWeight: 900, fontSize: 18 }}>
-                🖼️ Biblioteca de imágenes
-              </span>
-
-              <button
-                className="btn"
-                style={{
-                  background: "#F8FAFC",
-                  color: "#6B7280",
-                  padding: "6px 12px",
-                  fontSize: 11,
-                  border: "1px solid #E5E7EB"
-                }}
-                onClick={() => setModalBiblioteca(false)}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <input
-                className="inp"
-                placeholder="🔍 Buscar imágenes..."
-                value={busquedaBiblioteca}
-                onChange={e => setBusquedaBiblioteca(e.target.value)}
-              />
-            </div>
-
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(120px,1fr))",
-              gap: 12,
-              maxHeight: "60vh",
-              overflowY: "auto",
-              paddingRight: 4
-            }}>
-              {bibliotecaFotos
-                .filter(img =>
-                  img.nombre?.toLowerCase().includes(busquedaBiblioteca.toLowerCase()) ||
-                  img.categoria?.toLowerCase().includes(busquedaBiblioteca.toLowerCase())
-                )
-                .map(img => (
-                  <div
-                    key={img.id}
-                    onClick={() => {
-                      setNuevoProducto(p => ({
-                        ...p,
-                        foto: img.url,
-                        fotoFile: null,
-                        emoji: img.emoji || p.emoji
-                      }));
-
-                      setModalBiblioteca(false);
-                      mostrarToast("✅ Imagen seleccionada");
-                    }}
-                    style={{
-                      border: "1.5px solid #E5E7EB",
-                      borderRadius: 12,
-                      overflow: "hidden",
-                      cursor: "pointer",
-                      background: "#fff"
-                    }}
-                  >
-                    <div style={{
-                      width: "100%",
-                      aspectRatio: "1/1",
-                      background: "#F8FAFC"
-                    }}>
-                      <img
-                        src={img.url}
-                        alt={img.nombre}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover"
-                        }}
-                      />
-                    </div>
-
-                    <div style={{ padding: 8 }}>
-                      <p style={{
-                        fontSize: 12,
-                        fontWeight: 800,
-                        color: "#111827",
-                        marginBottom: 2
-                      }}>
-                        {img.emoji || "📦"} {img.nombre}
-                      </p>
-
-                      <p style={{
-                        fontSize: 10,
-                        color: "#9ca3af"
-                      }}>
-                        {img.categoria}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-            </div>
-
-            {bibliotecaFotos.length === 0 && (
-              <div style={{
-                textAlign: "center",
-                padding: "30px 10px",
-                color: "#9ca3af",
-                fontSize: 13
-              }}>
-                📭 No hay imágenes en la biblioteca
-              </div>
-            )}
-          </div>
+            📂 Cargar fotos disponibles
+          </button>
         </div>
       )}
 
+      {/* Grid de fotos */}
+      {bibliotecaFotos.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, maxHeight: 360, overflowY: "auto" }}>
+          {bibliotecaFotos.map(img => (
+            <div key={img.id}
+              onClick={async () => {
+                // ✅ Usar foto de biblioteca
+                setNuevoProducto(p => ({ ...p, foto: img.url, fotoFile: null }));
+                // ✅ Incrementar veces_usada
+                await supabase.from("imagenes_biblioteca").update({ veces_usada: (img.veces_usada || 1) + 1 }).eq("id", img.id);
+                setModalBiblioteca(false);
+                setBusquedaBiblioteca("");
+                mostrarToast("✅ Foto seleccionada de la biblioteca");
+              }}
+              style={{ cursor: "pointer", borderRadius: 10, overflow: "hidden", border: "2px solid #f1f5f9", aspectRatio: "1/1", background: "#f8fafc", position: "relative" }}>
+              <img src={img.url} alt={img.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.5)", padding: "4px 6px" }}>
+                <p style={{ fontSize: 9, color: "#fff", fontWeight: 700, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{img.nombre}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {bibliotecaFotos.length === 0 && busquedaBiblioteca.length > 0 && (
+        <div style={{ textAlign: "center", padding: "30px 0", color: "#9ca3af" }}>
+          <p style={{ fontSize: 32, marginBottom: 8 }}>😕</p>
+          <p style={{ fontSize: 13, fontWeight: 700 }}>Sin resultados para "{busquedaBiblioteca}"</p>
+        </div>
+      )}
+
+    </div>
+  </div>
+)}
     </div>
   );
 }
