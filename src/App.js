@@ -1898,45 +1898,47 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
   const [busqueda, setBusqueda] = useState("");
   const [resultadosBusqueda, setResultadosBusqueda] = useState([]);
 
- // ✅ Manejo botón atrás del celular
+// ✅ Manejo botón atrás del celular
+  const estadoRef = useRef({});
+  useEffect(() => {
+    estadoRef.current = { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo };
+  }, [kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo]);
+
   useEffect(() => {
     window.history.pushState({ pagina: "condominio" }, "");
+    window.history.pushState({ pagina: "condominio" }, "");
 
-    const handleBack = (e) => {
-  e.preventDefault();
+    const handleBack = () => {
+      const { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo } = estadoRef.current;
 
-  if (kioskoSeleccionado) {
-    // Estaba en un kiosko → vuelve a la lista del rubro
-    setKioskoSeleccionado(null);
-    window.history.pushState({ pagina: "condominio" }, "");
-    return;
-  }
-  if (mostrarResultados) {
-    // Estaba en resultados completos → vuelve al dropdown
-    setMostrarResultados(false);
-    window.history.pushState({ pagina: "condominio" }, "");
-    return;
-  }
-  if (busqueda) {
-    // Estaba buscando → limpia búsqueda
-    setBusqueda("");
-    setResultadosBusqueda([]);
-    window.history.pushState({ pagina: "condominio" }, "");
-    return;
-  }
-  if (rubroActivo) {
-    // Estaba en lista de negocios del rubro → vuelve al inicio
-    setRubroActivo(null);
-    window.history.pushState({ pagina: "condominio" }, "");
-    return;
-  }
-  // Ya está en el inicio → no sale, empuja estado nuevo
-  window.history.pushState({ pagina: "condominio" }, "");
-};
+      if (kioskoSeleccionado) {
+        setKioskoSeleccionado(null);
+        window.history.pushState({ pagina: "condominio" }, "");
+        return;
+      }
+      if (mostrarResultados) {
+        setMostrarResultados(false);
+        window.history.pushState({ pagina: "condominio" }, "");
+        return;
+      }
+      if (busqueda) {
+        setBusqueda("");
+        setResultadosBusqueda([]);
+        window.history.pushState({ pagina: "condominio" }, "");
+        return;
+      }
+      if (rubroActivo) {
+        setRubroActivo(null);
+        window.history.pushState({ pagina: "condominio" }, "");
+        return;
+      }
+      // En inicio → empuja estado para no salir
+      window.history.pushState({ pagina: "condominio" }, "");
+    };
 
     window.addEventListener("popstate", handleBack);
     return () => window.removeEventListener("popstate", handleBack);
-  }, [kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo]);
+  }, []);
 
 
   // ✅ Búsqueda — solo calcula resultados, NO muestra pantalla
