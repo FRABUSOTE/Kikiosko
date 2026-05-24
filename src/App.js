@@ -1903,31 +1903,36 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
     window.history.pushState({ pagina: "condominio" }, "");
 
     const handleBack = (e) => {
-      e.preventDefault();
+  e.preventDefault();
 
-      if (kioskoSeleccionado) {
-        setKioskoSeleccionado(null);
-        window.history.pushState({ pagina: "condominio" }, "");
-        return;
-      }
-      if (mostrarResultados) {
-        setMostrarResultados(false);
-        window.history.pushState({ pagina: "condominio" }, "");
-        return;
-      }
-      if (busqueda) {
-        setBusqueda("");
-        setResultadosBusqueda([]);
-        window.history.pushState({ pagina: "condominio" }, "");
-        return;
-      }
-      if (rubroActivo) {
-        setRubroActivo(null);
-        window.history.pushState({ pagina: "condominio" }, "");
-        return;
-      }
-      window.history.pushState({ pagina: "condominio" }, "");
-    };
+  if (kioskoSeleccionado) {
+    // Estaba en un kiosko → vuelve a la lista del rubro
+    setKioskoSeleccionado(null);
+    window.history.pushState({ pagina: "condominio" }, "");
+    return;
+  }
+  if (mostrarResultados) {
+    // Estaba en resultados completos → vuelve al dropdown
+    setMostrarResultados(false);
+    window.history.pushState({ pagina: "condominio" }, "");
+    return;
+  }
+  if (busqueda) {
+    // Estaba buscando → limpia búsqueda
+    setBusqueda("");
+    setResultadosBusqueda([]);
+    window.history.pushState({ pagina: "condominio" }, "");
+    return;
+  }
+  if (rubroActivo) {
+    // Estaba en lista de negocios del rubro → vuelve al inicio
+    setRubroActivo(null);
+    window.history.pushState({ pagina: "condominio" }, "");
+    return;
+  }
+  // Ya está en el inicio → no sale, empuja estado nuevo
+  window.history.pushState({ pagina: "condominio" }, "");
+};
 
     window.addEventListener("popstate", handleBack);
     return () => window.removeEventListener("popstate", handleBack);
