@@ -1898,6 +1898,42 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
   const [busqueda, setBusqueda] = useState("");
   const [resultadosBusqueda, setResultadosBusqueda] = useState([]);
 
+ // ✅ Manejo botón atrás del celular
+  useEffect(() => {
+    window.history.pushState({ pagina: "condominio" }, "");
+
+    const handleBack = (e) => {
+      e.preventDefault();
+
+      if (kioskoSeleccionado) {
+        setKioskoSeleccionado(null);
+        window.history.pushState({ pagina: "condominio" }, "");
+        return;
+      }
+      if (mostrarResultados) {
+        setMostrarResultados(false);
+        window.history.pushState({ pagina: "condominio" }, "");
+        return;
+      }
+      if (busqueda) {
+        setBusqueda("");
+        setResultadosBusqueda([]);
+        window.history.pushState({ pagina: "condominio" }, "");
+        return;
+      }
+      if (rubroActivo) {
+        setRubroActivo(null);
+        window.history.pushState({ pagina: "condominio" }, "");
+        return;
+      }
+      window.history.pushState({ pagina: "condominio" }, "");
+    };
+
+    window.addEventListener("popstate", handleBack);
+    return () => window.removeEventListener("popstate", handleBack);
+  }, [kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo]);
+
+
   // ✅ Búsqueda — solo calcula resultados, NO muestra pantalla
   useEffect(() => {
     const termino = busqueda.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
