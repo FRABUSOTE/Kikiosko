@@ -1898,77 +1898,49 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
   const [busqueda, setBusqueda] = useState("");
   const [resultadosBusqueda, setResultadosBusqueda] = useState([]);
 
-// ✅ Manejo botón atrás celular
-const estadoRef = useRef({});
-
+// ✅ Manejo del botón atrás del celular integrado y limpio
 useEffect(() => {
-  estadoRef.current = {
-    kioskoSeleccionado,
-    mostrarResultados,
-    busqueda,
-    rubroActivo,
-  };
-}, [kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo]);
+  const handlePopState = (event) => {
+    // Si el usuario retrocede y no hay estado de nuestra app, lo dejamos salir de forma natural
+    if (!event.state || event.state.app !== "kiosko-flow") return;
 
-useEffect(() => {
+    const nivelActual = event.state.nivel;
 
-  // 🔥 Crear 2 estados fake
-  window.history.pushState({ app: 1 }, "");
-  window.history.pushState({ app: 2 }, "");
-
-  const handleBack = () => {
-
-    const estado = estadoRef.current;
-
-    // 👉 Dentro de negocio
-    if (estado.kioskoSeleccionado) {
+    // 1. Si estaba en un kiosko y va hacia atrás, volvemos al rubro/búsqueda
+    if (kioskoSeleccionado) {
       setKioskoSeleccionado(null);
-
-      // volver a insertar estado
-      window.history.pushState({ app: 2 }, "");
       return;
     }
 
-    // 👉 Dentro de rubro
-    if (estado.rubroActivo) {
+    // 2. Si estaba en un rubro o resultados y va hacia atrás, volvemos al inicio
+    if (rubroActivo || mostrarResultados || busqueda) {
       setRubroActivo(null);
       setMostrarResultados(false);
       setBusqueda("");
       setResultadosBusqueda([]);
-
-      window.history.pushState({ app: 2 }, "");
       return;
     }
-
-    // 👉 Resultados
-    if (estado.mostrarResultados) {
-      setMostrarResultados(false);
-
-      window.history.pushState({ app: 2 }, "");
-      return;
-    }
-
-    // 👉 Texto búsqueda
-    if (estado.busqueda) {
-      setBusqueda("");
-      setResultadosBusqueda([]);
-
-      window.history.pushState({ app: 2 }, "");
-      return;
-    }
-
-    // 👉 Inicio → bloquear salida
-    window.history.go(1);
-
   };
 
-  window.addEventListener("popstate", handleBack);
+  window.addEventListener("popstate", handlePopState);
+  return () => window.removeEventListener("popstate", handlePopState);
+}, [kioskoSeleccionado, rubroActivo, mostrarResultados, busqueda]);
 
-  return () => {
-    window.removeEventListener("popstate", handleBack);
-  };
+// ✅ Este efecto maneja el historial cada vez que cambias de "pantalla"
+useEffect(() => {
+  // Calculamos el nivel de profundidad actual de la vista
+  let nivelActual = 0; // Inicio
+  if (rubroActivo || mostrarResultados || busqueda) nivelActual = 1; // Rubros / Búsquedas
+  if (kioskoSeleccionado) nivelActual = 2; // Dentro de un negocio
 
-}, []);
+  // Solo agregamos una nueva entrada al historial si el estado actual del navegador es diferente
+  if (!window.history.state || window.history.state.nivel !== nivelActual) {
+    window.history.pushState(
+      { app: "kiosko-flow", nivel: nivelActual },
+      ""
+    );
+  }
+}, [kioskoSeleccionado, rubroActivo, mostrarResultados, busqueda]);
 
   // ✅ Búsqueda — solo calcula resultados, NO muestra pantalla
   useEffect(() => {
