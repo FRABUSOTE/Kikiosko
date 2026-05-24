@@ -1898,48 +1898,77 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
   const [busqueda, setBusqueda] = useState("");
   const [resultadosBusqueda, setResultadosBusqueda] = useState([]);
 
-// ✅ Manejo botón atrás del celular
-  const estadoRef = useRef({});
-  useEffect(() => {
-    estadoRef.current = { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo };
-  }, [kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo]);
+// ✅ Manejo botón atrás celular
+const estadoRef = useRef({});
 
-  useEffect(() => {
-    window.history.pushState({ pagina: "condominio" }, "");
-    window.history.pushState({ pagina: "condominio" }, "");
+useEffect(() => {
+  estadoRef.current = {
+    kioskoSeleccionado,
+    mostrarResultados,
+    busqueda,
+    rubroActivo,
+  };
+}, [kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo]);
 
-    const handleBack = () => {
-      const { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo } = estadoRef.current;
+useEffect(() => {
 
-      if (kioskoSeleccionado) {
-        setKioskoSeleccionado(null);
-        window.history.pushState({ pagina: "condominio" }, "");
-        return;
-      }
-      if (mostrarResultados) {
-        setMostrarResultados(false);
-        window.history.pushState({ pagina: "condominio" }, "");
-        return;
-      }
-      if (busqueda) {
-        setBusqueda("");
-        setResultadosBusqueda([]);
-        window.history.pushState({ pagina: "condominio" }, "");
-        return;
-      }
-      if (rubroActivo) {
-        setRubroActivo(null);
-        window.history.pushState({ pagina: "condominio" }, "");
-        return;
-      }
-      // En inicio → empuja estado para no salir
-      window.history.pushState({ pagina: "condominio" }, "");
-    };
+  // Estado dummy para evitar salir
+  window.history.pushState({ app: true }, "");
 
-    window.addEventListener("popstate", handleBack);
-    return () => window.removeEventListener("popstate", handleBack);
-  }, []);
+  const handleBack = () => {
 
+    const estado = estadoRef.current;
+
+    // 👉 Dentro de negocio
+    if (estado.kioskoSeleccionado) {
+      setKioskoSeleccionado(null);
+
+      // mantener historial
+      window.history.pushState({ app: true }, "");
+      return;
+    }
+
+    // 👉 Dentro de rubro
+    if (estado.rubroActivo) {
+      setRubroActivo(null);
+
+      // limpiar también búsqueda si existe
+      setMostrarResultados(false);
+      setBusqueda("");
+      setResultadosBusqueda([]);
+
+      window.history.pushState({ app: true }, "");
+      return;
+    }
+
+    // 👉 Resultados búsqueda
+    if (estado.mostrarResultados) {
+      setMostrarResultados(false);
+
+      window.history.pushState({ app: true }, "");
+      return;
+    }
+
+    // 👉 Texto búsqueda
+    if (estado.busqueda) {
+      setBusqueda("");
+      setResultadosBusqueda([]);
+
+      window.history.pushState({ app: true }, "");
+      return;
+    }
+
+    // 👉 Inicio → NO salir
+    window.history.pushState({ app: true }, "");
+  };
+
+  window.addEventListener("popstate", handleBack);
+
+  return () => {
+    window.removeEventListener("popstate", handleBack);
+  };
+
+}, []);
 
   // ✅ Búsqueda — solo calcula resultados, NO muestra pantalla
   useEffect(() => {
