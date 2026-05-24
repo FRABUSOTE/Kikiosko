@@ -1908,12 +1908,13 @@ useEffect(() => {
     busqueda,
     rubroActivo,
   };
+
+  // 🔥 Crear nuevo estado SIEMPRE que cambia la vista
+  window.history.pushState({ app: true }, "");
+
 }, [kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo]);
 
 useEffect(() => {
-
-  // Estado dummy para evitar salir
-  window.history.pushState({ app: true }, "");
 
   const handleBack = () => {
 
@@ -1922,30 +1923,21 @@ useEffect(() => {
     // 👉 Dentro de negocio
     if (estado.kioskoSeleccionado) {
       setKioskoSeleccionado(null);
-
-      // mantener historial
-      window.history.pushState({ app: true }, "");
       return;
     }
 
     // 👉 Dentro de rubro
     if (estado.rubroActivo) {
       setRubroActivo(null);
-
-      // limpiar también búsqueda si existe
       setMostrarResultados(false);
       setBusqueda("");
       setResultadosBusqueda([]);
-
-      window.history.pushState({ app: true }, "");
       return;
     }
 
     // 👉 Resultados búsqueda
     if (estado.mostrarResultados) {
       setMostrarResultados(false);
-
-      window.history.pushState({ app: true }, "");
       return;
     }
 
@@ -1953,13 +1945,12 @@ useEffect(() => {
     if (estado.busqueda) {
       setBusqueda("");
       setResultadosBusqueda([]);
-
-      window.history.pushState({ app: true }, "");
       return;
     }
 
-    // 👉 Inicio → NO salir
+    // 👉 Inicio → mantener dentro
     window.history.pushState({ app: true }, "");
+
   };
 
   window.addEventListener("popstate", handleBack);
