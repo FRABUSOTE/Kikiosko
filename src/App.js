@@ -828,6 +828,9 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
   const [busquedaAdmin, setBusquedaAdmin] = useState("");
   const [modalTienda, setModalTienda] = useState(false);
   const [infoTienda, setInfoTienda] = useState(kiosko.info_tienda || {});
+  const [modalBiblioteca, setModalBiblioteca] = useState(false);
+  const [bibliotecaFotos, setBibliotecaFotos] = useState([]);
+  const [busquedaBiblioteca, setBusquedaBiblioteca] = useState("");
 
   const categoriasExistentes = [...new Set(productos.map(p => p.categoria))].filter(Boolean);
   const categoriasParaMostrar = categoriasExistentes.length > 0 ? categoriasExistentes : ["Bebidas", "SnackioskosConProductos", "Abarrotes", "Otros"];
@@ -862,6 +865,15 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
       if (uploadError) { mostrarToast("❌ Error subiendo foto", "error"); return; }
       const { data: urlData } = supabase.storage.from("fotos-productos").getPublicUrl(fileName);
       fotoUrl = urlData.publicUrl;
+
+      // ✅ Guardar en biblioteca compartida
+      await supabase.from("imagenes_biblioteca").insert([{
+        nombre: nuevoProducto.nombre || "Sin nombre",
+        categoria: nuevoProducto.categoria || "Otros",
+        emoji: nuevoProducto.emoji || "📦",
+        url: fotoUrl,
+        veces_usada: 1
+      }]);
     }
     const productoParaDB = {
       nombre: nuevoProducto.nombre, precio: parseFloat(nuevoProducto.precio) || 0,
@@ -1173,6 +1185,8 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
                       }} />
                     <button className="btn" style={{ width: "100%", background: "#eff6ff", color: "#2563EB", padding: "10px", fontSize: 12, border: "1.5px dashed #bfdbfe", borderRadius: 8, marginBottom: 6 }}
                       onClick={() => document.getElementById("foto-upload").click()}>📸 Subir foto</button>
+                    <button className="btn" style={{ width: "100%", background: "#f0fdf4", color: "#059669", padding: "10px", fontSize: 12, border: "1.5px dashed #bbf7d0", borderRadius: 8, marginBottom: 6 }}
+                      onClick={() => setModalBiblioteca(true)}>🖼️ Buscar en biblioteca</button>
                     <p style={{ fontSize: 10, color: "#9ca3af" }}>JPG, PNG o WEBP · Se comprime automáticamente ✅</p>
                     {nuevoProducto.foto && <button className="btn" style={{ fontSize: 10, color: "#dc2626", background: "transparent", padding: "4px 0", marginTop: 4 }} onClick={() => setNuevoProducto(p => ({ ...p, foto: null }))}>🗑 Quitar foto</button>}
                   </div>
@@ -1334,6 +1348,135 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
           </div>
         </div>
       )}
+
+      {/* ─── MODAL BIBLIOTECA ─── */}
+      {modalBiblioteca && (
+        <div className="modal-bg" onClick={() => setModalBiblioteca(false)}>
+          <div
+            className="modal fade"
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: 720 }}
+          >
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 16
+            }}>
+              <span style={{ fontWeight: 900, fontSize: 18 }}>
+                🖼️ Biblioteca de imágenes
+              </span>
+
+              <button
+                className="btn"
+                style={{
+                  background: "#F8FAFC",
+                  color: "#6B7280",
+                  padding: "6px 12px",
+                  fontSize: 11,
+                  border: "1px solid #E5E7EB"
+                }}
+                onClick={() => setModalBiblioteca(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <input
+                className="inp"
+                placeholder="🔍 Buscar imágenes..."
+                value={busquedaBiblioteca}
+                onChange={e => setBusquedaBiblioteca(e.target.value)}
+              />
+            </div>
+
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(120px,1fr))",
+              gap: 12,
+              maxHeight: "60vh",
+              overflowY: "auto",
+              paddingRight: 4
+            }}>
+              {bibliotecaFotos
+                .filter(img =>
+                  img.nombre?.toLowerCase().includes(busquedaBiblioteca.toLowerCase()) ||
+                  img.categoria?.toLowerCase().includes(busquedaBiblioteca.toLowerCase())
+                )
+                .map(img => (
+                  <div
+                    key={img.id}
+                    onClick={() => {
+                      setNuevoProducto(p => ({
+                        ...p,
+                        foto: img.url,
+                        fotoFile: null,
+                        emoji: img.emoji || p.emoji
+                      }));
+
+                      setModalBiblioteca(false);
+                      mostrarToast("✅ Imagen seleccionada");
+                    }}
+                    style={{
+                      border: "1.5px solid #E5E7EB",
+                      borderRadius: 12,
+                      overflow: "hidden",
+                      cursor: "pointer",
+                      background: "#fff"
+                    }}
+                  >
+                    <div style={{
+                      width: "100%",
+                      aspectRatio: "1/1",
+                      background: "#F8FAFC"
+                    }}>
+                      <img
+                        src={img.url}
+                        alt={img.nombre}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover"
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ padding: 8 }}>
+                      <p style={{
+                        fontSize: 12,
+                        fontWeight: 800,
+                        color: "#111827",
+                        marginBottom: 2
+                      }}>
+                        {img.emoji || "📦"} {img.nombre}
+                      </p>
+
+                      <p style={{
+                        fontSize: 10,
+                        color: "#9ca3af"
+                      }}>
+                        {img.categoria}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            {bibliotecaFotos.length === 0 && (
+              <div style={{
+                textAlign: "center",
+                padding: "30px 10px",
+                color: "#9ca3af",
+                fontSize: 13
+              }}>
+                📭 No hay imágenes en la biblioteca
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
