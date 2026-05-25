@@ -152,8 +152,13 @@ function SuperAdmin({ onSalir }) {
   const cargarKioskos = async () => {
     setCargando(true);
     const { data, error } = await supabase.from("kioskos").select(`*, productos (*)`).order("created_at", { ascending: false });
-    if (error) mostrarToast("Error cargando kioskos", "error");
-    else setKioskos(data);
+    if (error) { mostrarToast("Error cargando kioskos", "error"); setCargando(false); return; }
+    // ✅ Contar pedidos por kiosko
+    const { data: pedidos } = await supabase.from("pedidos").select("kiosko_id");
+    const conteo = {};
+    (pedidos || []).forEach(p => { conteo[p.kiosko_id] = (conteo[p.kiosko_id] || 0) + 1; });
+    const kioskosConPedidos = (data || []).map(k => ({ ...k, total_pedidos: conteo[k.id] || 0 }));
+    setKioskos(kioskosConPedidos);
     setCargando(false);
   };
 
@@ -341,12 +346,13 @@ function SuperAdmin({ onSalir }) {
       </div>
 
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "28px 20px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 14, marginBottom: 24 }}>
           {[
             { label: "Total kioskos", val: kioskos.length, color: "#111827", icon: "🏪" },
             { label: "Activos", val: activos.length, color: "#059669", icon: "✅" },
             { label: "Inactivos", val: inactivos.length, color: "#dc2626", icon: "❌" },
             { label: "Ingreso mensual", val: `S/. ${ingresoMensual}`, color: "#2563EB", icon: "💰" },
+            { label: "Total pedidos", val: kioskos.reduce((s, k) => s + (k.total_pedidos || 0), 0), color: "#7c3aed", icon: "📦" },
           ].map(s => (
             <div key={s.label} className="card" style={{ padding: "16px 18px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
@@ -419,7 +425,7 @@ function SuperAdmin({ onSalir }) {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "#F8FAFC", borderBottom: "1px solid #E5E7EB" }}>
-                {["Kiosko", "Plan", "Productos", "Vence", "Estado", "Acceso"].map(h => (
+                {["Kiosko", "Plan", "Productos", "Pedidos", "Vence", "Estado", "Acceso"].map(h => (
                   <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 10, color: "#9ca3af", letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 700 }}>{h}</th>
                 ))}
               </tr>
@@ -441,6 +447,23 @@ function SuperAdmin({ onSalir }) {
                     <p style={{ fontSize: 11, color: "#9ca3af" }}>S/. {k.monto}/mes</p>
                   </td>
                   <td style={{ padding: "12px 16px", fontSize: 13, fontWeight: 700, color: k.productos.length > 0 ? "#059669" : "#dc2626" }}>{k.productos.length} productos</td>
+                  <td style={{ padding: "12px 16px" }}>
+  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
+    <span style={{ fontSize: 13, fontWeight: 900, color: k.total_pedidos > 0 ? "#2563EB" : "#9ca3af" }}>
+      {k.total_pedidos} pedidos
+    </span>
+    {k.total_pedidos > 0 && (
+      <span style={{ fontSize: 9, color: "#059669", fontWeight: 700, background: "#dcfce7", padding: "1px 6px", borderRadius: 999 }}>
+        🔥 Activo
+      </span>
+    )}
+    {k.total_pedidos === 0 && k.activo && (
+      <span style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, background: "#f1f5f9", padding: "1px 6px", borderRadius: 999 }}>
+        Sin ventas
+      </span>
+    )}
+  </div>
+</td>       
                   <td style={{ padding: "12px 16px" }}>
                     <p style={{ fontSize: 12, color: diasRestantes(k.vence) <= 7 ? "#F59E0B" : "#6B7280", fontWeight: diasRestantes(k.vence) <= 7 ? 700 : 400 }}>{fmtFecha(k.vence)}</p>
                     {diasRestantes(k.vence) <= 7 && diasRestantes(k.vence) >= 0 && <p style={{ fontSize: 10, color: "#F59E0B" }}>Vence en {diasRestantes(k.vence)} días</p>}
