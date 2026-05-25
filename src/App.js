@@ -518,7 +518,7 @@ function SuperAdmin({ onSalir }) {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 4 }}>
-              {[["WhatsApp", "whatsapp", detalle.whatsapp], ["Correo", "email", detalle.email], ["Clave", "clave", detalle.clave], ["Acceso hasta", "vence", detalle.vence]].map(([label, key, val]) => (
+              {[["Nombre", "nombre", detalle.nombre], ["WhatsApp", "whatsapp", detalle.whatsapp], ["Correo", "email", detalle.email], ["Clave", "clave", detalle.clave], ["Dueño", "dueno", detalle.dueno], ["Acceso hasta", "vence", detalle.vence]].map(([label, key, val]) => (
                 <div key={key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #E5E7EB" }}>
                   <span style={{ fontSize: 12, color: "#9ca3af", width: 90, flexShrink: 0 }}>{label}</span>
                   <input type={key === "vence" ? "date" : "text"} defaultValue={val}
@@ -1721,13 +1721,13 @@ function CatalogoCliente({ kiosko, onSalir }) {
                 const key = varSel ? `${p.id}-${varSel.nombre}` : `${p.id}-unica`;
                 const cantidad = carrito[key]?.cantidad || 0;
                 return cantidad === 0 ? (
-                  <button onClick={() => agregar(p, varSel)} style={{ width: "100%", marginTop: 8, background: "#2563EB", color: "#fff", border: "none", padding: "10px", borderRadius: 8, fontWeight: 800, cursor: "pointer", fontSize: 13 }}>+ Agregar</button>
+                  <button onClick={() => agregar(p, varSel)} style={{ width: "100%", marginTop: 8, background: "#fff", color: "#2563EB", border: "1.5px solid #2563EB", padding: "7px", borderRadius: 8, fontWeight: 800, cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>🛒 Agregar</button>
                 ) : (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, background: "#f3f4f6", borderRadius: 8, padding: "4px" }}>
-                    <button onClick={() => quitar(key)} style={{ width: 26, height: 26, border: "none", background: "#2563EB", color: "#fff", borderRadius: 6, fontWeight: 900, cursor: "pointer", fontSize: 13 }}>−</button>
-                    <span style={{ fontWeight: 900, fontSize: 13, color: "#2563EB" }}>{cantidad}</span>
-                    <button onClick={() => agregar(p, varSel)} style={{ width: 26, height: 26, border: "none", background: "#2563EB", color: "#fff", borderRadius: 6, fontWeight: 900, cursor: "pointer", fontSize: 13 }}>+</button>
-                  </div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, background: "#fff", border: "1.5px solid #2563EB", borderRadius: 8, padding: "3px" }}>
+  <button onClick={() => quitar(key)} style={{ width: 24, height: 24, border: "none", background: "#eff6ff", color: "#2563EB", borderRadius: 6, fontWeight: 900, cursor: "pointer", fontSize: 13 }}>−</button>
+  <span style={{ fontWeight: 900, fontSize: 13, color: "#2563EB" }}>{cantidad}</span>
+  <button onClick={() => agregar(p, varSel)} style={{ width: 24, height: 24, border: "none", background: "#eff6ff", color: "#2563EB", borderRadius: 6, fontWeight: 900, cursor: "pointer", fontSize: 13 }}>+</button>
+</div>
                 );
               })()}
             </div>
