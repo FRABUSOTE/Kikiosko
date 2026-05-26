@@ -778,12 +778,34 @@ function SuperAdmin({ onSalir }) {
         <div className="modal-bg" onClick={() => setCondominioDetalle(null)}>
           <div className="modal fade" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <div>
-                <p style={{ fontWeight: 900, fontSize: 16 }}>🏘 {condominioDetalle.nombre}</p>
-                <p style={{ fontSize: 11, color: "#9ca3af" }}>kikiosko-vyvv.vercel.app/#/c/{condominioDetalle.slug}</p>
-              </div>
-              <button className="btn" style={{ background: "#F8FAFC", color: "#6B7280", padding: "6px 12px", fontSize: 11, border: "1px solid #E5E7EB" }} onClick={() => setCondominioDetalle(null)}>✕</button>
-            </div>
+  <div style={{ flex: 1, marginRight: 10 }}>
+    <p style={{ fontWeight: 900, fontSize: 16 }}>🏘 {condominioDetalle.nombre}</p>
+    <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8 }}>kikiosko-vyvv.vercel.app/#/c/{condominioDetalle.slug}</p>
+    {/* Editar nombre */}
+    <div style={{ display: "flex", gap: 6 }}>
+      <input
+        className="inp"
+        defaultValue={condominioDetalle.nombre}
+        placeholder="Nuevo nombre..."
+        id="input-nombre-cond"
+        style={{ fontSize: 12, padding: "6px 10px" }}
+      />
+      <button className="btn"
+        style={{ background: "#2563EB", color: "#fff", padding: "6px 12px", fontSize: 11, flexShrink: 0 }}
+        onClick={async () => {
+          const nuevoNombre = document.getElementById("input-nombre-cond").value.trim();
+          if (!nuevoNombre) return;
+          await supabase.from("condominios").update({ nombre: nuevoNombre }).eq("id", condominioDetalle.id);
+          setCondominios(prev => prev.map(c => c.id === condominioDetalle.id ? { ...c, nombre: nuevoNombre } : c));
+          setCondominioDetalle(prev => ({ ...prev, nombre: nuevoNombre }));
+          mostrarToast("✅ Nombre actualizado");
+        }}>
+        💾 Guardar
+      </button>
+    </div>
+  </div>
+  <button className="btn" style={{ background: "#F8FAFC", color: "#6B7280", padding: "6px 12px", fontSize: 11, border: "1px solid #E5E7EB", flexShrink: 0 }} onClick={() => setCondominioDetalle(null)}>✕</button>
+</div>
 
             {/* Banner condominio */}
             <div style={{ padding: "12px 0", borderBottom: "1px solid #E5E7EB" }}>
