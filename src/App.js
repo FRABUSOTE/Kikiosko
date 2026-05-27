@@ -2317,14 +2317,6 @@ const kioskosFiltered = kioskosDelRubro;
       );
     })}
   </div>
-
-  {/* Botón ver todos abajo del grid */}
-  {rubros.length > 6 && !verTodosRubros && (
-    <button onClick={() => setVerTodosRubros(true)}
-      style={{ width: "100%", padding: "10px", background: "#fff", border: "1.5px solid #e5e7eb", borderRadius: 12, fontSize: 12, fontWeight: 800, color: "#2563EB", cursor: "pointer", marginBottom: 16 }}>
-      + Ver todos los rubros ({rubros.length})
-    </button>
-  )}
           </div>
 
           {/* ✅ SECCIÓN OFERTAS */}
