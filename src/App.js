@@ -2032,6 +2032,7 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
   const [kioskoSeleccionado, setKioskoSeleccionado] = useState(null);
   const [busqueda, setBusqueda] = useState("");
   const [resultadosBusqueda, setResultadosBusqueda] = useState([]);
+  const [verTodosRubros, setVerTodosRubros] = useState(false);
 
 // ✅ Manejo del botón atrás del celular integrado y limpio
 useEffect(() => {
@@ -2267,44 +2268,63 @@ const kioskosFiltered = kioskosDelRubro;
  </div>
 
           {/* RUBROS GRID */}
-<div style={{ 
-  padding: "16px 14px 0",
-  position: "relative",
-  zIndex: 1
-}}>
-            <p style={{ fontSize: 13, fontWeight: 900, color: "#111827", marginBottom: 12 }}>¿Qué necesitas hoy?</p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
-              {rubros.map(r => {
-                const totalNegocios = kioskos.filter(k => k.rubro_id === r.id).length;
-                return (
-                  <button key={r.id} onClick={() => setRubroActivo(r)}
-                    style={{ background: "#fff", borderRadius: 14, padding: "12px 8px", textAlign: "center", border: "1.5px solid #f1f5f9", cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.05)", position: "relative", overflow: "hidden" }}>
-                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 3, background: r.color || "#2563EB", borderRadius: 0 }}></div>
-                    <span style={{ fontSize: 26, display: "block", marginBottom: 5 }}>
-  {r.emoji && r.emoji !== "🏪" ? r.emoji : (() => {
-    const n = r.nombre.toLowerCase();
-    if (n.includes("bodega")) return "🛒";
-    if (n.includes("farmacia")) return "💊";
-    if (n.includes("licor")) return "🍾";
-    if (n.includes("libreria") || n.includes("librería")) return "📚";
-    if (n.includes("peluquer")) return "✂️";
-    if (n.includes("ferreteri") || n.includes("ferretería")) return "🔧";
-    if (n.includes("polleria") || n.includes("pollería")) return "🍗";
-    if (n.includes("panaderia") || n.includes("panadería")) return "🥖";
-    if (n.includes("carnicer")) return "🥩";
-    if (n.includes("restaurant") || n.includes("comida")) return "🍽️";
-    if (n.includes("fruteria") || n.includes("frutas")) return "🍎";
-    if (n.includes("lavanderia") || n.includes("lavandería")) return "👕";
-    if (n.includes("zapateria") || n.includes("zapatería")) return "👟";
-    return "🏪";
-  })()}
-</span>
-                    <span style={{ fontSize: 10, fontWeight: 800, color: "#111827", display: "block", lineHeight: 1.2 }}>{r.nombre}</span>
-                    <span style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600 }}>{totalNegocios} tiendas</span>
-                  </button>
-                );
-              })}
-            </div>
+<div style={{ padding: "16px 14px 0" }}>
+  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+    <p style={{ fontSize: 13, fontWeight: 900, color: "#111827" }}>¿Qué necesitas hoy?</p>
+    {rubros.length > 6 && !verTodosRubros && (
+      <button onClick={() => setVerTodosRubros(true)}
+        style={{ fontSize: 11, color: "#2563EB", fontWeight: 800, background: "none", border: "none", cursor: "pointer" }}>
+        Ver todos ({rubros.length}) →
+      </button>
+    )}
+    {verTodosRubros && (
+      <button onClick={() => setVerTodosRubros(false)}
+        style={{ fontSize: 11, color: "#6B7280", fontWeight: 800, background: "none", border: "none", cursor: "pointer" }}>
+        ← Ver menos
+      </button>
+    )}
+  </div>
+
+  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
+    {(verTodosRubros ? rubros : rubros.slice(0, 6)).map(r => {
+      const totalNegocios = kioskos.filter(k => k.rubro_id === r.id).length;
+      return (
+        <button key={r.id} onClick={() => setRubroActivo(r)}
+          style={{ background: "#fff", borderRadius: 14, padding: "12px 8px", textAlign: "center", border: "1.5px solid #f1f5f9", cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.05)", position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 3, background: r.color || "#2563EB", borderRadius: 0 }}></div>
+          <span style={{ fontSize: 26, display: "block", marginBottom: 5 }}>
+            {r.emoji && r.emoji !== "🏪" ? r.emoji : (() => {
+              const n = r.nombre.toLowerCase();
+              if (n.includes("bodega")) return "🛒";
+              if (n.includes("farmacia")) return "💊";
+              if (n.includes("licor")) return "🍾";
+              if (n.includes("libreria") || n.includes("librería")) return "📚";
+              if (n.includes("peluquer")) return "✂️";
+              if (n.includes("ferreteri") || n.includes("ferretería")) return "🔧";
+              if (n.includes("polleria") || n.includes("pollería")) return "🍗";
+              if (n.includes("panaderia") || n.includes("panadería")) return "🥖";
+              if (n.includes("carnicer")) return "🥩";
+              if (n.includes("restaurant") || n.includes("comida")) return "🍽️";
+              if (n.includes("fruteria") || n.includes("frutas")) return "🍎";
+              if (n.includes("lavanderia") || n.includes("lavandería")) return "👕";
+              if (n.includes("zapateria") || n.includes("zapatería")) return "👟";
+              return "🏪";
+            })()}
+          </span>
+          <span style={{ fontSize: 10, fontWeight: 800, color: "#111827", display: "block", lineHeight: 1.2 }}>{r.nombre}</span>
+          <span style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600 }}>{totalNegocios} tiendas</span>
+        </button>
+      );
+    })}
+  </div>
+
+  {/* Botón ver todos abajo del grid */}
+  {rubros.length > 6 && !verTodosRubros && (
+    <button onClick={() => setVerTodosRubros(true)}
+      style={{ width: "100%", padding: "10px", background: "#fff", border: "1.5px solid #e5e7eb", borderRadius: 12, fontSize: 12, fontWeight: 800, color: "#2563EB", cursor: "pointer", marginBottom: 16 }}>
+      + Ver todos los rubros ({rubros.length})
+    </button>
+  )}
           </div>
 
           {/* ✅ SECCIÓN OFERTAS */}
