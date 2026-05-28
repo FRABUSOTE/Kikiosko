@@ -1030,7 +1030,12 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <p style={{ fontSize: 11, color: "#059669", fontWeight: 700, marginBottom: 2 }}>🛒 Link para tus compradores</p>
-              <p style={{ fontSize: 13, fontWeight: 800 }}>kikiosko-vyvv.vercel.app/#/{kiosko.slug}</p>
+              <p style={{ fontSize: 13, fontWeight: 800 }}>
+  {kiosko.condominio_slug 
+    ? `kikiosko-vyvv.vercel.app/#/c/${kiosko.condominio_slug}/${kiosko.slug}`
+    : `kikiosko-vyvv.vercel.app/#/${kiosko.slug}`
+  }
+</p>
             </div>
             <button className="btn" style={{ background: "#059669", color: "#fff", padding: "8px 14px", fontSize: 11 }}
               onClick={() => { navigator.clipboard?.writeText(`kikiosko-vyvv.vercel.app/#/${kiosko.slug}`); mostrarToast("📋 Link copiado"); }}>
@@ -1038,7 +1043,13 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
             </button>
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 16, gap: 8 }}>
-            <QRCode value={`https://kikiosko-vyvv.vercel.app/#/${kiosko.slug}`} size={160} bgColor="#ffffff" fgColor="#111827" level="H" />
+            <QRCode 
+  value={kiosko.condominio_slug 
+    ? `https://kikiosko-vyvv.vercel.app/#/c/${kiosko.condominio_slug}/${kiosko.slug}`
+    : `https://kikiosko-vyvv.vercel.app/#/${kiosko.slug}`
+  } 
+  size={160} bgColor="#ffffff" fgColor="#111827" level="H" 
+/>
             <p style={{ fontSize: 11, color: "#9ca3af", textAlign: "center" }}>📲 Tus clientes escanean este QR y llegan directo a tu tienda</p>
           </div>
         </div>
@@ -2027,12 +2038,20 @@ function CatalogoCliente({ kiosko, onSalir }) {
 }
 
 // ─── CONDOMINIO PÚBLICO ───
-function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, productosOferta, rubroActivo, setRubroActivo }) {
+function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, productosOferta, rubroActivo, setRubroActivo, kioskoDirecto, onKioskoDirectoVisto }) {
   const [mostrarResultados, setMostrarResultados] = useState(false);
   const [kioskoSeleccionado, setKioskoSeleccionado] = useState(null);
   const [busqueda, setBusqueda] = useState("");
   const [resultadosBusqueda, setResultadosBusqueda] = useState([]);
   const [verTodosRubros, setVerTodosRubros] = useState(false);
+
+// ✅ Si viene con kiosko directo, abrirlo automáticamente
+useEffect(() => {
+  if (kioskoDirecto && !kioskoSeleccionado) {
+    setKioskoSeleccionado(kioskoDirecto);
+    onKioskoDirectoVisto();
+  }
+}, [kioskoDirecto]);
 
 // ✅ Manejo del botón atrás del celular integrado y limpio
 useEffect(() => {
@@ -2509,11 +2528,19 @@ export default function App() {
   const [productosActuales, setProductosActuales] = useState([]);
   const [cargandoPublico, setCargandoPublico] = useState(false);
   const [kioskoPorSlug, setKioskoPorSlug] = useState(null);
+  const [kioskoDirecto, setKioskoDirecto] = useState(null);
 
   const hash = window.location.hash;
   const rawSlug = hash.replace(/^#\/?/, "").replace(/\/$/, "").toLowerCase().trim();
   const esCondominio = rawSlug.startsWith("c/");
-  const slug = esCondominio ? rawSlug.replace("c/", "") : rawSlug;
+
+  // ✅ Detectar si es link directo a kiosko dentro de condominio
+  // Formato: c/vistasol/bodeguita
+  const partesCondominio = esCondominio ? rawSlug.replace("c/", "").split("/") : [];
+  const esKioskoEnCondominio = esCondominio && partesCondominio.length === 2;
+  const slugCondominio = esCondominio ? partesCondominio[0] : null;
+  const slugKioskoEnCond = esKioskoEnCondominio ? partesCondominio[1] : null;
+  const slug = esCondominio ? partesCondominio[0] : rawSlug;
 
   const [condominioPublico, setCondominioPublico] = useState(null);
   const [rubrosPublicos, setRubrosPublicos] = useState([]);
@@ -2522,10 +2549,29 @@ export default function App() {
   const [productosDestacados, setProductosDestacados] = useState([]);
   const [productosOferta, setProductosOferta] = useState([]);
 
-  useEffect(() => {
-    if (esCondominio && slug.length > 0) cargarCondominio(slug);
-    else if (!esCondominio && slug.length > 0) cargarKioskoPorSlug(slug);
+ useEffect(() => {
+    if (esKioskoEnCondominio && slugCondominio && slugKioskoEnCond) {
+      // Link directo a kiosko dentro de condominio
+      cargarCondominioConKiosko(slugCondominio, slugKioskoEnCond);
+    } else if (esCondominio && slug.length > 0) {
+      cargarCondominio(slug);
+    } else if (!esCondominio && slug.length > 0) {
+      cargarKioskoPorSlug(slug);
+    }
   }, [slug]);
+
+const cargarCondominioConKiosko = async (slugCond, slugKiosko) => {
+    setCargandoPublico(true);
+    // Cargar condominio completo
+    await cargarCondominio(slugCond);
+    // Buscar el kiosko específico y seleccionarlo
+    const { data: k } = await supabase.from("kioskos").select("*").eq("slug", slugKiosko).single();
+    if (k) {
+      const { data: prods } = await supabase.from("productos").select("*").eq("kiosko_id", k.id);
+      setKioskoDirecto({ ...k, productos: prods || [] });
+    }
+    setCargandoPublico(false);
+  };
 
  const cargarCondominio = async (slugCond) => {
   setCargandoPublico(true);
@@ -2561,9 +2607,10 @@ export default function App() {
           .eq("kiosko_id", k.id);
 
         return {
-          ...k,
-          productos: prods || []
-        };
+  ...k,
+  productos: prods || [],
+  condominio_slug: cond.slug  // ✅ para el QR/link
+};
       })
     );
 
@@ -2701,16 +2748,18 @@ if (condominioPublico) {
   );
 
   return (
-    <CondominioPublico
-      condominio={condominioPublico}
-      rubros={rubrosPublicos}
-      kioskos={kioskosPorRubro}
-      productosDestacados={productosDestacados}
-      productosOferta={productosOferta}
-      rubroActivo={rubroActivo}
-      setRubroActivo={setRubroActivo}
-    />
-  );
+  <CondominioPublico
+    condominio={condominioPublico}
+    rubros={rubrosPublicos}
+    kioskos={kioskosPorRubro}
+    productosDestacados={productosDestacados}
+    productosOferta={productosOferta}
+    rubroActivo={rubroActivo}
+    setRubroActivo={setRubroActivo}
+    kioskoDirecto={kioskoDirecto}
+    onKioskoDirectoVisto={() => setKioskoDirecto(null)}
+  />
+);
 }
 
 if (kioskoPorSlug) {
@@ -2792,7 +2841,22 @@ const handleLogin = async () => {
       .select("*")
       .eq("kiosko_id", kioskoLogin.id);
 
-    setKioskoCurrent(kioskoLogin);
+    if (kioskoLogin.condominio_id) {
+
+  const { data: cond } = await supabase
+    .from("condominios")
+    .select("slug")
+    .eq("id", kioskoLogin.condominio_id)
+    .single();
+
+  setKioskoCurrent({
+    ...kioskoLogin,
+    condominio_slug: cond?.slug || null
+  });
+
+} else {
+  setKioskoCurrent(kioskoLogin);
+}
     setProductosActuales(prods || []);
     setPantalla("adminkiosko");
     setLoginError("");
