@@ -1497,6 +1497,9 @@ function CatalogoCliente({ kiosko, onSalir }) {
   const [busqueda, setBusqueda] = useState("");
   const [catMadres, setCatMadres] = useState([]);
   const [madreActiva, setMadreActiva] = useState(null);
+  const [sugerencias, setSugerencias] = useState([]);
+  const [mostrarResultados, setMostrarResultados] = useState(false);
+  const [productoSeleccionado, setProductoSeleccionado] = useState(null);
 
   useEffect(() => {
     supabase.from("categorias_madre").select("*").eq("kiosko_id", kiosko.id).order("orden")
@@ -1506,6 +1509,19 @@ function CatalogoCliente({ kiosko, onSalir }) {
         if (madres.length === 0) setMadreActiva("sin_madre");
       });
   }, [kiosko.id]);
+
+useEffect(() => {
+  const termino = busqueda.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (termino.length === 0) { setSugerencias([]); return; }
+  const timeout = setTimeout(() => {
+    const resultados = kiosko.productos.filter(p => {
+      const nombre = p.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      return p.stock && nombre.includes(termino);
+    });
+    setSugerencias(resultados);
+  }, 300);
+  return () => clearTimeout(timeout);
+}, [busqueda]);
 
   useEffect(() => {
     if (madreActiva && madreActiva !== "sin_madre") window.history.pushState({ madre: madreActiva }, "");
@@ -1834,25 +1850,136 @@ function CatalogoCliente({ kiosko, onSalir }) {
     </button>
   </div>
 
-  {/* FILA 2 — Buscador */}
-  <div style={{ padding: "0 14px 12px" }}>
-    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f8fafc", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "8px 14px" }}>
-      <span style={{ fontSize: 14, flexShrink: 0 }}>🔍</span>
-      <input style={{ border: "none", outline: "none", fontSize: 13, background: "transparent", flex: 1, minWidth: 0, color: "#111827", fontFamily: "Nunito, sans-serif" }}
-        placeholder="Buscar productos..." value={busqueda}
-        onChange={e => {
-          setBusqueda(e.target.value);
-          if (e.target.value.trim() && madreActiva === null) {
-            window.history.pushState({ madre: "sin_madre" }, "");
-            setMadreActiva("sin_madre");
-          }
-        }} />
-      {busqueda && <button onClick={() => setBusqueda("")} style={{ border: "none", background: "#e5e7eb", borderRadius: 6, padding: "3px 7px", fontSize: 11, cursor: "pointer", color: "#6B7280", flexShrink: 0 }}>✕</button>}
-    </div>
+  {/* FILA 2 — Buscador con dropdown */}
+<div style={{ padding: "0 14px 12px", position: "relative" }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 8, background: busqueda ? "#eff6ff" : "#f8fafc", border: busqueda ? "2px solid #2563EB" : "1.5px solid #e5e7eb", borderRadius: busqueda && sugerencias.length > 0 && !mostrarResultados ? "12px 12px 0 0" : 999, padding: "8px 14px", transition: "all 0.2s" }}>
+    <span style={{ fontSize: 14, flexShrink: 0 }}>🔍</span>
+    <input
+      style={{ border: "none", outline: "none", fontSize: 13, background: "transparent", flex: 1, minWidth: 0, color: "#111827", fontFamily: "Nunito, sans-serif", fontWeight: busqueda ? 700 : 400 }}
+      placeholder="Buscar productos..."
+      value={busqueda}
+      onChange={e => {
+        setBusqueda(e.target.value);
+        setMostrarResultados(false);
+        if (e.target.value.trim() && madreActiva === null) {
+          window.history.pushState({ madre: "sin_madre" }, "");
+          setMadreActiva("sin_madre");
+        }
+      }}
+      onKeyDown={e => { if (e.key === "Enter") setMostrarResultados(true); }}
+    />
+    {busqueda && (
+      <button onClick={() => { setBusqueda(""); setSugerencias([]); setMostrarResultados(false); setProductoSeleccionado(null); }}
+        style={{ border: "none", background: "#e5e7eb", borderRadius: 6, padding: "3px 7px", fontSize: 11, cursor: "pointer", color: "#6B7280", flexShrink: 0 }}>✕</button>
+    )}
   </div>
+
+  {/* DROPDOWN SUGERENCIAS */}
+  {busqueda.trim() && !mostrarResultados && sugerencias.length > 0 && (
+    <div style={{ position: "absolute", left: 14, right: 14, background: "#fff", borderRadius: "0 0 14px 14px", border: "2px solid #2563EB", borderTop: "none", overflow: "hidden", boxShadow: "0 12px 24px rgba(0,0,0,0.12)", zIndex: 50 }}>
+      {sugerencias.slice(0, 5).map((prod, idx) => (
+        <div key={prod.id}
+          onClick={() => { setProductoSeleccionado(prod); setMostrarResultados(true); }}
+          style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 13px", cursor: "pointer", borderBottom: "1px solid #f1f5f9", background: "#fff" }}
+          onMouseEnter={e => e.currentTarget.style.background = "#eff6ff"}
+          onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
+          <div style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 8, background: "#f8fafc", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {prod.foto ? <img src={prod.foto} alt={prod.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 18 }}>{prod.emoji || "📦"}</span>}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 12, fontWeight: 800, color: "#111827", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prod.nombre}</p>
+            <p style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, margin: 0 }}>{prod.categoria}</p>
+          </div>
+          <span style={{ fontSize: 12, fontWeight: 900, color: "#2563EB", flexShrink: 0 }}>S/. {Number(prod.precio).toFixed(2)}</span>
+        </div>
+      ))}
+      <div onClick={() => { setMostrarResultados(true); setProductoSeleccionado(null); }}
+        style={{ padding: "10px 13px", textAlign: "center", background: "#f8fafc", cursor: "pointer", borderTop: "1px solid #f1f5f9" }}>
+        <span style={{ fontSize: 11, color: "#2563EB", fontWeight: 800 }}>
+          🔍 Ver todos los resultados ({sugerencias.length}) →
+        </span>
+      </div>
+    </div>
+  )}
+
+  {/* Sin resultados */}
+  {busqueda.trim().length >= 2 && !mostrarResultados && sugerencias.length === 0 && (
+    <div style={{ position: "absolute", left: 14, right: 14, background: "#fff", borderRadius: "0 0 12px 12px", border: "2px solid #2563EB", borderTop: "none", padding: "14px 13px", zIndex: 50, textAlign: "center" }}>
+      <span style={{ fontSize: 12, color: "#9ca3af", fontWeight: 600 }}>😕 Sin resultados para "{busqueda}"</span>
+    </div>
+  )}
+</div>
 </div>
 
-      {madreActiva === null ? (
+{/* ✅ PRODUCTO SELECCIONADO — pantalla individual */}
+{mostrarResultados && productoSeleccionado && (
+  <div style={{ padding: "14px" }}>
+    <button onClick={() => { setProductoSeleccionado(null); setMostrarResultados(false); }}
+      style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#6B7280", fontSize: 12, fontWeight: 700, cursor: "pointer", marginBottom: 14 }}>
+      ← Volver al buscador
+    </button>
+    <div style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}>
+      {productoSeleccionado.foto && (
+        <img src={productoSeleccionado.foto} alt={productoSeleccionado.nombre} style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", display: "block" }} />
+      )}
+      {!productoSeleccionado.foto && (
+        <div style={{ width: "100%", aspectRatio: "1/1", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 80 }}>
+          {productoSeleccionado.emoji || "📦"}
+        </div>
+      )}
+      <div style={{ padding: "16px" }}>
+        <p style={{ fontSize: 18, fontWeight: 900, color: "#111827", marginBottom: 6 }}>{productoSeleccionado.nombre}</p>
+        {productoSeleccionado.descripcion && (
+          <p style={{ fontSize: 13, color: "#6B7280", lineHeight: 1.6, marginBottom: 12 }}>{productoSeleccionado.descripcion}</p>
+        )}
+        <p style={{ fontSize: 22, fontWeight: 900, color: "#2563EB", marginBottom: 16 }}>S/. {Number(productoSeleccionado.precio).toFixed(2)}</p>
+        <button
+          onClick={() => {
+            const key = `${productoSeleccionado.id}-unica`;
+            agregar(productoSeleccionado, null);
+            setMostrarResultados(false);
+            setProductoSeleccionado(null);
+            setBusqueda("");
+          }}
+          style={{ width: "100%", background: "#fff", color: "#2563EB", border: "1.5px solid #2563EB", padding: "12px", borderRadius: 10, fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "Nunito, sans-serif" }}>
+          🛒 Agregar al carrito
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* ✅ LISTA COMPLETA DE RESULTADOS */}
+{mostrarResultados && !productoSeleccionado && busqueda.trim() && (
+  <div style={{ padding: "14px" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ fontSize: 13, fontWeight: 900, color: "#111827" }}>📦 Resultados</span>
+        <span style={{ background: "#eff6ff", color: "#2563EB", fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 999 }}>{sugerencias.length}</span>
+      </div>
+      <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600 }}>"{busqueda}"</span>
+    </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {sugerencias.map(prod => (
+        <div key={prod.id}
+          onClick={() => setProductoSeleccionado(prod)}
+          style={{ background: "#fff", borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", border: "1px solid #f1f5f9", cursor: "pointer" }}>
+          <div style={{ width: 72, height: 72, flexShrink: 0, background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+            {prod.foto ? <img src={prod.foto} alt={prod.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 32 }}>{prod.emoji || "📦"}</span>}
+          </div>
+          <div style={{ flex: 1, padding: "10px 12px" }}>
+            <p style={{ fontSize: 13, fontWeight: 800, color: "#111827", margin: "0 0 3px" }}>{prod.nombre}</p>
+            <p style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, margin: "0 0 4px" }}>{prod.categoria}</p>
+            <span style={{ fontSize: 14, fontWeight: 900, color: "#2563EB" }}>S/. {Number(prod.precio).toFixed(2)}</span>
+          </div>
+          <div style={{ padding: "0 12px", fontSize: 18, color: "#9ca3af" }}>›</div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
+      {!mostrarResultados && madreActiva === null ? (
         <div style={{ padding: "16px" }}>
           <div style={{ textAlign: "center", marginBottom: 20, paddingTop: 8 }}>
             <p style={{ fontSize: 14, color: "#9ca3af" }}>¿Qué estás buscando hoy?</p>
@@ -1872,8 +1999,10 @@ function CatalogoCliente({ kiosko, onSalir }) {
             ))}
           </div>
         </div>
-      ) : (
-        <>
+      ) : null}
+
+{!mostrarResultados && madreActiva !== null && (
+  <>
           {kiosko.banner && kiosko.plan !== "Básico" && (
   <div style={{ padding: "10px 12px 0" }}>
     <div style={{ borderRadius: 20, overflow: "hidden", boxShadow: "0 6px 20px rgba(0,0,0,0.12)", position: "relative" }}>
