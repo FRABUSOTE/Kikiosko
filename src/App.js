@@ -1911,40 +1911,15 @@ useEffect(() => {
 </div>
 </div>
 
-{/* ✅ PRODUCTO SELECCIONADO — pantalla individual */}
+{/* ✅ PRODUCTO SELECCIONADO — muestra como card normal */}
 {mostrarResultados && productoSeleccionado && (
-  <div style={{ padding: "14px" }}>
+  <div style={{ padding: "10px 10px 100px" }}>
     <button onClick={() => { setProductoSeleccionado(null); setMostrarResultados(false); }}
       style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#6B7280", fontSize: 12, fontWeight: 700, cursor: "pointer", marginBottom: 14 }}>
       ← Volver al buscador
     </button>
-    <div style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}>
-      {productoSeleccionado.foto && (
-        <img src={productoSeleccionado.foto} alt={productoSeleccionado.nombre} style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", display: "block" }} />
-      )}
-      {!productoSeleccionado.foto && (
-        <div style={{ width: "100%", aspectRatio: "1/1", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 80 }}>
-          {productoSeleccionado.emoji || "📦"}
-        </div>
-      )}
-      <div style={{ padding: "16px" }}>
-        <p style={{ fontSize: 18, fontWeight: 900, color: "#111827", marginBottom: 6 }}>{productoSeleccionado.nombre}</p>
-        {productoSeleccionado.descripcion && (
-          <p style={{ fontSize: 13, color: "#6B7280", lineHeight: 1.6, marginBottom: 12 }}>{productoSeleccionado.descripcion}</p>
-        )}
-        <p style={{ fontSize: 22, fontWeight: 900, color: "#2563EB", marginBottom: 16 }}>S/. {Number(productoSeleccionado.precio).toFixed(2)}</p>
-        <button
-          onClick={() => {
-            const key = `${productoSeleccionado.id}-unica`;
-            agregar(productoSeleccionado, null);
-            setMostrarResultados(false);
-            setProductoSeleccionado(null);
-            setBusqueda("");
-          }}
-          style={{ width: "100%", background: "#fff", color: "#2563EB", border: "1.5px solid #2563EB", padding: "12px", borderRadius: 10, fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "Nunito, sans-serif" }}>
-          🛒 Agregar al carrito
-        </button>
-      </div>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
+      <ProductoCard key={productoSeleccionado.id} p={productoSeleccionado} />
     </div>
   </div>
 )}
