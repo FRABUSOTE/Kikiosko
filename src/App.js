@@ -1597,7 +1597,10 @@ useEffect(() => {
 
   const categoriasDeMadre = ["Todos", ...new Set(productosFiltradosPorMadre.map(p => p.categoria).filter(Boolean))];
   const productosFiltrados = productosFiltradosPorMadre
-    .filter(p => categoria === "Todos" || p.categoria === categoria)
+    .filter(p => {
+      if (categoria === "__ofertas__") return p.oferta;
+      return categoria === "Todos" || p.categoria === categoria;
+    })
     .filter(p => busqueda === "" || p.nombre.toLowerCase().includes(busqueda.toLowerCase()));
 
   const ProductoCard = ({ p }) => {
@@ -2001,16 +2004,26 @@ useEffect(() => {
 )}
 
           <div style={{ display: "flex", gap: 8, padding: "10px 12px", overflowX: "auto", overflowY: "hidden", background: "#f9fafb", width: "100%", maxWidth: "100vw", boxSizing: "border-box" }}>
-            {categoriasDeMadre.map(cat => (
-              <button key={cat} onClick={() => setCategoria(cat)}
-                style={{ flexShrink: 0, padding: "7px 16px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: 13,
-                  background: categoria === cat ? "#1D4ED8" : "#fff",
-                  color: categoria === cat ? "#fff" : "#374151",
-                   boxShadow: categoria === cat ? "0 2px 8px rgba(37,99,235,0.3)" : "0 1px 4px rgba(0,0,0,0.06)" }}>
-                {cat}
-              </button>
-            ))}
-          </div>
+  
+  <button onClick={() => setCategoria("__ofertas__")}
+    style={{ flexShrink: 0, padding: "7px 16px", borderRadius: 999, cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: 13,
+      background: categoria === "__ofertas__" ? "#dc2626" : "#fff",
+      color: categoria === "__ofertas__" ? "#fff" : "#dc2626",
+      border: categoria === "__ofertas__" ? "none" : "1.5px solid #fecaca",
+      boxShadow: categoria === "__ofertas__" ? "0 2px 8px rgba(220,38,38,0.3)" : "0 1px 4px rgba(0,0,0,0.06)" }}>
+    🏷️ Ofertas
+  </button>
+
+  {categoriasDeMadre.map(cat => (
+    <button key={cat} onClick={() => setCategoria(cat)}
+      style={{ flexShrink: 0, padding: "7px 16px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: 13,
+        background: categoria === cat ? "#1D4ED8" : "#fff",
+        color: categoria === cat ? "#fff" : "#374151",
+        boxShadow: categoria === cat ? "0 2px 8px rgba(37,99,235,0.3)" : "0 1px 4px rgba(0,0,0,0.06)" }}>
+      {cat}
+    </button>
+  ))}
+</div>
 
           <div className="productos-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, padding: "10px 10px 100px", width: "100%", maxWidth: "100vw", boxSizing: "border-box" }}>
             {productosFiltrados.length === 0
