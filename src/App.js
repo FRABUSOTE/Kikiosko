@@ -2102,7 +2102,7 @@ useEffect(() => {
   </div>
 )}
 
-      {!mostrarResultados && madreActiva === null ? (
+      {madreActiva === null ? (
         <div>
 
     {/* BANNER PROMOCIONAL */}
