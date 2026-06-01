@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { supabase } from "./supabase";
 import { QRCodeSVG as QRCode } from "qrcode.react";
 import imageCompression from "browser-image-compression";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const SUPERADMIN = { email: "admin@kikiosko.pe", clave: "admin123" };
 const PLANES = [
@@ -876,6 +877,8 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
   const [modalBiblioteca, setModalBiblioteca] = useState(false);
   const [bibliotecaFotos, setBibliotecaFotos] = useState([]);
   const [busquedaBiblioteca, setBusquedaBiblioteca] = useState("");
+  const [pedidosData, setPedidosData] = useState([]);
+  const [filtroPedidos, setFiltroPedidos] = useState("semana");
 
   const categoriasExistentes = [...new Set(productos.map(p => p.categoria))].filter(Boolean);
   const categoriasParaMostrar = categoriasExistentes.length > 0 ? categoriasExistentes : ["Bebidas", "SnackioskosConProductos", "Abarrotes", "Otros"];
@@ -889,6 +892,14 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
     supabase.from("categorias_madre").select("*").eq("kiosko_id", kiosko.id).order("orden")
       .then(({ data }) => setCatMadres(data || []));
   }, [kiosko.id]);
+
+  useEffect(() => {
+  supabase.from("pedidos")
+    .select("*")
+    .eq("kiosko_id", kiosko.id)
+    .order("created_at", { ascending: true })
+    .then(({ data }) => setPedidosData(data || []));
+}, [kiosko.id]);
 
   const mostrarToast = (msg, tipo = "ok") => { setToast({ msg, tipo }); setTimeout(() => setToast(null), 2500); };
   const actualizarProductos = (nuevos) => { setProductos(nuevos); onProductosChange(nuevos); };
@@ -963,6 +974,89 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
     setModalTienda(false);
   };
 
+  const calcularDatosGrafico = () => {
+  const ahora = new Date();
+  let labels = [];
+  let datos = [];
+
+  if (filtroPedidos === "dia") {
+    // Últimas 24 horas por hora
+    for (let i = 23; i >= 0; i--) {
+      const hora = new Date(ahora);
+      hora.setHours(ahora.getHours() - i, 0, 0, 0);
+      const horaFin = new Date(hora);
+      horaFin.setHours(hora.getHours() + 1);
+      const count = pedidosData.filter(p => {
+        const d = new Date(p.created_at);
+        return d >= hora && d < horaFin;
+      }).length;
+      const total = pedidosData.filter(p => {
+        const d = new Date(p.created_at);
+        return d >= hora && d < horaFin;
+      }).reduce((s, p) => s + Number(p.total || 0), 0);
+      labels.push(`${hora.getHours()}h`);
+      datos.push({ label: `${hora.getHours()}:00`, pedidos: count, total: Number(total.toFixed(2)) });
+    }
+  } else if (filtroPedidos === "semana") {
+    // Últimos 7 días
+    const dias = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+    for (let i = 6; i >= 0; i--) {
+      const dia = new Date(ahora);
+      dia.setDate(ahora.getDate() - i);
+      dia.setHours(0, 0, 0, 0);
+      const diaFin = new Date(dia);
+      diaFin.setDate(dia.getDate() + 1);
+      const count = pedidosData.filter(p => {
+        const d = new Date(p.created_at);
+        return d >= dia && d < diaFin;
+      }).length;
+      const total = pedidosData.filter(p => {
+        const d = new Date(p.created_at);
+        return d >= dia && d < diaFin;
+      }).reduce((s, p) => s + Number(p.total || 0), 0);
+      datos.push({ label: dias[dia.getDay()], pedidos: count, total: Number(total.toFixed(2)) });
+    }
+  } else if (filtroPedidos === "mes") {
+    // Últimos 30 días
+    for (let i = 29; i >= 0; i--) {
+      const dia = new Date(ahora);
+      dia.setDate(ahora.getDate() - i);
+      dia.setHours(0, 0, 0, 0);
+      const diaFin = new Date(dia);
+      diaFin.setDate(dia.getDate() + 1);
+      const count = pedidosData.filter(p => {
+        const d = new Date(p.created_at);
+        return d >= dia && d < diaFin;
+      }).length;
+      const total = pedidosData.filter(p => {
+        const d = new Date(p.created_at);
+        return d >= dia && d < diaFin;
+      }).reduce((s, p) => s + Number(p.total || 0), 0);
+      datos.push({ label: `${dia.getDate()}/${dia.getMonth()+1}`, pedidos: count, total: Number(total.toFixed(2)) });
+    }
+  } else if (filtroPedidos === "año") {
+    // Últimos 12 meses
+    const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+    for (let i = 11; i >= 0; i--) {
+      const mes = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1);
+      const mesFin = new Date(ahora.getFullYear(), ahora.getMonth() - i + 1, 1);
+      const count = pedidosData.filter(p => {
+        const d = new Date(p.created_at);
+        return d >= mes && d < mesFin;
+      }).length;
+      const total = pedidosData.filter(p => {
+        const d = new Date(p.created_at);
+        return d >= mes && d < mesFin;
+      }).reduce((s, p) => s + Number(p.total || 0), 0);
+      datos.push({ label: meses[mes.getMonth()], pedidos: count, total: Number(total.toFixed(2)) });
+    }
+  }
+  return datos;
+};
+
+const datosGrafico = calcularDatosGrafico();
+const totalPeriodo = datosGrafico.reduce((s, d) => s + d.pedidos, 0);
+const ventasPeriodo = datosGrafico.reduce((s, d) => s + d.total, 0);
   return (
     <div style={{ minHeight: "100vh", background: "#F8FAFC", fontFamily: "'Nunito', sans-serif", color: "#111827" }}>
       <style>{`
@@ -1010,12 +1104,13 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
       </div>
 
       <div style={{ maxWidth: 800, margin: "0 auto", padding: "24px 20px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 20 }}>
           {[
-            { label: "Total productos", val: productos.length, color: "#111827", icon: "📦" },
-            { label: "En stock", val: productos.filter(p => p.stock).length, color: "#059669", icon: "✅" },
-            { label: "Sin stock", val: productos.filter(p => !p.stock).length, color: "#dc2626", icon: "❌" },
-          ].map(s => (
+  { label: "Total productos", val: productos.length, color: "#111827", icon: "📦" },
+  { label: "En stock", val: productos.filter(p => p.stock).length, color: "#059669", icon: "✅" },
+  { label: "Sin stock", val: productos.filter(p => !p.stock).length, color: "#dc2626", icon: "❌" },
+  { label: "Pedidos totales", val: pedidosData.length, color: "#2563EB", icon: "🛒" },
+].map(s => (
             <div key={s.label} className="card" style={{ padding: "14px 16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                 <p style={{ fontSize: 10, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>{s.label}</p>
@@ -1066,6 +1161,56 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
             </div>
           </div>
         )}
+
+        {/* ✅ GRÁFICO DE PEDIDOS */}
+<div className="card" style={{ padding: "16px 20px", marginBottom: 16 }}>
+  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+    <div>
+      <p style={{ fontWeight: 900, fontSize: 15, color: "#111827", margin: 0 }}>📈 Mis pedidos</p>
+      <p style={{ fontSize: 11, color: "#9ca3af", margin: "2px 0 0" }}>
+        {totalPeriodo} pedidos · S/. {ventasPeriodo.toFixed(2)} en ventas
+      </p>
+    </div>
+    <div style={{ display: "flex", gap: 4 }}>
+      {[["dia","Día"],["semana","Semana"],["mes","Mes"],["año","Año"]].map(([val, label]) => (
+        <button key={val} className="btn"
+          onClick={() => setFiltroPedidos(val)}
+          style={{ padding: "5px 10px", fontSize: 11, background: filtroPedidos === val ? "#2563EB" : "#F8FAFC", color: filtroPedidos === val ? "#fff" : "#6B7280", border: `1px solid ${filtroPedidos === val ? "#2563EB" : "#E5E7EB"}` }}>
+          {label}
+        </button>
+      ))}
+    </div>
+  </div>
+
+  {pedidosData.length === 0 ? (
+    <div style={{ textAlign: "center", padding: "30px 0", color: "#9ca3af" }}>
+      <p style={{ fontSize: 32, marginBottom: 8 }}>📊</p>
+      <p style={{ fontSize: 13, fontWeight: 700 }}>Sin pedidos aún</p>
+      <p style={{ fontSize: 11, marginTop: 4 }}>Los pedidos aparecerán aquí cuando tus clientes compren</p>
+    </div>
+  ) : (
+    (() => {
+      const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = require("recharts");
+      return (
+        <ResponsiveContainer width="100%" height={180}>
+          <LineChart data={datosGrafico} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#9ca3af" }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+            <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} tickLine={false} axisLine={false} allowDecimals={false} />
+            <Tooltip
+              contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 12 }}
+              formatter={(value, name) => [
+                name === "pedidos" ? `${value} pedidos` : `S/. ${value}`,
+                name === "pedidos" ? "Pedidos" : "Ventas"
+              ]}
+            />
+            <Line type="monotone" dataKey="pedidos" stroke="#2563EB" strokeWidth={2.5} dot={{ fill: "#2563EB", r: 3 }} activeDot={{ r: 5 }} />
+          </LineChart>
+        </ResponsiveContainer>
+      );
+    })()
+  )}
+</div>
 
         <div className="card" style={{ overflow: "hidden" }}>
           {productos.length === 0 ? (
