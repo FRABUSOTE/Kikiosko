@@ -1967,36 +1967,36 @@ useEffect(() => {
 
       {/* HEADER AZUL */}
       <div style={{ background: "#fff", position: "sticky", top: 0, zIndex: 40, boxShadow: "0 4px 16px rgba(0,0,0,0.08)", borderRadius: "0 0 20px 20px" }}>
-  {/* FILA 1 — Logo + Nombre negocio + Carrito */}
-  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px 8px" }}>
-    {/* Izquierda — Logo + botón volver */}
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      {onSalir && (
-        <button onClick={onSalir} style={{ background: "#f1f5f9", border: "none", color: "#374151", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>←</button>
-      )}
-      {madreActiva && madreActiva !== "sin_madre" && (
-        <button onClick={volverInicio} style={{ background: "#f1f5f9", border: "none", color: "#374151", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>←</button>
-      )}
-      <img src="/logo.png" style={{ height: 28, objectFit: "contain" }} alt="KiKiosko" />
-    </div>
-
-    {/* Centro — Nombre y descripción negocio */}
-    <div style={{ flex: 1, textAlign: "center", minWidth: 0, padding: "0 8px" }}>
-      <p style={{ margin: 0, fontSize: 13, fontWeight: 900, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{kiosko.nombre}</p>
-      {kiosko.info_tienda?.descripcion && (
-        <p style={{ margin: 0, fontSize: 10, color: "#9ca3af", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{kiosko.info_tienda.descripcion}</p>
-      )}
-    </div>
-
-    {/* Derecha — Carrito */}
-    <button onClick={() => totalItems > 0 && setVerCarrito(true)}
-      style={{ position: "relative", background: "#eff6ff", border: "none", color: "#2563EB", width: 38, height: 38, borderRadius: 10, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-      🛒
-      {totalItems > 0 && (
-        <span style={{ position: "absolute", top: -4, right: -4, background: "#F59E0B", color: "#fff", fontSize: 10, fontWeight: 900, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>{totalItems}</span>
-      )}
-    </button>
+  {/* FILA 1 — Logo + botones + Carrito */}
+<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px 6px" }}>
+  {/* Izquierda — botones volver */}
+  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+    {onSalir && (
+      <button onClick={onSalir} style={{ background: "#f1f5f9", border: "none", color: "#374151", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>←</button>
+    )}
+    {madreActiva && madreActiva !== "sin_madre" && (
+      <button onClick={volverInicio} style={{ background: "#f1f5f9", border: "none", color: "#374151", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>←</button>
+    )}
+    <img src="/logo.png" style={{ height: 26, objectFit: "contain" }} alt="KiKiosko" />
   </div>
+
+  {/* Derecha — Carrito */}
+  <button onClick={() => totalItems > 0 && setVerCarrito(true)}
+    style={{ position: "relative", background: "#eff6ff", border: "none", color: "#2563EB", width: 38, height: 38, borderRadius: 10, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+    🛒
+    {totalItems > 0 && (
+      <span style={{ position: "absolute", top: -4, right: -4, background: "#F59E0B", color: "#fff", fontSize: 10, fontWeight: 900, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>{totalItems}</span>
+    )}
+  </button>
+</div>
+
+{/* FILA 2 — Nombre tienda completo */}
+<div style={{ padding: "0 14px 8px", textAlign: "center" }}>
+  <p style={{ margin: 0, fontSize: 14, fontWeight: 900, color: "#111827", lineHeight: 1.3 }}>{kiosko.nombre}</p>
+  {kiosko.info_tienda?.descripcion && (
+    <p style={{ margin: 0, fontSize: 11, color: "#9ca3af", fontWeight: 600, marginTop: 2 }}>{kiosko.info_tienda.descripcion}</p>
+  )}
+</div>
 
   {/* FILA 2 — Buscador con dropdown */}
 <div style={{ padding: "0 14px 12px", position: "relative" }}>
