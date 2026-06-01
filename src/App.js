@@ -2103,25 +2103,77 @@ useEffect(() => {
 )}
 
       {!mostrarResultados && madreActiva === null ? (
-        <div style={{ padding: "16px" }}>
-          <div style={{ textAlign: "center", marginBottom: 20, paddingTop: 8 }}>
-            <p style={{ fontSize: 14, color: "#9ca3af" }}>¿Qué estás buscando hoy?</p>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14 }}>
-            {catMadres.map(madre => (
-              <button key={madre.id} onClick={() => entrarMadre(madre.nombre)}
-                style={{ background: "#fff", borderRadius: 18, overflow: "hidden", border: "none", cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.08)", padding: 0, textAlign: "left" }}>
-                <div style={{ width: "100%", aspectRatio: "16/9", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                  {madre.imagen_url ? <img src={madre.imagen_url} alt={madre.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 48 }}>🗂</span>}
-                </div>
-                <div style={{ padding: "10px 14px 12px" }}>
-                  <p style={{ fontWeight: 800, fontSize: 14, color: "#111827", margin: 0 }}>{madre.nombre}</p>
-                  <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{kiosko.productos.filter(p => p.madre === madre.nombre).length} productos</p>
-                </div>
-              </button>
-            ))}
-          </div>
+        <div>
+
+    {/* BANNER PROMOCIONAL */}
+    {kiosko.banner && kiosko.plan !== "Básico" && (
+      <div style={{ padding: "12px 14px 0" }}>
+        <div style={{ borderRadius: 18, overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.10)" }}>
+          <img src={kiosko.banner} alt="banner" style={{ width: "100%", aspectRatio: "16/7", objectFit: "cover", display: "block" }} />
         </div>
+      </div>
+    )}
+
+    {/* FILA DE BENEFICIOS */}
+    <div style={{ margin: "12px 14px", background: "#fff", borderRadius: 14, border: "1px solid #f1f5f9", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", display: "flex", overflow: "hidden" }}>
+      
+      {/* Delivery */}
+      <div style={{ flex: 1, padding: "10px 8px", textAlign: "center", borderRight: "1px solid #f1f5f9" }}>
+        <div style={{ width: 32, height: 32, background: "#dbeafe", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 4px", fontSize: 16 }}>🛵</div>
+        <p style={{ fontSize: 11, fontWeight: 800, color: "#111827", margin: 0 }}>Delivery</p>
+        <p style={{ fontSize: 9, color: kiosko.info_tienda?.delivery === "si" ? "#059669" : "#9ca3af", fontWeight: 700, margin: "2px 0 0" }}>
+          {kiosko.info_tienda?.delivery === "si" ? kiosko.info_tienda?.delivery_tiempo || "Disponible" : "No disponible"}
+        </p>
+      </div>
+
+      {/* Pagos */}
+      <div style={{ flex: 1, padding: "10px 8px", textAlign: "center", borderRight: "1px solid #f1f5f9" }}>
+        <div style={{ width: 32, height: 32, background: "#dcfce7", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 4px", fontSize: 16 }}>📱</div>
+        <p style={{ fontSize: 11, fontWeight: 800, color: "#111827", margin: 0 }}>Pagos</p>
+        <p style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, margin: "2px 0 0" }}>
+          {kiosko.datos_pago?.yape_numero ? "Yape / Plin" : "Efectivo"}
+          {kiosko.datos_pago?.banco ? " · Banco" : ""}
+        </p>
+      </div>
+
+      {/* Productos */}
+      <div style={{ flex: 1, padding: "10px 8px", textAlign: "center" }}>
+        <div style={{ width: 32, height: 32, background: "#fef9c3", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 4px", fontSize: 16 }}>✅</div>
+        <p style={{ fontSize: 11, fontWeight: 800, color: "#111827", margin: 0 }}>Productos</p>
+        <p style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, margin: "2px 0 0" }}>
+          {kiosko.productos.filter(p => p.stock).length} disponibles
+        </p>
+      </div>
+
+    </div>
+
+    {/* TÍTULO CATEGORÍAS */}
+    <div style={{ padding: "4px 14px 12px", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+      <span style={{ fontSize: 14 }}>✨</span>
+      <p style={{ fontSize: 14, fontWeight: 900, color: "#111827", margin: 0 }}>Explora nuestras categorías</p>
+      <span style={{ fontSize: 14 }}>✨</span>
+    </div>
+
+    {/* GRID CATEGORÍAS MADRE */}
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14, padding: "0 14px 20px" }}>
+      {catMadres.map(madre => (
+        <button key={madre.id} onClick={() => entrarMadre(madre.nombre)}
+          style={{ background: "#fff", borderRadius: 18, overflow: "hidden", border: "none", cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.08)", padding: 0, textAlign: "left" }}>
+          <div style={{ width: "100%", aspectRatio: "16/9", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+            {madre.imagen_url
+              ? <img src={madre.imagen_url} alt={madre.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : <span style={{ fontSize: 48 }}>🗂</span>
+            }
+          </div>
+          <div style={{ padding: "10px 14px 12px" }}>
+            <p style={{ fontWeight: 800, fontSize: 14, color: "#111827", margin: 0 }}>{madre.nombre}</p>
+            <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{kiosko.productos.filter(p => p.madre === madre.nombre).length} productos</p>
+          </div>
+        </button>
+      ))}
+    </div>
+
+  </div>
       ) : null}
 
 {!mostrarResultados && madreActiva !== null && (
