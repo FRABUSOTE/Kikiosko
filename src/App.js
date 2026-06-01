@@ -2155,7 +2155,7 @@ useEffect(() => {
     </div>
 
     {/* GRID CATEGORÍAS MADRE */}
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14, padding: "0 14px 20px" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, padding: "0 14px 20px" }}>
       {catMadres.map(madre => (
         <button key={madre.id} onClick={() => entrarMadre(madre.nombre)}
           style={{ background: "#fff", borderRadius: 18, overflow: "hidden", border: "none", cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.08)", padding: 0, textAlign: "left" }}>
