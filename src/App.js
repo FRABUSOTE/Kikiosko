@@ -1674,13 +1674,49 @@ useEffect(() => {
     if (madreActiva && madreActiva !== "sin_madre") window.history.pushState({ madre: madreActiva }, "");
   }, [madreActiva]);
 
+  const estadoRefCatalogo = useRef({});
   useEffect(() => {
+    estadoRefCatalogo.current = { madreActiva, mostrarResultados, productoSeleccionado, busqueda };
+  }, [madreActiva, mostrarResultados, productoSeleccionado, busqueda]);
+
+  useEffect(() => {
+    window.history.pushState({ pagina: "catalogo" }, "");
+    window.history.pushState({ pagina: "catalogo" }, "");
+
     const handleBack = () => {
-      if (madreActiva !== null) { setMadreActiva(null); setBusqueda(""); setCategoria("Todos"); }
+      const { madreActiva, mostrarResultados, productoSeleccionado, busqueda } = estadoRefCatalogo.current;
+
+      if (productoSeleccionado) {
+        setProductoSeleccionado(null);
+        window.history.pushState({ pagina: "catalogo" }, "");
+        return;
+      }
+      if (mostrarResultados) {
+        setMostrarResultados(false);
+        window.history.pushState({ pagina: "catalogo" }, "");
+        return;
+      }
+      if (busqueda) {
+        setBusqueda("");
+        setSugerencias([]);
+        window.history.pushState({ pagina: "catalogo" }, "");
+        return;
+      }
+      if (madreActiva && madreActiva !== "sin_madre") {
+        // ✅ Vuelve a categorías madre
+        setMadreActiva(null);
+        setCategoria("Todos");
+        setBusqueda("");
+        window.history.pushState({ pagina: "catalogo" }, "");
+        return;
+      }
+      // Ya está en inicio → no sale
+      window.history.pushState({ pagina: "catalogo" }, "");
     };
+
     window.addEventListener("popstate", handleBack);
     return () => window.removeEventListener("popstate", handleBack);
-  }, [madreActiva]);
+  }, []);
 
   const entrarMadre = (n) => { setMadreActiva(n); setCategoria("Todos"); setBusqueda(""); };
   const volverInicio = () => { setMadreActiva(null); setBusqueda(""); setCategoria("Todos"); if (window.history.state?.madre) window.history.back(); };
