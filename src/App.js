@@ -1645,6 +1645,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
   const [sugerencias, setSugerencias] = useState([]);
   const [mostrarResultados, setMostrarResultados] = useState(false);
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
+  const [cargandoMadres, setCargandoMadres] = useState(true);
 
   useEffect(() => {
     supabase.from("categorias_madre").select("*").eq("kiosko_id", kiosko.id).order("orden")
@@ -1652,6 +1653,7 @@ function CatalogoCliente({ kiosko, onSalir }) {
         const madres = data || [];
         setCatMadres(madres);
         if (madres.length === 0) setMadreActiva("sin_madre");
+        setCargandoMadres(false);
       });
   }, [kiosko.id]);
 
@@ -2102,7 +2104,7 @@ useEffect(() => {
   </div>
 )}
 
-      {madreActiva === null ? (
+      {!cargandoMadres && madreActiva === null ? (
         <div>
 
     {/* BANNER PROMOCIONAL */}
