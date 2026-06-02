@@ -1680,38 +1680,35 @@ useEffect(() => {
   }, [madreActiva, mostrarResultados, productoSeleccionado, busqueda]);
 
   useEffect(() => {
-    window.history.pushState({ pagina: "catalogo" }, "");
-    window.history.pushState({ pagina: "catalogo" }, "");
+    window.history.pushState({ pagina: "condominio" }, "");
+    window.history.pushState({ pagina: "condominio" }, "");
 
     const handleBack = () => {
-      const { madreActiva, mostrarResultados, productoSeleccionado, busqueda } = estadoRefCatalogo.current;
+      const { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo } = estadoRef.current;
 
-      if (productoSeleccionado) {
-        setProductoSeleccionado(null);
-        window.history.pushState({ pagina: "catalogo" }, "");
+      // ✅ Si hay kiosko abierto, NO hacer nada
+      // CatalogoCliente maneja su propio atrás
+      if (kioskoSeleccionado) {
+        window.history.pushState({ pagina: "condominio" }, "");
         return;
       }
       if (mostrarResultados) {
         setMostrarResultados(false);
-        window.history.pushState({ pagina: "catalogo" }, "");
+        window.history.pushState({ pagina: "condominio" }, "");
         return;
       }
       if (busqueda) {
         setBusqueda("");
-        setSugerencias([]);
-        window.history.pushState({ pagina: "catalogo" }, "");
+        setResultadosBusqueda([]);
+        window.history.pushState({ pagina: "condominio" }, "");
         return;
       }
-      if (madreActiva && madreActiva !== "sin_madre") {
-        // ✅ Vuelve a categorías madre
-        setMadreActiva(null);
-        setCategoria("Todos");
-        setBusqueda("");
-        window.history.pushState({ pagina: "catalogo" }, "");
+      if (rubroActivo) {
+        setRubroActivo(null);
+        window.history.pushState({ pagina: "condominio" }, "");
         return;
       }
-      // Ya está en inicio → no sale
-      window.history.pushState({ pagina: "catalogo" }, "");
+      window.history.pushState({ pagina: "condominio" }, "");
     };
 
     window.addEventListener("popstate", handleBack);
@@ -1719,7 +1716,11 @@ useEffect(() => {
   }, []);
 
   const entrarMadre = (n) => { setMadreActiva(n); setCategoria("Todos"); setBusqueda(""); };
-  const volverInicio = () => { setMadreActiva(null); setBusqueda(""); setCategoria("Todos"); if (window.history.state?.madre) window.history.back(); };
+  const volverInicio = () => {
+  setMadreActiva(null);
+  setBusqueda("");
+  setCategoria("Todos");
+};
 
   const agregar = (p, variacion) => {
     const key = variacion ? `${p.id}-${variacion.nombre}` : `${p.id}-unica`;
