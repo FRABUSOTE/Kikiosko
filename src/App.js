@@ -1677,19 +1677,26 @@ useEffect(() => {
 }, [madreActiva, mostrarResultados, productoSeleccionado, busqueda]);
 
 useEffect(() => {
-  window.history.pushState(null, "", window.location.href);
+  // Empujar 2 estados al montar
+  window.history.pushState({ app: true }, "");
+  window.history.pushState({ app: true }, "");
 
   const handleBack = () => {
-    // ✅ replaceState en lugar de pushState
-    window.history.replaceState(null, "", window.location.href);
-    window.history.pushState(null, "", window.location.href);
+    const { madreActiva, mostrarResultados, productoSeleccionado, busqueda } = estadoRefCatalogo.current;
 
-    const { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo } = estadoRef.current;
+    // Siempre reponer 2 estados
+    window.history.pushState({ app: true }, "");
+    window.history.pushState({ app: true }, "");
 
-    if (kioskoSeleccionado) return;
+    if (productoSeleccionado) { setProductoSeleccionado(null); return; }
     if (mostrarResultados) { setMostrarResultados(false); return; }
-    if (busqueda) { setBusqueda(""); setResultadosBusqueda([]); return; }
-    if (rubroActivo) { setRubroActivo(null); return; }
+    if (busqueda) { setBusqueda(""); setSugerencias([]); return; }
+    if (madreActiva && madreActiva !== "sin_madre") {
+      setMadreActiva(null);
+      setCategoria("Todos");
+      return;
+    }
+    if (onSalir) onSalir();
   };
 
   window.addEventListener("popstate", handleBack);
@@ -2394,24 +2401,25 @@ useEffect(() => {
 }, [kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo]);
 
 useEffect(() => {
-  window.history.pushState(null, "", window.location.href);
+  window.history.pushState({ app: true }, "");
+  window.history.pushState({ app: true }, "");
 
   const handleBack = () => {
-    // ✅ replaceState en lugar de pushState
-    window.history.replaceState(null, "", window.location.href);
-    window.history.pushState(null, "", window.location.href);
+    const { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo } = estadoRef.current;
 
-    const { madreActiva, mostrarResultados, productoSeleccionado, busqueda } = estadoRefCatalogo.current;
-
-    if (productoSeleccionado) { setProductoSeleccionado(null); return; }
-    if (mostrarResultados) { setMostrarResultados(false); return; }
-    if (busqueda) { setBusqueda(""); setSugerencias([]); return; }
-    if (madreActiva && madreActiva !== "sin_madre") {
-      setMadreActiva(null);
-      setCategoria("Todos");
-      return;
+    if (!kioskoSeleccionado) {
+      window.history.pushState({ app: true }, "");
+      window.history.pushState({ app: true }, "");
     }
-    if (onSalir) onSalir();
+
+    if (kioskoSeleccionado) return;
+    if (mostrarResultados) { setMostrarResultados(false); return; }
+    if (busqueda) { setBusqueda(""); setResultadosBusqueda([]); return; }
+    if (rubroActivo) { setRubroActivo(null); return; }
+    
+    // En inicio siempre reponer
+    window.history.pushState({ app: true }, "");
+    window.history.pushState({ app: true }, "");
   };
 
   window.addEventListener("popstate", handleBack);
