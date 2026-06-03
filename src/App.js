@@ -1676,56 +1676,29 @@ useEffect(() => {
   estadoRefCatalogo.current = { madreActiva, mostrarResultados, productoSeleccionado, busqueda };
 }, [madreActiva, mostrarResultados, productoSeleccionado, busqueda]);
 
-// ✅ ÚNICO manejador botón atrás del celular
 useEffect(() => {
-  // Llenar historial inicial
-  for (let i = 0; i < 10; i++) {
-    window.history.pushState({ nivel: i }, "");
-  }
+  // Bloquear salida con un estado fijo
+  window.history.pushState(null, "", window.location.href);
 
-  // Mantener historial siempre lleno
-  const intervalo = setInterval(() => {
-    window.history.pushState({ nivel: 99 }, "");
-  }, 500);
+  const handleBack = (e) => {
+    // Siempre bloquear la salida
+    window.history.pushState(null, "", window.location.href);
 
-  const handleBack = () => {
     const { madreActiva, mostrarResultados, productoSeleccionado, busqueda } = estadoRefCatalogo.current;
 
-    // Reponer historial inmediatamente
-    window.history.pushState({ nivel: 1 }, "");
-    window.history.pushState({ nivel: 2 }, "");
-    window.history.pushState({ nivel: 3 }, "");
-
-    if (productoSeleccionado) {
-      setProductoSeleccionado(null);
-      return;
-    }
-    if (mostrarResultados) {
-      setMostrarResultados(false);
-      return;
-    }
-    if (busqueda) {
-      setBusqueda("");
-      setSugerencias([]);
-      return;
-    }
+    if (productoSeleccionado) { setProductoSeleccionado(null); return; }
+    if (mostrarResultados) { setMostrarResultados(false); return; }
+    if (busqueda) { setBusqueda(""); setSugerencias([]); return; }
     if (madreActiva && madreActiva !== "sin_madre") {
       setMadreActiva(null);
       setCategoria("Todos");
       return;
     }
-    // Inicio del kiosko → volver al condominio
-    if (onSalir) {
-      clearInterval(intervalo);
-      onSalir();
-    }
+    if (onSalir) onSalir();
   };
 
   window.addEventListener("popstate", handleBack);
-  return () => {
-    window.removeEventListener("popstate", handleBack);
-    clearInterval(intervalo);
-  };
+  return () => window.removeEventListener("popstate", handleBack);
 }, []);
 
   const entrarMadre = (n) => { setMadreActiva(n); setCategoria("Todos"); setBusqueda(""); };
@@ -2419,67 +2392,22 @@ useEffect(() => {
   }
 }, [kioskoDirecto]);
 
-// ✅ Manejo del botón atrás del celular integrado y limpio
-   // ✅ Ref para leer estados actuales
-const estadoRef = useRef({});
 useEffect(() => {
-  estadoRef.current = { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo };
-}, [kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo]);
-
-useEffect(() => {
-  // Llenar historial inicial
-  for (let i = 0; i < 10; i++) {
-    window.history.pushState({ nivel: i }, "");
-  }
-
-  // Mantener historial siempre lleno
-  const intervalo = setInterval(() => {
-    const { kioskoSeleccionado } = estadoRef.current;
-    // Solo mantener si NO hay kiosko abierto
-    // (CatalogoCliente maneja el suyo)
-    if (!kioskoSeleccionado) {
-      window.history.pushState({ nivel: 99 }, "");
-    }
-  }, 500);
+  window.history.pushState(null, "", window.location.href);
 
   const handleBack = () => {
+    window.history.pushState(null, "", window.location.href);
+
     const { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo } = estadoRef.current;
 
-    // Reponer historial inmediatamente
-    if (!kioskoSeleccionado) {
-      window.history.pushState({ nivel: 1 }, "");
-      window.history.pushState({ nivel: 2 }, "");
-      window.history.pushState({ nivel: 3 }, "");
-    }
-
-    if (kioskoSeleccionado) {
-      window.history.pushState({ nivel: 2 }, "");
-      return;
-    }
-    if (mostrarResultados) {
-      setMostrarResultados(false);
-      return;
-    }
-    if (busqueda) {
-      setBusqueda("");
-      setResultadosBusqueda([]);
-      return;
-    }
-    if (rubroActivo) {
-      setRubroActivo(null);
-      return;
-    }
-    // En inicio → no salir, reponer
-    window.history.pushState({ nivel: 1 }, "");
-    window.history.pushState({ nivel: 2 }, "");
-    window.history.pushState({ nivel: 3 }, "");
+    if (kioskoSeleccionado) return;
+    if (mostrarResultados) { setMostrarResultados(false); return; }
+    if (busqueda) { setBusqueda(""); setResultadosBusqueda([]); return; }
+    if (rubroActivo) { setRubroActivo(null); return; }
   };
 
   window.addEventListener("popstate", handleBack);
-  return () => {
-    window.removeEventListener("popstate", handleBack);
-    clearInterval(intervalo);
-  };
+  return () => window.removeEventListener("popstate", handleBack);
 }, []);
 
   // ✅ Búsqueda — solo calcula resultados, NO muestra pantalla
