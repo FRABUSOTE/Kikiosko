@@ -1670,23 +1670,10 @@ useEffect(() => {
   return () => clearTimeout(timeout);
 }, [busqueda]);
 
-// ✅ Ref para leer estados actuales
-const estadoRefCatalogo = useRef({});
+// ✅ Escucha evento custom del padre
 useEffect(() => {
-  estadoRefCatalogo.current = { madreActiva, mostrarResultados, productoSeleccionado, busqueda };
-}, [madreActiva, mostrarResultados, productoSeleccionado, busqueda]);
-
-useEffect(() => {
-  // Empujar 2 estados al montar
-  window.history.pushState({ app: true }, "");
-  window.history.pushState({ app: true }, "");
-
-  const handleBack = () => {
+  const onBack = () => {
     const { madreActiva, mostrarResultados, productoSeleccionado, busqueda } = estadoRefCatalogo.current;
-
-    // Siempre reponer 2 estados
-    window.history.pushState({ app: true }, "");
-    window.history.pushState({ app: true }, "");
 
     if (productoSeleccionado) { setProductoSeleccionado(null); return; }
     if (mostrarResultados) { setMostrarResultados(false); return; }
@@ -1699,8 +1686,8 @@ useEffect(() => {
     if (onSalir) onSalir();
   };
 
-  window.addEventListener("popstate", handleBack);
-  return () => window.removeEventListener("popstate", handleBack);
+  window.addEventListener("katalogo-back", onBack);
+  return () => window.removeEventListener("katalogo-back", onBack);
 }, []);
 
   const entrarMadre = (n) => { setMadreActiva(n); setCategoria("Todos"); setBusqueda(""); };
@@ -2394,36 +2381,28 @@ useEffect(() => {
   }
 }, [kioskoDirecto]);
 
-// ✅ Ref estados actuales
-const estadoRef = useRef({});
+// ✅ UN SOLO listener en el documento
 useEffect(() => {
-  estadoRef.current = { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo };
-}, [kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo]);
-
-useEffect(() => {
-  window.history.pushState({ app: true }, "");
-  window.history.pushState({ app: true }, "");
-
-  const handleBack = () => {
-    const { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo } = estadoRef.current;
-
-    if (!kioskoSeleccionado) {
-      window.history.pushState({ app: true }, "");
-      window.history.pushState({ app: true }, "");
-    }
-
-    if (kioskoSeleccionado) return;
-    if (mostrarResultados) { setMostrarResultados(false); return; }
-    if (busqueda) { setBusqueda(""); setResultadosBusqueda([]); return; }
-    if (rubroActivo) { setRubroActivo(null); return; }
-    
-    // En inicio siempre reponer
+  const onBack = (e) => {
+    e.preventDefault();
     window.history.pushState({ app: true }, "");
+    
+    const estado = estadoRef.current;
+    
+    // Si hay kiosko abierto, disparar evento custom al catálogo
+    if (estado.kioskoSeleccionado) {
+      window.dispatchEvent(new CustomEvent("katalogo-back"));
+      return;
+    }
+    if (estado.mostrarResultados) { setMostrarResultados(false); return; }
+    if (estado.busqueda) { setBusqueda(""); setResultadosBusqueda([]); return; }
+    if (estado.rubroActivo) { setRubroActivo(null); return; }
     window.history.pushState({ app: true }, "");
   };
 
-  window.addEventListener("popstate", handleBack);
-  return () => window.removeEventListener("popstate", handleBack);
+  window.history.pushState({ app: true }, "");
+  window.addEventListener("popstate", onBack);
+  return () => window.removeEventListener("popstate", onBack);
 }, []);
 
   // ✅ Búsqueda — solo calcula resultados, NO muestra pantalla
