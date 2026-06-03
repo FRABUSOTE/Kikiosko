@@ -1670,50 +1670,54 @@ useEffect(() => {
   return () => clearTimeout(timeout);
 }, [busqueda]);
 
-  useEffect(() => {
-    if (madreActiva && madreActiva !== "sin_madre") window.history.pushState({ madre: madreActiva }, "");
-  }, [madreActiva]);
+// ✅ Ref para leer estados actuales
+const estadoRefCatalogo = useRef({});
+useEffect(() => {
+  estadoRefCatalogo.current = { madreActiva, mostrarResultados, productoSeleccionado, busqueda };
+}, [madreActiva, mostrarResultados, productoSeleccionado, busqueda]);
 
-  const estadoRefCatalogo = useRef({});
-  useEffect(() => {
-    estadoRefCatalogo.current = { madreActiva, mostrarResultados, productoSeleccionado, busqueda };
-  }, [madreActiva, mostrarResultados, productoSeleccionado, busqueda]);
+// ✅ ÚNICO manejador botón atrás del celular
+useEffect(() => {
+  window.history.pushState({ nivel: 1 }, "");
+  window.history.pushState({ nivel: 2 }, "");
 
-  useEffect(() => {
-    window.history.pushState({ pagina: "condominio" }, "");
-    window.history.pushState({ pagina: "condominio" }, "");
+  const handleBack = () => {
+    const { madreActiva, mostrarResultados, productoSeleccionado, busqueda } = estadoRefCatalogo.current;
 
-    const handleBack = () => {
-      const { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo } = estadoRef.current;
+    if (productoSeleccionado) {
+      setProductoSeleccionado(null);
+      window.history.pushState({ nivel: 2 }, "");
+      return;
+    }
+    if (mostrarResultados) {
+      setMostrarResultados(false);
+      window.history.pushState({ nivel: 2 }, "");
+      return;
+    }
+    if (busqueda) {
+      setBusqueda("");
+      setSugerencias([]);
+      window.history.pushState({ nivel: 2 }, "");
+      return;
+    }
+    if (madreActiva && madreActiva !== "sin_madre") {
+      // ✅ Vuelve a categorías madre
+      setMadreActiva(null);
+      setCategoria("Todos");
+      window.history.pushState({ nivel: 2 }, "");
+      return;
+    }
+    // ✅ Está en inicio → cerrar kiosko y volver al condominio
+    if (onSalir) {
+      onSalir();
+    } else {
+      window.history.pushState({ nivel: 2 }, "");
+    }
+  };
 
-      // ✅ Si hay kiosko abierto, NO hacer nada
-      // CatalogoCliente maneja su propio atrás
-      if (kioskoSeleccionado) {
-        window.history.pushState({ pagina: "condominio" }, "");
-        return;
-      }
-      if (mostrarResultados) {
-        setMostrarResultados(false);
-        window.history.pushState({ pagina: "condominio" }, "");
-        return;
-      }
-      if (busqueda) {
-        setBusqueda("");
-        setResultadosBusqueda([]);
-        window.history.pushState({ pagina: "condominio" }, "");
-        return;
-      }
-      if (rubroActivo) {
-        setRubroActivo(null);
-        window.history.pushState({ pagina: "condominio" }, "");
-        return;
-      }
-      window.history.pushState({ pagina: "condominio" }, "");
-    };
-
-    window.addEventListener("popstate", handleBack);
-    return () => window.removeEventListener("popstate", handleBack);
-  }, []);
+  window.addEventListener("popstate", handleBack);
+  return () => window.removeEventListener("popstate", handleBack);
+}, []);
 
   const entrarMadre = (n) => { setMadreActiva(n); setCategoria("Todos"); setBusqueda(""); };
   const volverInicio = () => {
@@ -2407,48 +2411,51 @@ useEffect(() => {
 }, [kioskoDirecto]);
 
 // ✅ Manejo del botón atrás del celular integrado y limpio
+   // ✅ Ref para leer estados actuales
+const estadoRef = useRef({});
 useEffect(() => {
-  const handlePopState = (event) => {
-    // Si el usuario retrocede y no hay estado de nuestra app, lo dejamos salir de forma natural
-    if (!event.state || event.state.app !== "kiosko-flow") return;
+  estadoRef.current = { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo };
+}, [kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo]);
 
-    const nivelActual = event.state.nivel;
+// ✅ ÚNICO manejador botón atrás
+useEffect(() => {
+  window.history.pushState({ nivel: 1 }, "");
+  window.history.pushState({ nivel: 2 }, "");
 
-    // 1. Si estaba en un kiosko y va hacia atrás, volvemos al rubro/búsqueda
+  const handleBack = () => {
+    const { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo } = estadoRef.current;
+
+    // ✅ Si hay kiosko abierto → NO intervenir
+    // CatalogoCliente maneja su propio atrás
+    // y llama onSalir() cuando llega al inicio
     if (kioskoSeleccionado) {
-      setKioskoSeleccionado(null);
+      window.history.pushState({ nivel: 2 }, "");
       return;
     }
-
-    // 2. Si estaba en un rubro o resultados y va hacia atrás, volvemos al inicio
-    if (rubroActivo || mostrarResultados || busqueda) {
-      setRubroActivo(null);
+    if (mostrarResultados) {
       setMostrarResultados(false);
+      window.history.pushState({ nivel: 2 }, "");
+      return;
+    }
+    if (busqueda) {
       setBusqueda("");
       setResultadosBusqueda([]);
+      window.history.pushState({ nivel: 2 }, "");
       return;
     }
+    if (rubroActivo) {
+      setRubroActivo(null);
+      window.history.pushState({ nivel: 2 }, "");
+      return;
+    }
+    // En inicio → no salir
+    window.history.pushState({ nivel: 2 }, "");
   };
 
-  window.addEventListener("popstate", handlePopState);
-  return () => window.removeEventListener("popstate", handlePopState);
-}, [kioskoSeleccionado, rubroActivo, mostrarResultados, busqueda]);
+  window.addEventListener("popstate", handleBack);
+  return () => window.removeEventListener("popstate", handleBack);
+}, []); // ← Solo se registra UNA vez
 
-// ✅ Este efecto maneja el historial cada vez que cambias de "pantalla"
-useEffect(() => {
-  // Calculamos el nivel de profundidad actual de la vista
-  let nivelActual = 0; // Inicio
-  if (rubroActivo || mostrarResultados || busqueda) nivelActual = 1; // Rubros / Búsquedas
-  if (kioskoSeleccionado) nivelActual = 2; // Dentro de un negocio
-
-  // Solo agregamos una nueva entrada al historial si el estado actual del navegador es diferente
-  if (!window.history.state || window.history.state.nivel !== nivelActual) {
-    window.history.pushState(
-      { app: "kiosko-flow", nivel: nivelActual },
-      ""
-    );
-  }
-}, [kioskoSeleccionado, rubroActivo, mostrarResultados, busqueda]);
 
   // ✅ Búsqueda — solo calcula resultados, NO muestra pantalla
   useEffect(() => {
