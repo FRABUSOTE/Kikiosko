@@ -2392,12 +2392,18 @@ useEffect(() => {
   }
 }, [kioskoDirecto]);
 
+// ✅ Ref estados actuales
+const estadoRef = useRef({});
+useEffect(() => {
+  estadoRef.current = { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo };
+}, [kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo]);
+
+// ✅ ÚNICO manejador botón atrás
 useEffect(() => {
   window.history.pushState(null, "", window.location.href);
 
   const handleBack = () => {
     window.history.pushState(null, "", window.location.href);
-
     const { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo } = estadoRef.current;
 
     if (kioskoSeleccionado) return;
