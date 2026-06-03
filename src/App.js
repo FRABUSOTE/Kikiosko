@@ -1680,6 +1680,9 @@ useEffect(() => {
 useEffect(() => {
   window.history.pushState({ nivel: 1 }, "");
   window.history.pushState({ nivel: 2 }, "");
+  window.history.pushState({ nivel: 3 }, "");
+  window.history.pushState({ nivel: 4 }, "");
+  window.history.pushState({ nivel: 5 }, "");
 
   const handleBack = () => {
     const { madreActiva, mostrarResultados, productoSeleccionado, busqueda } = estadoRefCatalogo.current;
@@ -1709,9 +1712,15 @@ useEffect(() => {
     }
     // ✅ Está en inicio → cerrar kiosko y volver al condominio
     if (onSalir) {
+      // Recargar historial del condominio antes de salir
+      window.history.pushState({ nivel: 1 }, "");
+      window.history.pushState({ nivel: 2 }, "");
+      window.history.pushState({ nivel: 3 }, "");
       onSalir();
     } else {
+      window.history.pushState({ nivel: 1 }, "");
       window.history.pushState({ nivel: 2 }, "");
+      window.history.pushState({ nivel: 3 }, "");
     }
   };
 
@@ -2419,8 +2428,12 @@ useEffect(() => {
 
 // ✅ ÚNICO manejador botón atrás
 useEffect(() => {
+  // Empujar suficientes estados para no salir nunca
   window.history.pushState({ nivel: 1 }, "");
   window.history.pushState({ nivel: 2 }, "");
+  window.history.pushState({ nivel: 3 }, "");
+  window.history.pushState({ nivel: 4 }, "");
+  window.history.pushState({ nivel: 5 }, "");
 
   const handleBack = () => {
     const { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo } = estadoRef.current;
@@ -2448,14 +2461,15 @@ useEffect(() => {
       window.history.pushState({ nivel: 2 }, "");
       return;
     }
-    // En inicio → no salir
+    // En inicio → siempre empujar para nunca salir
+    window.history.pushState({ nivel: 1 }, "");
     window.history.pushState({ nivel: 2 }, "");
+    window.history.pushState({ nivel: 3 }, "");
   };
 
   window.addEventListener("popstate", handleBack);
   return () => window.removeEventListener("popstate", handleBack);
 }, []); // ← Solo se registra UNA vez
-
 
   // ✅ Búsqueda — solo calcula resultados, NO muestra pantalla
   useEffect(() => {
