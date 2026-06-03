@@ -1677,24 +1677,19 @@ useEffect(() => {
 }, [madreActiva, mostrarResultados, productoSeleccionado, busqueda]);
 
 useEffect(() => {
-  // Bloquear salida con un estado fijo
   window.history.pushState(null, "", window.location.href);
 
-  const handleBack = (e) => {
-    // Siempre bloquear la salida
+  const handleBack = () => {
+    // ✅ replaceState en lugar de pushState
+    window.history.replaceState(null, "", window.location.href);
     window.history.pushState(null, "", window.location.href);
 
-    const { madreActiva, mostrarResultados, productoSeleccionado, busqueda } = estadoRefCatalogo.current;
+    const { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo } = estadoRef.current;
 
-    if (productoSeleccionado) { setProductoSeleccionado(null); return; }
+    if (kioskoSeleccionado) return;
     if (mostrarResultados) { setMostrarResultados(false); return; }
-    if (busqueda) { setBusqueda(""); setSugerencias([]); return; }
-    if (madreActiva && madreActiva !== "sin_madre") {
-      setMadreActiva(null);
-      setCategoria("Todos");
-      return;
-    }
-    if (onSalir) onSalir();
+    if (busqueda) { setBusqueda(""); setResultadosBusqueda([]); return; }
+    if (rubroActivo) { setRubroActivo(null); return; }
   };
 
   window.addEventListener("popstate", handleBack);
@@ -2398,18 +2393,25 @@ useEffect(() => {
   estadoRef.current = { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo };
 }, [kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo]);
 
-// ✅ ÚNICO manejador botón atrás
 useEffect(() => {
   window.history.pushState(null, "", window.location.href);
 
   const handleBack = () => {
+    // ✅ replaceState en lugar de pushState
+    window.history.replaceState(null, "", window.location.href);
     window.history.pushState(null, "", window.location.href);
-    const { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo } = estadoRef.current;
 
-    if (kioskoSeleccionado) return;
+    const { madreActiva, mostrarResultados, productoSeleccionado, busqueda } = estadoRefCatalogo.current;
+
+    if (productoSeleccionado) { setProductoSeleccionado(null); return; }
     if (mostrarResultados) { setMostrarResultados(false); return; }
-    if (busqueda) { setBusqueda(""); setResultadosBusqueda([]); return; }
-    if (rubroActivo) { setRubroActivo(null); return; }
+    if (busqueda) { setBusqueda(""); setSugerencias([]); return; }
+    if (madreActiva && madreActiva !== "sin_madre") {
+      setMadreActiva(null);
+      setCategoria("Todos");
+      return;
+    }
+    if (onSalir) onSalir();
   };
 
   window.addEventListener("popstate", handleBack);
