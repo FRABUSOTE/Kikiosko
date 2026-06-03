@@ -1678,54 +1678,54 @@ useEffect(() => {
 
 // ✅ ÚNICO manejador botón atrás del celular
 useEffect(() => {
-  window.history.pushState({ nivel: 1 }, "");
-  window.history.pushState({ nivel: 2 }, "");
-  window.history.pushState({ nivel: 3 }, "");
-  window.history.pushState({ nivel: 4 }, "");
-  window.history.pushState({ nivel: 5 }, "");
+  // Llenar historial inicial
+  for (let i = 0; i < 10; i++) {
+    window.history.pushState({ nivel: i }, "");
+  }
+
+  // Mantener historial siempre lleno
+  const intervalo = setInterval(() => {
+    window.history.pushState({ nivel: 99 }, "");
+  }, 500);
 
   const handleBack = () => {
     const { madreActiva, mostrarResultados, productoSeleccionado, busqueda } = estadoRefCatalogo.current;
 
+    // Reponer historial inmediatamente
+    window.history.pushState({ nivel: 1 }, "");
+    window.history.pushState({ nivel: 2 }, "");
+    window.history.pushState({ nivel: 3 }, "");
+
     if (productoSeleccionado) {
       setProductoSeleccionado(null);
-      window.history.pushState({ nivel: 2 }, "");
       return;
     }
     if (mostrarResultados) {
       setMostrarResultados(false);
-      window.history.pushState({ nivel: 2 }, "");
       return;
     }
     if (busqueda) {
       setBusqueda("");
       setSugerencias([]);
-      window.history.pushState({ nivel: 2 }, "");
       return;
     }
     if (madreActiva && madreActiva !== "sin_madre") {
-      // ✅ Vuelve a categorías madre
       setMadreActiva(null);
       setCategoria("Todos");
-      window.history.pushState({ nivel: 2 }, "");
       return;
     }
-    // ✅ Está en inicio → cerrar kiosko y volver al condominio
+    // Inicio del kiosko → volver al condominio
     if (onSalir) {
-      // Recargar historial del condominio antes de salir
-      window.history.pushState({ nivel: 1 }, "");
-      window.history.pushState({ nivel: 2 }, "");
-      window.history.pushState({ nivel: 3 }, "");
+      clearInterval(intervalo);
       onSalir();
-    } else {
-      window.history.pushState({ nivel: 1 }, "");
-      window.history.pushState({ nivel: 2 }, "");
-      window.history.pushState({ nivel: 3 }, "");
     }
   };
 
   window.addEventListener("popstate", handleBack);
-  return () => window.removeEventListener("popstate", handleBack);
+  return () => {
+    window.removeEventListener("popstate", handleBack);
+    clearInterval(intervalo);
+  };
 }, []);
 
   const entrarMadre = (n) => { setMadreActiva(n); setCategoria("Todos"); setBusqueda(""); };
@@ -2426,50 +2426,61 @@ useEffect(() => {
   estadoRef.current = { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo };
 }, [kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo]);
 
-// ✅ ÚNICO manejador botón atrás
 useEffect(() => {
-  // Empujar suficientes estados para no salir nunca
-  window.history.pushState({ nivel: 1 }, "");
-  window.history.pushState({ nivel: 2 }, "");
-  window.history.pushState({ nivel: 3 }, "");
-  window.history.pushState({ nivel: 4 }, "");
-  window.history.pushState({ nivel: 5 }, "");
+  // Llenar historial inicial
+  for (let i = 0; i < 10; i++) {
+    window.history.pushState({ nivel: i }, "");
+  }
+
+  // Mantener historial siempre lleno
+  const intervalo = setInterval(() => {
+    const { kioskoSeleccionado } = estadoRef.current;
+    // Solo mantener si NO hay kiosko abierto
+    // (CatalogoCliente maneja el suyo)
+    if (!kioskoSeleccionado) {
+      window.history.pushState({ nivel: 99 }, "");
+    }
+  }, 500);
 
   const handleBack = () => {
     const { kioskoSeleccionado, mostrarResultados, busqueda, rubroActivo } = estadoRef.current;
 
-    // ✅ Si hay kiosko abierto → NO intervenir
-    // CatalogoCliente maneja su propio atrás
-    // y llama onSalir() cuando llega al inicio
+    // Reponer historial inmediatamente
+    if (!kioskoSeleccionado) {
+      window.history.pushState({ nivel: 1 }, "");
+      window.history.pushState({ nivel: 2 }, "");
+      window.history.pushState({ nivel: 3 }, "");
+    }
+
     if (kioskoSeleccionado) {
       window.history.pushState({ nivel: 2 }, "");
       return;
     }
     if (mostrarResultados) {
       setMostrarResultados(false);
-      window.history.pushState({ nivel: 2 }, "");
       return;
     }
     if (busqueda) {
       setBusqueda("");
       setResultadosBusqueda([]);
-      window.history.pushState({ nivel: 2 }, "");
       return;
     }
     if (rubroActivo) {
       setRubroActivo(null);
-      window.history.pushState({ nivel: 2 }, "");
       return;
     }
-    // En inicio → siempre empujar para nunca salir
+    // En inicio → no salir, reponer
     window.history.pushState({ nivel: 1 }, "");
     window.history.pushState({ nivel: 2 }, "");
     window.history.pushState({ nivel: 3 }, "");
   };
 
   window.addEventListener("popstate", handleBack);
-  return () => window.removeEventListener("popstate", handleBack);
-}, []); // ← Solo se registra UNA vez
+  return () => {
+    window.removeEventListener("popstate", handleBack);
+    clearInterval(intervalo);
+  };
+}, []);
 
   // ✅ Búsqueda — solo calcula resultados, NO muestra pantalla
   useEffect(() => {
