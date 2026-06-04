@@ -1630,14 +1630,19 @@ const ventasPeriodo = datosGrafico.reduce((s, d) => s + d.total, 0);
   );
 }
 
-// ─── CATÁLOGO CLIENTE ───
+// ─── CATÁLOGO CLIENTE (CORREGIDO CON CLEAN URLS) ───
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom"; // 👈 CRITICAL: No olvides importar esto arriba de tu archivo
+
 function CatalogoCliente({
   kiosko,
   onSalir,
   slugCond,
   slugKiosko,
-  slugMadre
+  slugMadre // Este slug viene de tu componente Route (ej: :slugMadre)
 }) {
+  const navigate = useNavigate(); // 🔥 ¡Aquí estaba el error principal! Faltaba declarar navigate
+
   const [carrito, setCarrito] = useState({});
   const [categoria, setCategoria] = useState("Todos");
   const [nombreCliente, setNombreCliente] = useState("");
@@ -1649,20 +1654,23 @@ function CatalogoCliente({
   const [busqueda, setBusqueda] = useState("");
   const [catMadres, setCatMadres] = useState([]);
   const [madreActiva, setMadreActiva] = useState(null);
-
-   useEffect(() => {
-  if (slugMadre) {
-    setMadreActiva(decodeURIComponent(slugMadre));
-  } else {
-    setMadreActiva(null);
-  }
-}, [slugMadre]);
-
   const [sugerencias, setSugerencias] = useState([]);
   const [mostrarResultados, setMostrarResultados] = useState(false);
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
   const [cargandoMadres, setCargandoMadres] = useState(true);
 
+  // 🎯 Sincroniza la Categoría Madre cuando cambia la URL gracias al botón atrás
+  useEffect(() => {
+    if (slugMadre) {
+      setMadreActiva(decodeURIComponent(slugMadre));
+    } else {
+      setMadreActiva(null);
+    }
+    // 💡 Reseteamos la subcategoría interna a "Todos" cada vez que se cambia de sección madre
+    setCategoria("Todos"); 
+  }, [slugMadre]);
+
+  // Carga inicial de categorías madre desde Supabase
   useEffect(() => {
     supabase.from("categorias_madre").select("*").eq("kiosko_id", kiosko.id).order("orden")
       .then(({ data }) => {
@@ -1673,27 +1681,30 @@ function CatalogoCliente({
       });
   }, [kiosko.id]);
 
-useEffect(() => {
-  const termino = busqueda.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  if (termino.length === 0) { setSugerencias([]); return; }
-  const timeout = setTimeout(() => {
-    const resultados = kiosko.productos.filter(p => {
-      const nombre = p.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      return p.stock && nombre.includes(termino);
-    });
-    setSugerencias(resultados);
-  }, 300);
-  return () => clearTimeout(timeout);
-}, [busqueda]);
+  // Debounce para el buscador de productos
+  useEffect(() => {
+    const termino = busqueda.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if (termino.length === 0) { setSugerencias([]); return; }
+    const timeout = setTimeout(() => {
+      const resultados = kiosko.productos.filter(p => {
+        const nombre = p.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return p.stock && nombre.includes(termino);
+      });
+      setSugerencias(resultados);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [busqueda, kiosko.productos]);
 
+  // 🚀 Funciones de navegación fluidas que alteran la URL
   const entrarMadre = (n) => {
-  navigate(
-    `/c/${slugCond}/${slugKiosko}/${encodeURIComponent(n)}`
-  );
-};
+    setBusqueda("");
+    navigate(`/c/${slugCond}/${slugKiosko}/${encodeURIComponent(n)}`);
+  };
+
   const volverInicio = () => {
-  navigate(`/c/${slugCond}/${slugKiosko}`);
-};
+    setBusqueda("");
+    navigate(`/c/${slugCond}/${slugKiosko}`);
+  };
 
   const agregar = (p, variacion) => {
     const key = variacion ? `${p.id}-${variacion.nombre}` : `${p.id}-unica`;
