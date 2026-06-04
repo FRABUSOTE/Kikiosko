@@ -1631,9 +1631,6 @@ const ventasPeriodo = datosGrafico.reduce((s, d) => s + d.total, 0);
 }
 
 // ─── CATÁLOGO CLIENTE (CORREGIDO CON CLEAN URLS) ───
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom"; // 👈 CRITICAL: No olvides importar esto arriba de tu archivo
-
 function CatalogoCliente({
   kiosko,
   onSalir,
@@ -1697,14 +1694,24 @@ function CatalogoCliente({
 
   // 🚀 Funciones de navegación fluidas que alteran la URL
   const entrarMadre = (n) => {
-    setBusqueda("");
+  setBusqueda("");
+  if (slugCond && slugKiosko) {
     navigate(`/c/${slugCond}/${slugKiosko}/${encodeURIComponent(n)}`);
-  };
+  } else {
+    setMadreActiva(n);
+    setCategoria("Todos");
+  }
+};
 
   const volverInicio = () => {
-    setBusqueda("");
+  setBusqueda("");
+  if (slugCond && slugKiosko) {
     navigate(`/c/${slugCond}/${slugKiosko}`);
-  };
+  } else {
+    setMadreActiva(null);
+    setCategoria("Todos");
+  }
+};
 
   const agregar = (p, variacion) => {
     const key = variacion ? `${p.id}-${variacion.nombre}` : `${p.id}-unica`;
