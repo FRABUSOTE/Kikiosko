@@ -1631,7 +1631,13 @@ const ventasPeriodo = datosGrafico.reduce((s, d) => s + d.total, 0);
 }
 
 // ─── CATÁLOGO CLIENTE ───
-function CatalogoCliente({ kiosko, onSalir }) {
+function CatalogoCliente({
+  kiosko,
+  onSalir,
+  slugCond,
+  slugKiosko,
+  slugMadre
+}) {
   const [carrito, setCarrito] = useState({});
   const [categoria, setCategoria] = useState("Todos");
   const [nombreCliente, setNombreCliente] = useState("");
@@ -1643,6 +1649,15 @@ function CatalogoCliente({ kiosko, onSalir }) {
   const [busqueda, setBusqueda] = useState("");
   const [catMadres, setCatMadres] = useState([]);
   const [madreActiva, setMadreActiva] = useState(null);
+
+   useEffect(() => {
+  if (slugMadre) {
+    setMadreActiva(decodeURIComponent(slugMadre));
+  } else {
+    setMadreActiva(null);
+  }
+}, [slugMadre]);
+
   const [sugerencias, setSugerencias] = useState([]);
   const [mostrarResultados, setMostrarResultados] = useState(false);
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
@@ -1671,11 +1686,13 @@ useEffect(() => {
   return () => clearTimeout(timeout);
 }, [busqueda]);
 
-  const entrarMadre = (n) => { setMadreActiva(n); setCategoria("Todos"); setBusqueda(""); };
+  const entrarMadre = (n) => {
+  navigate(
+    `/c/${slugCond}/${slugKiosko}/${encodeURIComponent(n)}`
+  );
+};
   const volverInicio = () => {
-  setMadreActiva(null);
-  setBusqueda("");
-  setCategoria("Todos");
+  navigate(`/c/${slugCond}/${slugKiosko}`);
 };
 
   const agregar = (p, variacion) => {
@@ -2878,7 +2895,7 @@ function LoginScreen() {
 
 // ─── WRAPPER DE CONDOMINIO ───
 function CondominioWrapper() {
-  const { slugCond, slugKiosko } = useParams();
+  const { slugCond, slugKiosko, slugMadre } = useParams();
   const navigate = useNavigate(); // 🌟 Lo agregamos para controlar el botón "Salir"
   const [condominioPublico, setCondominioPublico] = useState(null);
   const [rubrosPublicos, setRubrosPublicos] = useState([]);
@@ -2941,12 +2958,14 @@ function CondominioWrapper() {
     const kioskoActual = kioskosPorRubro.find(k => k.slug === slugKiosko.toLowerCase().trim());
     if (kioskoActual) {
       return (
-        <CatalogoCliente 
-          kiosko={{ ...kioskoActual, productos: kioskoActual.productos || [] }} 
-          // 🚀 Al salir, volvemos a la URL del condominio. ¡Esto genera historial real!
-          onSalir={() => navigate(`/c/${condominioPublico.slug}`)} 
-        />
-      );
+  <CatalogoCliente
+    kiosko={{ ...kioskoActual, productos: kioskoActual.productos || [] }}
+    slugCond={slugCond}
+    slugKiosko={slugKiosko}
+    slugMadre={slugMadre}
+    onSalir={() => navigate(`/c/${condominioPublico.slug}`)}
+  />
+);
     }
   }
 
@@ -3000,7 +3019,15 @@ function KioskoWrapper() {
     </div>
   );
 
-  return <CatalogoCliente kiosko={kiosko} onSalir={null} />;
+  return (
+  <CatalogoCliente
+    kiosko={kiosko}
+    slugCond={null}
+    slugKiosko={slug}
+    slugMadre={null}
+    onSalir={null}
+  />
+);
 }
 
 // ─── APP PRINCIPAL ───
@@ -3011,6 +3038,7 @@ export default function App() {
         <Route path="/" element={<LoginScreen />} />
         <Route path="/c/:slugCond" element={<CondominioWrapper />} />
         <Route path="/c/:slugCond/:slugKiosko" element={<CondominioWrapper />} />
+        <Route path="/c/:slugCond/:slugKiosko/:slugMadre" element={<CondominioWrapper />} />
         <Route path="/:slug" element={<KioskoWrapper />} />
       </Routes>
     </HashRouter>
