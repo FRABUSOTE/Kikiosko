@@ -4,6 +4,7 @@ import { supabase } from "./supabase";
 import { QRCodeSVG as QRCode } from "qrcode.react";
 import imageCompression from "browser-image-compression";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { HashRouter, Routes, Route, useNavigate, useParams } from "react-router-dom";
 
 const SUPERADMIN = { email: "admin@kikiosko.pe", clave: "admin123" };
 const PLANES = [
@@ -1670,26 +1671,6 @@ useEffect(() => {
   return () => clearTimeout(timeout);
 }, [busqueda]);
 
-// ✅ Escucha evento custom del padre
-useEffect(() => {
-  const onBack = () => {
-    const { madreActiva, mostrarResultados, productoSeleccionado, busqueda } = estadoRefCatalogo.current;
-
-    if (productoSeleccionado) { setProductoSeleccionado(null); return; }
-    if (mostrarResultados) { setMostrarResultados(false); return; }
-    if (busqueda) { setBusqueda(""); setSugerencias([]); return; }
-    if (madreActiva && madreActiva !== "sin_madre") {
-      setMadreActiva(null);
-      setCategoria("Todos");
-      return;
-    }
-    if (onSalir) onSalir();
-  };
-
-  window.addEventListener("katalogo-back", onBack);
-  return () => window.removeEventListener("katalogo-back", onBack);
-}, []);
-
   const entrarMadre = (n) => { setMadreActiva(n); setCategoria("Todos"); setBusqueda(""); };
   const volverInicio = () => {
   setMadreActiva(null);
@@ -2024,7 +2005,6 @@ useEffect(() => {
         setBusqueda(e.target.value);
         setMostrarResultados(false);
         if (e.target.value.trim() && madreActiva === null) {
-          window.history.pushState({ madre: "sin_madre" }, "");
           setMadreActiva("sin_madre");
         }
       }}
@@ -2381,29 +2361,6 @@ useEffect(() => {
   }
 }, [kioskoDirecto]);
 
-// ✅ UN SOLO listener en el documento
-useEffect(() => {
-  const onBack = (e) => {
-    e.preventDefault();
-    window.history.pushState({ app: true }, "");
-    
-    const estado = estadoRef.current;
-    
-    // Si hay kiosko abierto, disparar evento custom al catálogo
-    if (estado.kioskoSeleccionado) {
-      window.dispatchEvent(new CustomEvent("katalogo-back"));
-      return;
-    }
-    if (estado.mostrarResultados) { setMostrarResultados(false); return; }
-    if (estado.busqueda) { setBusqueda(""); setResultadosBusqueda([]); return; }
-    if (estado.rubroActivo) { setRubroActivo(null); return; }
-    window.history.pushState({ app: true }, "");
-  };
-
-  window.history.pushState({ app: true }, "");
-  window.addEventListener("popstate", onBack);
-  return () => window.removeEventListener("popstate", onBack);
-}, []);
 
   // ✅ Búsqueda — solo calcula resultados, NO muestra pantalla
   useEffect(() => {
@@ -2827,395 +2784,64 @@ const kioskosFiltered = kioskosDelRubro;
   );
 }
 
-// ─── APP PRINCIPAL ───
-export default function App() {
-  const [pantalla, setPantalla] = useState("login");
+// ─── LOGIN SCREEN ───
+function LoginScreen() {
+  const navigate = useNavigate();
   const [loginForm, setLoginForm] = useState({ email: "", clave: "" });
   const [loginError, setLoginError] = useState("");
+  const [pantalla, setPantalla] = useState("login");
   const [kioskoCurrent, setKioskoCurrent] = useState(null);
   const [productosActuales, setProductosActuales] = useState([]);
-  const [cargandoPublico, setCargandoPublico] = useState(false);
-  const [kioskoPorSlug, setKioskoPorSlug] = useState(null);
-  const [kioskoDirecto, setKioskoDirecto] = useState(null);
 
-  const hash = window.location.hash;
-  const rawSlug = hash.replace(/^#\/?/, "").replace(/\/$/, "").toLowerCase().trim();
-  const esCondominio = rawSlug.startsWith("c/");
-
-  // ✅ Detectar si es link directo a kiosko dentro de condominio
-  // Formato: c/vistasol/bodeguita
-  const partesCondominio = esCondominio ? rawSlug.replace("c/", "").split("/") : [];
-  const esKioskoEnCondominio = esCondominio && partesCondominio.length === 2;
-  const slugCondominio = esCondominio ? partesCondominio[0] : null;
-  const slugKioskoEnCond = esKioskoEnCondominio ? partesCondominio[1] : null;
-  const slug = esCondominio ? partesCondominio[0] : rawSlug;
-
-  const [condominioPublico, setCondominioPublico] = useState(null);
-  const [rubrosPublicos, setRubrosPublicos] = useState([]);
-  const [rubroActivo, setRubroActivo] = useState(null);
-  const [kioskosPorRubro, setKioskosPorRubro] = useState([]);
-  const [productosDestacados, setProductosDestacados] = useState([]);
-  const [productosOferta, setProductosOferta] = useState([]);
-
- useEffect(() => {
-    if (esKioskoEnCondominio && slugCondominio && slugKioskoEnCond) {
-      // Link directo a kiosko dentro de condominio
-      cargarCondominioConKiosko(slugCondominio, slugKioskoEnCond);
-    } else if (esCondominio && slug.length > 0) {
-      cargarCondominio(slug);
-    } else if (!esCondominio && slug.length > 0) {
-      cargarKioskoPorSlug(slug);
-    }
-  }, [slug]);
-
-const cargarCondominioConKiosko = async (slugCond, slugKiosko) => {
-    setCargandoPublico(true);
-    // Cargar condominio completo
-    await cargarCondominio(slugCond);
-    // Buscar el kiosko específico y seleccionarlo
-    const { data: k } = await supabase.from("kioskos").select("*").eq("slug", slugKiosko).single();
-    if (k) {
-      const { data: prods } = await supabase.from("productos").select("*").eq("kiosko_id", k.id);
-      setKioskoDirecto({ ...k, productos: prods || [] });
-    }
-    setCargandoPublico(false);
-  };
-
- const cargarCondominio = async (slugCond) => {
-  setCargandoPublico(true);
-
-  const { data: cond } = await supabase
-    .from("condominios")
-    .select("*")
-    .eq("slug", slugCond)
-    .single();
-
-  if (cond) {
-
-    const { data: rubros } = await supabase
-      .from("rubros")
-      .select("*")
-      .eq("condominio_id", cond.id)
-      .order("orden");
-
-    // ✅ Obtener kioskos básicos
-    const { data: kioskos } = await supabase
-      .from("kioskos")
-      .select("*")
-      .eq("condominio_id", cond.id)
-      .eq("activo", true);
-
-    // ✅ Agregar productos a cada kiosko
-    const kioskosConProductos = await Promise.all(
-      (kioskos || []).map(async (k) => {
-
-        const { data: prods } = await supabase
-          .from("productos")
-          .select("*")
-          .eq("kiosko_id", k.id);
-
-        return {
-  ...k,
-  productos: prods || [],
-  condominio_slug: cond.slug  // ✅ para el QR/link
-};
-      })
-    );
-
-    setCondominioPublico(cond);
-    setRubrosPublicos(rubros || []);
-    setKioskosPorRubro(kioskosConProductos || []);
-
-    // ✅ Productos destacados
-    const conFoto = (kioskosConProductos || [])
-      .flatMap(k =>
-        (k.productos || []).filter(p => p.foto && p.stock)
-      )
-      .slice(0, 3);
-
-    setProductosDestacados(conFoto);
-
-    // ✅ Productos en oferta
-    const enOferta = (kioskosConProductos || [])
-      .flatMap(k =>
-        (k.productos || [])
-          .filter(p => p.oferta && p.stock)
-          .map(p => ({
-            ...p,
-            kiosko_nombre: k.nombre,
-            kiosko_wa: k.whatsapp
-          }))
-      );
-
-    setProductosOferta(enOferta);
-  }
-
-  setCargandoPublico(false);
-};
-
-const cargarKioskoPorSlug = async (slug) => {
-  setCargandoPublico(true);
-
-  const { data: kiosko } = await supabase
-    .from("kioskos")
-    .select("*")
-    .eq("slug", slug)
-    .single();
-
-  if (kiosko) {
-
-    const { data: prods } = await supabase
-      .from("productos")
-      .select("*")
-      .eq("kiosko_id", kiosko.id);
-
-    setKioskoPorSlug({
-      ...kiosko,
-      productos: prods || []
-    });
-  }
-
-  setCargandoPublico(false);
-};
-
-if (cargandoPublico) return (
-  <div
-    style={{
-      minHeight: "100vh",
-      display: "flex",
-      flexDirection: "column", // Permite alinear el logo y el texto verticalmente
-      alignItems: "center",
-      justifyContent: "center",
-      background: "#eff6ff",
-      fontFamily: "'Nunito', sans-serif",
-      gap: "16px" // Espacio entre el logo y el texto de carga
-    }}
-  >
-    {/* Imagen del Logo */}
-    <img 
-      src="/logo.png" // Cambia esto por el nombre y formato real de tu archivo en la carpeta public
-      alt="Logo Kiosko"
-      style={{
-        width: "120px", // Ajusta el tamaño según tu diseño
-        height: "auto",
-        objectFit: "contain",
-        animation: "pulse 1.5s infinite ease-in-out" // Opcional: un efecto sutil de parpadeo
-      }}
-    />
-
-    {/* Texto de carga opcional */}
-    <p
-      style={{
-        fontSize: 16,
-        fontWeight: 700,
-        color: "#1D4ED8",
-        margin: 0
-      }}
-    >
-      Cargando...
-    </p>
-
-    {/* Estilo CSS en línea opcional para la animación del logo */}
-    <style>{`
-      @keyframes pulse {
-        0%, 100% { opacity: 0.6; transform: scale(0.98); }
-        50% { opacity: 1; transform: scale(1); }
-      }
-    `}</style>
-  </div>
-);
-
-// ✅ PANTALLA PÚBLICA CONDOMINIO
-if (condominioPublico) {
-
-  if (!condominioPublico.activo) return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "'Nunito', sans-serif",
-        background: "#eff6ff"
-      }}
-    >
-      <div style={{ textAlign: "center", padding: 40 }}>
-        <p style={{ fontSize: 48, marginBottom: 16 }}>🔒</p>
-
-        <p
-          style={{
-            fontSize: 18,
-            fontWeight: 900,
-            color: "#dc2626"
-          }}
-        >
-          Condominio no disponible
-        </p>
-      </div>
-    </div>
-  );
-
-  return (
-  <CondominioPublico
-    condominio={condominioPublico}
-    rubros={rubrosPublicos}
-    kioskos={kioskosPorRubro}
-    productosDestacados={productosDestacados}
-    productosOferta={productosOferta}
-    rubroActivo={rubroActivo}
-    setRubroActivo={setRubroActivo}
-    kioskoDirecto={kioskoDirecto}
-    onKioskoDirectoVisto={() => setKioskoDirecto(null)}
-  />
-);
-}
-
-if (kioskoPorSlug) {
-
-  if (!kioskoPorSlug.activo) return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "'Nunito', sans-serif",
-        background: "#eff6ff"
-      }}
-    >
-      <div style={{ textAlign: "center", padding: 40 }}>
-
-        <p style={{ fontSize: 48, marginBottom: 16 }}>🔒</p>
-
-        <p
-          style={{
-            fontSize: 18,
-            fontWeight: 900,
-            color: "#dc2626"
-          }}
-        >
-          Kiosko no disponible
-        </p>
-
-        <p
-          style={{
-            fontSize: 13,
-            color: "#9ca3af",
-            marginTop: 8
-          }}
-        >
-          Contacta al administrador
-        </p>
-
-      </div>
-    </div>
-  );
-
-  return (
-    <CatalogoCliente
-      kiosko={kioskoPorSlug}
-      onSalir={null}
-    />
-  );
-}
-
-const handleLogin = async () => {
-
-  if (
-    loginForm.email === SUPERADMIN.email &&
-    loginForm.clave === SUPERADMIN.clave
-  ) {
-    setPantalla("superadmin");
-    setLoginError("");
-    return;
-  }
-
-  const { data: kioskoLogin } = await supabase
-    .from("kioskos")
-    .select("*")
-    .eq("email", loginForm.email)
-    .eq("clave", loginForm.clave)
-    .single();
-
-  if (kioskoLogin) {
-
-    if (!kioskoLogin.activo) {
-      setLoginError("Tu acceso está inactivo. Contacta al administrador.");
+  const handleLogin = async () => {
+    if (loginForm.email === SUPERADMIN.email && loginForm.clave === SUPERADMIN.clave) {
+      setPantalla("superadmin");
+      setLoginError("");
       return;
     }
+    const { data: kioskoLogin } = await supabase.from("kioskos").select("*").eq("email", loginForm.email).eq("clave", loginForm.clave).single();
+    if (kioskoLogin) {
+      if (!kioskoLogin.activo) { setLoginError("Tu acceso está inactivo. Contacta al administrador."); return; }
+      const { data: prods } = await supabase.from("productos").select("*").eq("kiosko_id", kioskoLogin.id);
+      if (kioskoLogin.condominio_id) {
+        const { data: cond } = await supabase.from("condominios").select("slug").eq("id", kioskoLogin.condominio_id).single();
+        setKioskoCurrent({ ...kioskoLogin, condominio_slug: cond?.slug || null });
+      } else {
+        setKioskoCurrent(kioskoLogin);
+      }
+      setProductosActuales(prods || []);
+      setPantalla("adminkiosko");
+      setLoginError("");
+      return;
+    }
+    setLoginError("Correo o clave incorrectos");
+  };
 
-    const { data: prods } = await supabase
-      .from("productos")
-      .select("*")
-      .eq("kiosko_id", kioskoLogin.id);
-
-    if (kioskoLogin.condominio_id) {
-
-  const { data: cond } = await supabase
-    .from("condominios")
-    .select("slug")
-    .eq("id", kioskoLogin.condominio_id)
-    .single();
-
-  setKioskoCurrent({
-    ...kioskoLogin,
-    condominio_slug: cond?.slug || null
-  });
-
-} else {
-  setKioskoCurrent(kioskoLogin);
-}
-    setProductosActuales(prods || []);
-    setPantalla("adminkiosko");
-    setLoginError("");
-    return;
+  if (pantalla === "superadmin") {
+    return <SuperAdmin onSalir={() => { setPantalla("login"); setLoginForm({ email: "", clave: "" }); }} />;
   }
 
-  setLoginError("Correo o clave incorrectos");
-};
+  if (pantalla === "adminkiosko" && kioskoCurrent) {
+    return (
+      <AdminKiosko
+        kiosko={{ ...kioskoCurrent, productos: productosActuales }}
+        onProductosChange={setProductosActuales}
+        onSalir={() => { setPantalla("login"); setKioskoCurrent(null); setLoginForm({ email: "", clave: "" }); }}
+        onVerCatalogo={() => setPantalla("catalogo")}
+      />
+    );
+  }
 
-if (pantalla === "superadmin") {
+  if (pantalla === "catalogo" && kioskoCurrent) {
+    return (
+      <CatalogoCliente
+        kiosko={{ ...kioskoCurrent, productos: productosActuales }}
+        onSalir={() => setPantalla("adminkiosko")}
+      />
+    );
+  }
+
   return (
-    <SuperAdmin
-      onSalir={() => {
-        setPantalla("login");
-        setLoginForm({ email: "", clave: "" });
-      }}
-    />
-  );
-}
-
-if (pantalla === "adminkiosko" && kioskoCurrent) {
-  return (
-    <AdminKiosko
-      kiosko={{
-        ...kioskoCurrent,
-        productos: productosActuales
-      }}
-      onProductosChange={setProductosActuales}
-      onSalir={() => {
-        setPantalla("login");
-        setKioskoCurrent(null);
-        setLoginForm({ email: "", clave: "" });
-      }}
-      onVerCatalogo={() => setPantalla("catalogo")}
-    />
-  );
-}
-
-if (pantalla === "catalogo" && kioskoCurrent) {
-  return (
-    <CatalogoCliente
-      kiosko={{
-        ...kioskoCurrent,
-        productos: productosActuales
-      }}
-      onSalir={() => setPantalla("adminkiosko")}
-    />
-  );
-}
-
-return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Nunito', sans-serif", padding: 20 }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
@@ -3245,5 +2871,137 @@ return (
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── WRAPPER DE CONDOMINIO ───
+function CondominioWrapper() {
+  const { slugCond, slugKiosko } = useParams();
+  const [condominioPublico, setCondominioPublico] = useState(null);
+  const [rubrosPublicos, setRubrosPublicos] = useState([]);
+  const [rubroActivo, setRubroActivo] = useState(null);
+  const [kioskosPorRubro, setKioskosPorRubro] = useState([]);
+  const [productosDestacados, setProductosDestacados] = useState([]);
+  const [productosOferta, setProductosOferta] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [kioskoDirecto, setKioskoDirecto] = useState(null);
+
+  useEffect(() => {
+    cargarCondominio();
+  }, [slugCond]);
+
+  const cargarCondominio = async () => {
+    setCargando(true);
+    const { data: cond } = await supabase.from("condominios").select("*").eq("slug", slugCond).single();
+    if (cond) {
+      const { data: rubros } = await supabase.from("rubros").select("*").eq("condominio_id", cond.id).order("orden");
+      const { data: kioskos } = await supabase.from("kioskos").select("*").eq("condominio_id", cond.id).eq("activo", true);
+      const kioskosConProductos = await Promise.all(
+        (kioskos || []).map(async (k) => {
+          const { data: prods } = await supabase.from("productos").select("*").eq("kiosko_id", k.id);
+          return { ...k, productos: prods || [], condominio_slug: cond.slug };
+        })
+      );
+      setCondominioPublico(cond);
+      setRubrosPublicos(rubros || []);
+      setKioskosPorRubro(kioskosConProductos || []);
+      setProductosDestacados(
+        kioskosConProductos.flatMap(k => (k.productos || []).filter(p => p.foto && p.stock)).slice(0, 3)
+      );
+      setProductosOferta(
+        kioskosConProductos.flatMap(k =>
+          (k.productos || []).filter(p => p.oferta && p.stock).map(p => ({ ...p, kiosko_nombre: k.nombre }))
+        )
+      );
+      // ✅ Si viene con slugKiosko directo
+      if (slugKiosko) {
+        const kDirec = kioskosConProductos.find(k => k.slug === slugKiosko);
+        if (kDirec) setKioskoDirecto(kDirec);
+      }
+    }
+    setCargando(false);
+  };
+
+  if (cargando) return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#eff6ff", fontFamily: "'Nunito', sans-serif", gap: 16 }}>
+      <img src="/logo.png" alt="Logo" style={{ width: 120, height: "auto", objectFit: "contain" }} />
+      <p style={{ fontSize: 16, fontWeight: 700, color: "#1D4ED8", margin: 0 }}>Cargando...</p>
+    </div>
+  );
+
+  if (!condominioPublico) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Nunito', sans-serif", background: "#eff6ff" }}>
+      <div style={{ textAlign: "center", padding: 40 }}>
+        <p style={{ fontSize: 48, marginBottom: 16 }}>🔒</p>
+        <p style={{ fontSize: 18, fontWeight: 900, color: "#dc2626" }}>Condominio no disponible</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <CondominioPublico
+      condominio={condominioPublico}
+      rubros={rubrosPublicos}
+      kioskos={kioskosPorRubro}
+      productosDestacados={productosDestacados}
+      productosOferta={productosOferta}
+      rubroActivo={rubroActivo}
+      setRubroActivo={setRubroActivo}
+      kioskoDirecto={kioskoDirecto}
+      onKioskoDirectoVisto={() => setKioskoDirecto(null)}
+    />
+  );
+}
+
+// ─── WRAPPER DE KIOSKO INDIVIDUAL ───
+function KioskoWrapper() {
+  const { slug } = useParams();
+  const [kiosko, setKiosko] = useState(null);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    cargarKiosko();
+  }, [slug]);
+
+  const cargarKiosko = async () => {
+    setCargando(true);
+    const { data } = await supabase.from("kioskos").select("*").eq("slug", slug).single();
+    if (data) {
+      const { data: prods } = await supabase.from("productos").select("*").eq("kiosko_id", data.id);
+      setKiosko({ ...data, productos: prods || [] });
+    }
+    setCargando(false);
+  };
+
+  if (cargando) return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#eff6ff", fontFamily: "'Nunito', sans-serif", gap: 16 }}>
+      <img src="/logo.png" alt="Logo" style={{ width: 120, height: "auto", objectFit: "contain" }} />
+      <p style={{ fontSize: 16, fontWeight: 700, color: "#1D4ED8", margin: 0 }}>Cargando...</p>
+    </div>
+  );
+
+  if (!kiosko || !kiosko.activo) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Nunito', sans-serif", background: "#eff6ff" }}>
+      <div style={{ textAlign: "center", padding: 40 }}>
+        <p style={{ fontSize: 48, marginBottom: 16 }}>🔒</p>
+        <p style={{ fontSize: 18, fontWeight: 900, color: "#dc2626" }}>Kiosko no disponible</p>
+      </div>
+    </div>
+  );
+
+  return <CatalogoCliente kiosko={kiosko} onSalir={null} />;
+}
+
+// ─── APP PRINCIPAL ───
+export default function App() {
+  return (
+    <HashRouter>
+      <Routes>
+        <Route path="/" element={<LoginScreen />} />
+        <Route path="/c/:slugCond" element={<CondominioWrapper />} />
+        <Route path="/c/:slugCond/:slugKiosko" element={<CondominioWrapper />} />
+        <Route path="/:slug" element={<KioskoWrapper />} />
+      </Routes>
+    </HashRouter>
   );
 }
