@@ -2347,20 +2347,21 @@ useEffect(() => {
 
 // ─── CONDOMINIO PÚBLICO ───
 function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, productosOferta, rubroActivo, setRubroActivo, kioskoDirecto, onKioskoDirectoVisto }) {
+  // 🚀 Declaramos el hook de navegación nativo de React Router
+  const navigate = useNavigate(); 
+  
   const [mostrarResultados, setMostrarResultados] = useState(false);
-  const [kioskoSeleccionado, setKioskoSeleccionado] = useState(null);
   const [busqueda, setBusqueda] = useState("");
   const [resultadosBusqueda, setResultadosBusqueda] = useState([]);
   const [verTodosRubros, setVerTodosRubros] = useState(false);
 
-// ✅ Si viene con kiosko directo, abrirlo automáticamente
-useEffect(() => {
-  if (kioskoDirecto && !kioskoSeleccionado) {
-    setKioskoSeleccionado(kioskoDirecto);
-    onKioskoDirectoVisto();
-  }
-}, [kioskoDirecto]);
-
+  // ✅ Si viene con kiosko directo desde la URL, cambiamos la ruta limpiamente
+  useEffect(() => {
+    if (kioskoDirecto) {
+      navigate(`/c/${condominio.slug}/${kioskoDirecto.slug}`);
+      onKioskoDirectoVisto();
+    }
+  }, [kioskoDirecto, condominio, navigate, onKioskoDirectoVisto]);
 
   // ✅ Búsqueda — solo calcula resultados, NO muestra pantalla
   useEffect(() => {
@@ -2380,95 +2381,91 @@ useEffect(() => {
     return () => clearTimeout(timeout);
   }, [busqueda, kioskos]);
 
-  // Si seleccionó un kiosko → mostrar su catálogo
-  if (kioskoSeleccionado) {
-    return <CatalogoCliente 
-      kiosko={{ 
-        ...kioskoSeleccionado, 
-        productos: kioskoSeleccionado.productos || [] 
-      }} 
-      onSalir={() => setKioskoSeleccionado(null)} 
-    />;
-  }
 
   const kioskosDelRubro = rubroActivo
     ? kioskos.filter(k => k.rubro_id === rubroActivo.id)
     : kioskos;
 
-const kioskosFiltered = kioskosDelRubro;
+  const kioskosFiltered = kioskosDelRubro;
 
   return (
     <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "Nunito, sans-serif" }}>
       <style>{`* { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
 
       {/* HEADER */}
-<div style={{ background: "#fff", padding: "10px 16px 12px", position: "sticky", top: 0, zIndex: 40, boxShadow: "0 4px 16px rgba(0,0,0,0.08)", borderRadius: "0 0 20px 20px" }}>
-  
-  {/* FILA 1 — Logo + botón volver + rubro activo */}
-  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", position: "relative", marginBottom: 10 }}>
-    {rubroActivo && (
-      <button onClick={() => { setRubroActivo(null); setBusqueda(""); setMostrarResultados(false); }}
-        style={{ position: "absolute", left: 0, background: "#f1f5f9", border: "none", color: "#374151", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
-    )}
-    <img src="/logo.png" style={{ height: 28, objectFit: "contain" }} alt="KiKiosko" />
-    {rubroActivo && (
-      <span style={{ position: "absolute", right: 0, fontSize: 11, color: "#6B7280", fontWeight: 700 }}>{rubroActivo.emoji} {rubroActivo.nombre}</span>
-    )}
-  </div>
+      <div style={{ background: "#fff", padding: "10px 16px 12px", position: "sticky", top: 0, zIndex: 40, boxShadow: "0 4px 16px rgba(0,0,0,0.08)", borderRadius: "0 0 20px 20px" }}>
+        
+        {/* FILA 1 — Logo + botón volver + rubro activo */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", position: "relative", marginBottom: 10 }}>
+          {rubroActivo && (
+            <button onClick={() => { setRubroActivo(null); setBusqueda(""); setMostrarResultados(false); }}
+              style={{ position: "absolute", left: 0, background: "#f1f5f9", border: "none", color: "#374151", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
+          )}
+          <img src="/logo.png" style={{ height: 28, objectFit: "contain" }} alt="KiKiosko" />
+          {rubroActivo && (
+            <span style={{ position: "absolute", right: 0, fontSize: 11, color: "#6B7280", fontWeight: 700 }}>{rubroActivo.emoji} {rubroActivo.nombre}</span>
+          )}
+        </div>
 
-  {/* FILA 2 — Buscador con dropdown */}
-  <div style={{ position: "relative" }}>
-    <div style={{ display: "flex", alignItems: "center", gap: 8, background: busqueda ? "#eff6ff" : "#f8fafc", border: busqueda ? "2px solid #2563EB" : "1.5px solid #e5e7eb", borderRadius: busqueda && resultadosBusqueda.length > 0 && !mostrarResultados ? "12px 12px 0 0" : 999, padding: "9px 14px", transition: "all 0.2s" }}>
-      <span style={{ fontSize: 14, flexShrink: 0 }}>🔍</span>
-      <input
-        style={{ border: "none", outline: "none", fontSize: 13, background: "transparent", flex: 1, color: "#111827", fontFamily: "Nunito, sans-serif", fontWeight: busqueda ? 700 : 400 }}
-        placeholder="Buscar productos en el condominio..."
-        value={busqueda}
-        onChange={e => { setBusqueda(e.target.value); if (e.target.value) setRubroActivo(null); setMostrarResultados(false); }}
-        onKeyDown={e => { if (e.key === "Enter") setMostrarResultados(true); }}
-      />
-      {busqueda && (
-        <button onClick={() => { setBusqueda(""); setResultadosBusqueda([]); setMostrarResultados(false); }}
-          style={{ border: "none", background: "#e5e7eb", borderRadius: 6, padding: "3px 7px", fontSize: 11, cursor: "pointer", color: "#6B7280", flexShrink: 0 }}>✕</button>
-      )}
-    </div>
-
-    {/* DROPDOWN SUGERENCIAS */}
-    {busqueda.trim() && !mostrarResultados && resultadosBusqueda.length > 0 && (
-      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", borderRadius: "0 0 14px 14px", border: "2px solid #2563EB", borderTop: "none", overflow: "hidden", boxShadow: "0 12px 24px rgba(0,0,0,0.12)", zIndex: 50 }}>
-        {resultadosBusqueda.slice(0, 5).map((prod, idx) => (
-          <div key={`${prod.id}-${idx}`}
-            onClick={() => { setKioskoSeleccionado(prod.kiosko_obj); setBusqueda(""); setResultadosBusqueda([]); setMostrarResultados(false); }}
-            style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 13px", cursor: "pointer", borderBottom: "1px solid #f1f5f9", background: "#fff" }}
-            onMouseEnter={e => e.currentTarget.style.background = "#eff6ff"}
-            onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
-            <div style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 8, background: "#f8fafc", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {prod.foto ? <img src={prod.foto} alt={prod.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 18 }}>{prod.emoji || "📦"}</span>}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 12, fontWeight: 800, color: "#111827", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prod.nombre}</p>
-              <p style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, margin: 0 }}>{prod.kiosko_obj.nombre}</p>
-            </div>
-            <span style={{ fontSize: 12, fontWeight: 900, color: "#2563EB", flexShrink: 0 }}>S/. {Number(prod.precio).toFixed(2)}</span>
+        {/* FILA 2 — Buscador con dropdown */}
+        <div style={{ position: "relative" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: busqueda ? "#eff6ff" : "#f8fafc", border: busqueda ? "2px solid #2563EB" : "1.5px solid #e5e7eb", borderRadius: busqueda && resultadosBusqueda.length > 0 && !mostrarResultados ? "12px 12px 0 0" : 999, padding: "9px 14px", transition: "all 0.2s" }}>
+            <span style={{ fontSize: 14, flexShrink: 0 }}>🔍</span>
+            <input
+              style={{ border: "none", outline: "none", fontSize: 13, background: "transparent", flex: 1, color: "#111827", fontFamily: "Nunito, sans-serif", fontWeight: busqueda ? 700 : 400 }}
+              placeholder="Buscar productos en el condominio..."
+              value={busqueda}
+              onChange={e => { setBusqueda(e.target.value); if (e.target.value) setRubroActivo(null); setMostrarResultados(false); }}
+              onKeyDown={e => { if (e.key === "Enter") setMostrarResultados(true); }}
+            />
+            {busqueda && (
+              <button onClick={() => { setBusqueda(""); setResultadosBusqueda([]); setMostrarResultados(false); }}
+                style={{ border: "none", background: "#e5e7eb", borderRadius: 6, padding: "3px 7px", fontSize: 11, cursor: "pointer", color: "#6B7280", flexShrink: 0 }}>✕</button>
+            )}
           </div>
-        ))}
-        <div onClick={() => setMostrarResultados(true)}
-          style={{ padding: "10px 13px", textAlign: "center", background: "#f8fafc", cursor: "pointer", borderTop: "1px solid #f1f5f9" }}>
-          <span style={{ fontSize: 11, color: "#2563EB", fontWeight: 800 }}>
-            🔍 Ver todos los resultados ({resultadosBusqueda.length}) →
-          </span>
+
+          {/* DROPDOWN SUGERENCIAS */}
+          {busqueda.trim() && !mostrarResultados && resultadosBusqueda.length > 0 && (
+            <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", borderRadius: "0 0 14px 14px", border: "2px solid #2563EB", borderTop: "none", overflow: "hidden", boxShadow: "0 12px 24px rgba(0,0,0,0.12)", zIndex: 50 }}>
+              {resultadosBusqueda.slice(0, 5).map((prod, idx) => (
+                <div key={`${prod.id}-${idx}`}
+                  onClick={() => { 
+                    // 🚀 Cambiado a ruta nativa
+                    navigate(`/c/${condominio.slug}/${prod.kiosko_obj.slug}`);
+                    setBusqueda(""); 
+                    setResultadosBusqueda([]); 
+                    setMostrarResultados(false); 
+                  }}
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 13px", cursor: "pointer", borderBottom: "1px solid #f1f5f9", background: "#fff" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "#eff6ff"}
+                  onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
+                  <div style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 8, background: "#f8fafc", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {prod.foto ? <img src={prod.foto} alt={prod.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 18 }}>{prod.emoji || "📦"}</span>}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 12, fontWeight: 800, color: "#111827", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prod.nombre}</p>
+                    <p style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, margin: 0 }}>{prod.kiosko_obj.nombre}</p>
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 900, color: "#2563EB", flexShrink: 0 }}>S/. {Number(prod.precio).toFixed(2)}</span>
+                </div>
+              ))}
+              <div onClick={() => setMostrarResultados(true)}
+                style={{ padding: "10px 13px", textAlign: "center", background: "#f8fafc", cursor: "pointer", borderTop: "1px solid #f1f5f9" }}>
+                <span style={{ fontSize: 11, color: "#2563EB", fontWeight: 800 }}>
+                  🔍 Ver todos los resultados ({resultadosBusqueda.length}) →
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Sin resultados */}
+          {busqueda.trim().length >= 2 && !mostrarResultados && resultadosBusqueda.length === 0 && (
+            <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", borderRadius: "0 0 12px 12px", border: "2px solid #2563EB", borderTop: "none", padding: "14px 13px", zIndex: 50, textAlign: "center" }}>
+              <span style={{ fontSize: 12, color: "#9ca3af", fontWeight: 600 }}>😕 Sin resultados para "{busqueda}"</span>
+            </div>
+          )}
         </div>
       </div>
-    )}
-
-    {/* Sin resultados */}
-    {busqueda.trim().length >= 2 && !mostrarResultados && resultadosBusqueda.length === 0 && (
-      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", borderRadius: "0 0 12px 12px", border: "2px solid #2563EB", borderTop: "none", padding: "14px 13px", zIndex: 50, textAlign: "center" }}>
-        <span style={{ fontSize: 12, color: "#9ca3af", fontWeight: 600 }}>😕 Sin resultados para "{busqueda}"</span>
-      </div>
-    )}
-  </div>
-</div>
 
       {busqueda.trim() && mostrarResultados ? (
         /* ✅ RESULTADOS DE BÚSQUEDA */
@@ -2499,7 +2496,8 @@ const kioskosFiltered = kioskosDelRubro;
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {resultadosBusqueda.map((prod, idx) => (
                 <div key={`${prod.id}-${idx}`}
-                  onClick={() => setKioskoSeleccionado(prod.kiosko_obj)}
+                  // 🚀 Cambiado a ruta nativa
+                  onClick={() => navigate(`/c/${condominio.slug}/${prod.kiosko_obj.slug}`)}
                   style={{ background: "#fff", borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", border: "1px solid #f1f5f9", cursor: "pointer" }}>
                   {/* Foto producto */}
                   <div style={{ width: 72, height: 72, flexShrink: 0, background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
@@ -2535,125 +2533,126 @@ const kioskosFiltered = kioskosDelRubro;
               : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 80, opacity: 0.2 }}>🏢</div>
             }
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%)", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "16px" }}>
-  {(() => {
-    const total = kioskos.length;
-    const abiertos = kioskos.filter(k => estaAbierto(k.info_tienda) !== false).length;
-    return (
-      <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(16,185,129,0.85)", borderRadius: 999, padding: "3px 10px", width: "fit-content", marginBottom: 6 }}>
-        <div style={{ width: 5, height: 5, background: "#fff", borderRadius: "50%" }}></div>
-        <span style={{ color: "#fff", fontSize: 9, fontWeight: 800 }}>
-          {total} negocios · {abiertos} abiertos ahora
-        </span>
-      </div>
-    );
-  })()}
-  <p style={{ fontSize: 22, fontWeight: 900, color: "#fff", textShadow: "0 2px 8px rgba(0,0,0,0.4)", lineHeight: 1.1 }}>{condominio.nombre}</p>
-</div>
- </div>
-
-          {/* RUBROS GRID */}
-<div style={{ padding: "16px 14px 0" }}>
-  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-    <p style={{ fontSize: 13, fontWeight: 900, color: "#111827" }}>¿Qué necesitas hoy?</p>
-    {rubros.length > 6 && !verTodosRubros && (
-      <button onClick={() => setVerTodosRubros(true)}
-        style={{ fontSize: 11, color: "#2563EB", fontWeight: 800, background: "none", border: "none", cursor: "pointer" }}>
-        Ver todos ({rubros.length}) →
-      </button>
-    )}
-    {verTodosRubros && (
-      <button onClick={() => setVerTodosRubros(false)}
-        style={{ fontSize: 11, color: "#6B7280", fontWeight: 800, background: "none", border: "none", cursor: "pointer" }}>
-        ← Ver menos
-      </button>
-    )}
-  </div>
-
-  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
-    {(verTodosRubros ? rubros : rubros.slice(0, 6)).map(r => {
-      const totalNegocios = kioskos.filter(k => k.rubro_id === r.id).length;
-      return (
-        <button key={r.id} onClick={() => setRubroActivo(r)}
-          style={{ background: "#fff", borderRadius: 14, padding: "12px 8px", textAlign: "center", border: "1.5px solid #f1f5f9", cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.05)", position: "relative", overflow: "hidden" }}>
-          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 3, background: r.color || "#2563EB", borderRadius: 0 }}></div>
-          <span style={{ fontSize: 26, display: "block", marginBottom: 5 }}>
-            {r.emoji && r.emoji !== "🏪" ? r.emoji : (() => {
-              const n = r.nombre.toLowerCase();
-              if (n.includes("bodega")) return "🛒";
-              if (n.includes("farmacia")) return "💊";
-              if (n.includes("licor")) return "🍾";
-              if (n.includes("libreria") || n.includes("librería")) return "📚";
-              if (n.includes("peluquer")) return "✂️";
-              if (n.includes("ferreteri") || n.includes("ferretería")) return "🔧";
-              if (n.includes("polleria") || n.includes("pollería")) return "🍗";
-              if (n.includes("panaderia") || n.includes("panadería")) return "🥖";
-              if (n.includes("carnicer")) return "🥩";
-              if (n.includes("restaurant") || n.includes("comida")) return "🍽️";
-              if (n.includes("fruteria") || n.includes("frutas")) return "🍎";
-              if (n.includes("lavanderia") || n.includes("lavandería")) return "👕";
-              if (n.includes("zapateria") || n.includes("zapatería")) return "👟";
-              return "🏪";
-            })()}
-          </span>
-          <span style={{ fontSize: 10, fontWeight: 800, color: "#111827", display: "block", lineHeight: 1.2 }}>{r.nombre}</span>
-          <span style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600 }}>{totalNegocios} tiendas</span>
-        </button>
-      );
-    })}
-  </div>
-          </div>
-
-          {/* ✅ SECCIÓN OFERTAS */}
-      {productosOferta && productosOferta.length > 0 && (
-        <div style={{ background: "#fff", padding: "14px 14px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ background: "#fef2f2", borderRadius: 8, padding: "3px 7px", fontSize: 14 }}>🏷️</div>
-              <span style={{ fontSize: 13, fontWeight: 900, color: "#111827" }}>Ofertas</span>
-              <span style={{ fontSize: 10, background: "#fee2e2", color: "#dc2626", fontWeight: 800, padding: "2px 8px", borderRadius: 999 }}>{productosOferta.length} productos</span>
+              {(() => {
+                const total = kioskos.length;
+                const abiertos = kioskos.filter(k => estaAbierto(k.info_tienda) !== false).length;
+                return (
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(16,185,129,0.85)", borderRadius: 999, padding: "3px 10px", width: "fit-content", marginBottom: 6 }}>
+                    <div style={{ width: 5, height: 5, background: "#fff", borderRadius: "50%" }}></div>
+                    <span style={{ color: "#fff", fontSize: 9, fontWeight: 800 }}>
+                      {total} negocios · {abiertos} abiertos ahora
+                    </span>
+                  </div>
+                );
+              })()}
+              <p style={{ fontSize: 22, fontWeight: 900, color: "#fff", textShadow: "0 2px 8px rgba(0,0,0,0.4)", lineHeight: 1.1 }}>{condominio.nombre}</p>
             </div>
           </div>
 
-          {/* Scroll horizontal de ofertas */}
-          <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4 }}>
-            {productosOferta.map((prod, idx) => {
-              const kiosko = kioskos.find(k => k.id === prod.kiosko_id);
-              return (
-                <div key={`${prod.id}-${idx}`}
-                  onClick={() => kiosko && setKioskoSeleccionado(kiosko)}
-                  style={{ flexShrink: 0, width: 140, background: "#fff", borderRadius: 14, overflow: "hidden", border: "1.5px solid #fee2e2", boxShadow: "0 2px 8px rgba(220,38,38,0.08)", cursor: "pointer" }}>
+          {/* RUBROS GRID */}
+          <div style={{ padding: "16px 14px 0" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <p style={{ fontSize: 13, fontWeight: 900, color: "#111827" }}>¿Qué necesitas hoy?</p>
+              {rubros.length > 6 && !verTodosRubros && (
+                <button onClick={() => setVerTodosRubros(true)}
+                  style={{ fontSize: 11, color: "#2563EB", fontWeight: 800, background: "none", border: "none", cursor: "pointer" }}>
+                  Ver todos ({rubros.length}) →
+                </button>
+              )}
+              {verTodosRubros && (
+                <button onClick={() => setVerTodosRubros(false)}
+                  style={{ fontSize: 11, color: "#6B7280", fontWeight: 800, background: "none", border: "none", cursor: "pointer" }}>
+                  ← Ver menos
+                </button>
+              )}
+            </div>
 
-                  {/* Foto producto */}
-                  <div style={{ position: "relative", width: "100%", aspectRatio: "1/1", background: "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {prod.foto
-                      ? <img src={prod.foto} alt={prod.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      : <span style={{ fontSize: 36 }}>{prod.emoji || "🏷️"}</span>
-                    }
-                    {/* Badge oferta */}
-                    <div style={{ position: "absolute", top: 6, left: 6, background: "#dc2626", color: "#fff", fontSize: 9, fontWeight: 900, padding: "2px 7px", borderRadius: 999 }}>
-                      🏷️ OFERTA
-                    </div>
-                  </div>
-
-                  {/* Info */}
-                  <div style={{ padding: "8px 9px 10px" }}>
-                    <p style={{ fontSize: 11, fontWeight: 800, color: "#111827", margin: "0 0 3px", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prod.nombre}</p>
-                    <p style={{ fontSize: 13, fontWeight: 900, color: "#dc2626", margin: "0 0 4px" }}>S/. {Number(prod.precio).toFixed(2)}</p>
-                    {kiosko && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                        <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#dc2626", flexShrink: 0 }}></div>
-                        <span style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{kiosko.nombre}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
+              {(verTodosRubros ? rubros : rubros.slice(0, 6)).map(r => {
+                const totalNegocios = kioskos.filter(k => k.rubro_id === r.id).length;
+                return (
+                  <button key={r.id} onClick={() => setRubroActivo(r)}
+                    style={{ background: "#fff", borderRadius: 14, padding: "12px 8px", textAlign: "center", border: "1.5px solid #f1f5f9", cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.05)", position: "relative", overflow: "hidden" }}>
+                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 3, background: r.color || "#2563EB", borderRadius: 0 }}></div>
+                    <span style={{ fontSize: 26, display: "block", marginBottom: 5 }}>
+                      {r.emoji && r.emoji !== "🏪" ? r.emoji : (() => {
+                        const n = r.nombre.toLowerCase();
+                        if (n.includes("bodega")) return "🛒";
+                        if (n.includes("farmacia")) return "💊";
+                        if (n.includes("licor")) return "🍾";
+                        if (n.includes("libreria") || n.includes("librería")) return "📚";
+                        if (n.includes("peluquer")) return "✂️";
+                        if (n.includes("ferreteri") || n.includes("ferretería")) return "🔧";
+                        if (n.includes("polleria") || n.includes("pollería")) return "🍗";
+                        if (n.includes("panaderia") || n.includes("panadería")) return "🥖";
+                        if (n.includes("carnicer")) return "🥩";
+                        if (n.includes("restaurant") || n.includes("comida")) return "🍽️";
+                        if (n.includes("fruteria") || n.includes("frutas")) return "🍎";
+                        if (n.includes("lavanderia") || n.includes("lavandería")) return "👕";
+                        if (n.includes("zapateria") || n.includes("zapatería")) return "👟";
+                        return "🏪";
+                      })()}
+                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: "#111827", display: "block", lineHeight: 1.2 }}>{r.nombre}</span>
+                    <span style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600 }}>{totalNegocios} tiendas</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
 
-      <div style={{ height: 8, background: "#f1f5f9" }} />
+          {/* ✅ SECCIÓN OFERTAS */}
+          {productosOferta && productosOferta.length > 0 && (
+            <div style={{ background: "#fff", padding: "14px 14px 16px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ background: "#fef2f2", borderRadius: 8, padding: "3px 7px", fontSize: 14 }}>🏷️</div>
+                  <span style={{ fontSize: 13, fontWeight: 900, color: "#111827" }}>Ofertas</span>
+                  <span style={{ fontSize: 10, background: "#fee2e2", color: "#dc2626", fontWeight: 800, padding: "2px 8px", borderRadius: 999 }}>{productosOferta.length} productos</span>
+                </div>
+              </div>
+
+              {/* Scroll horizontal de ofertas */}
+              <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4 }}>
+                {productosOferta.map((prod, idx) => {
+                  const kiosko = kioskos.find(k => k.id === prod.kiosko_id);
+                  return (
+                    <div key={`${prod.id}-${idx}`}
+                      // 🚀 Cambiado a ruta nativa
+                      onClick={() => kiosko && navigate(`/c/${condominio.slug}/${kiosko.slug}`)}
+                      style={{ flexShrink: 0, width: 140, background: "#fff", borderRadius: 14, overflow: "hidden", border: "1.5px solid #fee2e2", boxShadow: "0 2px 8px rgba(220,38,38,0.08)", cursor: "pointer" }}>
+
+                      {/* Foto producto */}
+                      <div style={{ position: "relative", width: "100%", aspectRatio: "1/1", background: "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {prod.foto
+                          ? <img src={prod.foto} alt={prod.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          : <span style={{ fontSize: 36 }}>{prod.emoji || "🏷️"}</span>
+                        }
+                        {/* Badge oferta */}
+                        <div style={{ position: "absolute", top: 6, left: 6, background: "#dc2626", color: "#fff", fontSize: 9, fontWeight: 900, padding: "2px 7px", borderRadius: 999 }}>
+                          🏷️ OFERTA
+                        </div>
+                      </div>
+
+                      {/* Info */}
+                      <div style={{ padding: "8px 9px 10px" }}>
+                        <p style={{ fontSize: 11, fontWeight: 800, color: "#111827", margin: "0 0 3px", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prod.nombre}</p>
+                        <p style={{ fontSize: 13, fontWeight: 900, color: "#dc2626", margin: "0 0 4px" }}>S/. {Number(prod.precio).toFixed(2)}</p>
+                        {kiosko && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                            <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#dc2626", flexShrink: 0 }}></div>
+                            <span style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{kiosko.nombre}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div style={{ height: 8, background: "#f1f5f9" }} />
 
           {/* PRODUCTOS DESTACADOS */}
           {productosDestacados.length > 0 && (
@@ -2666,7 +2665,9 @@ const kioskosFiltered = kioskosDelRubro;
                 {productosDestacados.map((prod, idx) => {
                   const kiosko = kioskos.find(k => k.id === prod.kiosko_id);
                   return (
-                    <div key={prod.id} onClick={() => kiosko && setKioskoSeleccionado(kiosko)}
+                    <div key={prod.id} 
+                      // 🚀 Cambiado a ruta nativa
+                      onClick={() => kiosko && navigate(`/c/${condominio.slug}/${kiosko.slug}`)}
                       style={{ background: "#fff", borderRadius: 14, overflow: "hidden", border: "1px solid #f1f5f9", cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.05)" }}>
                       <div style={{ position: "relative", aspectRatio: "1/1", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <img src={prod.foto} alt={prod.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -2705,77 +2706,78 @@ const kioskosFiltered = kioskosDelRubro;
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {kioskosFiltered.map(k => {
-  const rubro = rubros.find(r => r.id === k.rubro_id);
-  return (
-    <div key={k.id}
-      style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,0.07)", border: "1px solid #f1f5f9", cursor: "pointer", display: "flex" }}
-      onClick={() => setKioskoSeleccionado(k)}>
+                const rubro = rubros.find(r => r.id === k.rubro_id);
+                return (
+                  <div key={k.id}
+                    style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,0.07)", border: "1px solid #f1f5f9", cursor: "pointer", display: "flex" }}
+                    // 🚀 Cambiado a ruta nativa
+                    onClick={() => navigate(`/c/${condominio.slug}/${k.slug}`)}>
 
-      {/* IMAGEN LATERAL */}
-      <div style={{ width: 110, flexShrink: 0, position: "relative", background: rubro ? `linear-gradient(135deg, ${rubro.color}33, ${rubro.color}66)` : "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 44 }}>
-        {k.banner
-          ? <img src={k.banner} alt={k.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          : <span style={{ opacity: 0.5 }}>{rubro?.emoji || "🏪"}</span>
-        }
-        {/* Badge abierto/cerrado DINÁMICO */}
-        {(() => {
-          const abierto = estaAbierto(k.info_tienda);
-          return (
-            <div style={{ position: "absolute", bottom: 6, left: 6, display: "flex", alignItems: "center", gap: 3, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", borderRadius: 999, padding: "2px 7px" }}>
-              <div style={{ width: 4, height: 4, background: abierto === false ? "#f87171" : "#4ade80", borderRadius: "50%" }}></div>
-              <span style={{ color: "#fff", fontSize: 8, fontWeight: 800 }}>
-                {abierto === false ? "Cerrado" : "Abierto"}
-              </span>
-            </div>
-          );
-        })()}
-      </div>
+                    {/* IMAGEN LATERAL */}
+                    <div style={{ width: 110, flexShrink: 0, position: "relative", background: rubro ? `linear-gradient(135deg, ${rubro.color}33, ${rubro.color}66)` : "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 44 }}>
+                      {k.banner
+                        ? <img src={k.banner} alt={k.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        : <span style={{ opacity: 0.5 }}>{rubro?.emoji || "🏪"}</span>
+                      }
+                      {/* Badge abierto/cerrado DINÁMICO */}
+                      {(() => {
+                        const abierto = estaAbierto(k.info_tienda);
+                        return (
+                          <div style={{ position: "absolute", bottom: 6, left: 6, display: "flex", alignItems: "center", gap: 3, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", borderRadius: 999, padding: "2px 7px" }}>
+                            <div style={{ width: 4, height: 4, background: abierto === false ? "#f87171" : "#4ade80", borderRadius: "50%" }}></div>
+                            <span style={{ color: "#fff", fontSize: 8, fontWeight: 800 }}>
+                              {abierto === false ? "Cerrado" : "Abierto"}
+                            </span>
+                          </div>
+                        );
+                      })()}
+                    </div>
 
-      {/* INFO DERECHA */}
-      <div style={{ flex: 1, padding: "11px 12px 11px 13px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 4 }}>
+                    {/* INFO DERECHA */}
+                    <div style={{ flex: 1, padding: "11px 12px 11px 13px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 4 }}>
 
-        {/* Nombre + flecha */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <p style={{ fontSize: 14, fontWeight: 900, color: "#111827", margin: 0, lineHeight: 1.2 }}>{k.nombre}</p>
-          <div style={{ width: 24, height: 24, background: "#f1f5f9", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#9ca3af", flexShrink: 0 }}>›</div>
-        </div>
+                      {/* Nombre + flecha */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <p style={{ fontSize: 14, fontWeight: 900, color: "#111827", margin: 0, lineHeight: 1.2 }}>{k.nombre}</p>
+                        <div style={{ width: 24, height: 24, background: "#f1f5f9", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#9ca3af", flexShrink: 0 }}>›</div>
+                      </div>
 
-        {/* Descripción */}
-        {k.info_tienda?.descripcion && (
-          <p style={{ fontSize: 10, color: "#6b7280", fontWeight: 600, margin: 0, lineHeight: 1.3 }}>{k.info_tienda.descripcion}</p>
-        )}
+                      {/* Descripción */}
+                      {k.info_tienda?.descripcion && (
+                        <p style={{ fontSize: 10, color: "#6b7280", fontWeight: 600, margin: 0, lineHeight: 1.3 }}>{k.info_tienda.descripcion}</p>
+                      )}
 
-        {/* Rubro badge */}
-        {rubro && (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: `${rubro.color}15`, border: `1px solid ${rubro.color}30`, borderRadius: 999, padding: "2px 8px", fontSize: 9, fontWeight: 800, color: rubro.color, width: "fit-content" }}>
-            {rubro.emoji} {rubro.nombre}
-          </span>
-        )}
+                      {/* Rubro badge */}
+                      {rubro && (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: `${rubro.color}15`, border: `1px solid ${rubro.color}30`, borderRadius: 999, padding: "2px 8px", fontSize: 9, fontWeight: 800, color: rubro.color, width: "fit-content" }}>
+                          {rubro.emoji} {rubro.nombre}
+                        </span>
+                      )}
 
-        {/* Horario */}
-        {k.info_tienda?.horario && (
-          <span style={{ fontSize: 9, color: "#6b7280", fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}>
-            🕐 {k.info_tienda.horario}
-          </span>
-        )}
+                      {/* Horario */}
+                      {k.info_tienda?.horario && (
+                        <span style={{ fontSize: 9, color: "#6b7280", fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}>
+                          🕐 {k.info_tienda.horario}
+                        </span>
+                      )}
 
-        {/* Delivery + productos */}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          {k.info_tienda?.delivery === "si" && (
-            <span style={{ fontSize: 9, color: "#059669", fontWeight: 800, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 999, padding: "2px 7px", display: "flex", alignItems: "center", gap: 3 }}>
-              🛵 {k.info_tienda?.delivery_tiempo || "Delivery"}
-            </span>
-          )}
-          <span style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600 }}>📦 {(k.productos || []).length} productos</span>
-          {k.plan === "Premium" && (
-            <span style={{ fontSize: 9, color: "#f59e0b", fontWeight: 800 }}>⭐ Premium</span>
-          )}
-        </div>
+                      {/* Delivery + productos */}
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                        {k.info_tienda?.delivery === "si" && (
+                          <span style={{ fontSize: 9, color: "#059669", fontWeight: 800, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 999, padding: "2px 7px", display: "flex", alignItems: "center", gap: 3 }}>
+                            🛵 {k.info_tienda?.delivery_tiempo || "Delivery"}
+                          </span>
+                        )}
+                        <span style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600 }}>📦 {(k.productos || []).length} productos</span>
+                        {k.plan === "Premium" && (
+                          <span style={{ fontSize: 9, color: "#f59e0b", fontWeight: 800 }}>⭐ Premium</span>
+                        )}
+                      </div>
 
-      </div>
-    </div>
-  );
-})}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -2877,6 +2879,7 @@ function LoginScreen() {
 // ─── WRAPPER DE CONDOMINIO ───
 function CondominioWrapper() {
   const { slugCond, slugKiosko } = useParams();
+  const navigate = useNavigate(); // 🌟 Lo agregamos para controlar el botón "Salir"
   const [condominioPublico, setCondominioPublico] = useState(null);
   const [rubrosPublicos, setRubrosPublicos] = useState([]);
   const [rubroActivo, setRubroActivo] = useState(null);
@@ -2884,7 +2887,6 @@ function CondominioWrapper() {
   const [productosDestacados, setProductosDestacados] = useState([]);
   const [productosOferta, setProductosOferta] = useState([]);
   const [cargando, setCargando] = useState(true);
-  const [kioskoDirecto, setKioskoDirecto] = useState(null);
 
   useEffect(() => {
     cargarCondominio();
@@ -2914,11 +2916,6 @@ function CondominioWrapper() {
           (k.productos || []).filter(p => p.oferta && p.stock).map(p => ({ ...p, kiosko_nombre: k.nombre }))
         )
       );
-      // ✅ Si viene con slugKiosko directo
-      if (slugKiosko) {
-        const kDirec = kioskosConProductos.find(k => k.slug === slugKiosko);
-        if (kDirec) setKioskoDirecto(kDirec);
-      }
     }
     setCargando(false);
   };
@@ -2939,6 +2936,20 @@ function CondominioWrapper() {
     </div>
   );
 
+  // 🌟 SI EN LA URL VIENE UN SLUG DE KIOSKO, CARGAMOS SU CATÁLOGO DIRECTO:
+  if (slugKiosko) {
+    const kioskoActual = kioskosPorRubro.find(k => k.slug === slugKiosko.toLowerCase().trim());
+    if (kioskoActual) {
+      return (
+        <CatalogoCliente 
+          kiosko={{ ...kioskoActual, productos: kioskoActual.productos || [] }} 
+          // 🚀 Al salir, volvemos a la URL del condominio. ¡Esto genera historial real!
+          onSalir={() => navigate(`/c/${condominioPublico.slug}`)} 
+        />
+      );
+    }
+  }
+
   return (
     <CondominioPublico
       condominio={condominioPublico}
@@ -2948,8 +2959,6 @@ function CondominioWrapper() {
       productosOferta={productosOferta}
       rubroActivo={rubroActivo}
       setRubroActivo={setRubroActivo}
-      kioskoDirecto={kioskoDirecto}
-      onKioskoDirectoVisto={() => setKioskoDirecto(null)}
     />
   );
 }
