@@ -2892,7 +2892,8 @@ function CondominioWrapper() {
 
   const cargarCondominio = async () => {
     setCargando(true);
-    const { data: cond } = await supabase.from("condominios").select("*").eq("slug", slugCond).single();
+    const slugLimpio = slugCond ? slugCond.toLowerCase().trim() : "";
+    const { data: cond } = await supabase.from("condominios").select("*").eq("slug", slugLimpio).single();
     if (cond) {
       const { data: rubros } = await supabase.from("rubros").select("*").eq("condominio_id", cond.id).order("orden");
       const { data: kioskos } = await supabase.from("kioskos").select("*").eq("condominio_id", cond.id).eq("activo", true);
@@ -2965,7 +2966,8 @@ function KioskoWrapper() {
 
   const cargarKiosko = async () => {
     setCargando(true);
-    const { data } = await supabase.from("kioskos").select("*").eq("slug", slug).single();
+    const slugLimpio = slug ? slug.toLowerCase().trim() : "";
+    const { data } = await supabase.from("kioskos").select("*").eq("slug", slugLimpio).single();
     if (data) {
       const { data: prods } = await supabase.from("productos").select("*").eq("kiosko_id", data.id);
       setKiosko({ ...data, productos: prods || [] });
