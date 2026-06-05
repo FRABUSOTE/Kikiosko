@@ -2416,6 +2416,16 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
     return () => clearTimeout(timeout);
   }, [busqueda, kioskos]);
 
+  useEffect(() => {
+  const onBack = () => {
+    if (rubroActivo) {
+      setRubroActivo(null);
+      window.history.pushState({ rubro: true }, "");
+    }
+  };
+  window.addEventListener("popstate", onBack);
+  return () => window.removeEventListener("popstate", onBack);
+}, [rubroActivo]);
 
   const kioskosDelRubro = rubroActivo
     ? kioskos.filter(k => k.rubro_id === rubroActivo.id)
@@ -2606,7 +2616,10 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
               {(verTodosRubros ? rubros : rubros.slice(0, 6)).map(r => {
                 const totalNegocios = kioskos.filter(k => k.rubro_id === r.id).length;
                 return (
-                  <button key={r.id} onClick={() => setRubroActivo(r)}
+                  <button key={r.id} onClick={() => {
+  setRubroActivo(r);
+  window.history.pushState({ rubro: true }, "");
+}}
                     style={{ background: "#fff", borderRadius: 14, padding: "12px 8px", textAlign: "center", border: "1.5px solid #f1f5f9", cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.05)", position: "relative", overflow: "hidden" }}>
                     <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 3, background: r.color || "#2563EB", borderRadius: 0 }}></div>
                     <span style={{ fontSize: 26, display: "block", marginBottom: 5 }}>
