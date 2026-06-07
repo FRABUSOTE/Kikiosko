@@ -1280,23 +1280,31 @@ const ventasPeriodo = datosGrafico.reduce((s, d) => s + d.total, 0);
                     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                       <span style={{ fontSize: 12, fontWeight: 700, color: "#9ca3af" }}>S/.</span>
                       <input type="text" value={isNaN(p.precio) ? "" : Number(p.precio).toFixed(2)}
-                        onChange={e => { const val = e.target.value.replace(",", "."); actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, precio: parseFloat(val) || 0 } : pr)); }}
+                        onChange={e => { 
+  const val = e.target.value.replace(",", "."); 
+  actualizarProductos(productos.map(pr => pr.id === p.id ? { 
+    ...pr, 
+    precio: parseFloat(val) || 0,
+    _precioAntes: pr._precioAntes ?? pr.precio  // ✅ guarda precio antes de editar
+  } : pr)); 
+}}
                         onFocus={e => { e.target.style.borderColor = "#2563EB"; e.target.select(); }}
                         onBlur={async e => {
   e.target.style.borderColor = "#bfdbfe";
   const val = parseFloat(e.target.value.replace(",", ".")) || 0;
-  const precioActual = parseFloat(p.precio) || 0;
+  const precioActual = parseFloat(p._precioAntes ?? p.precio) || 0; // ✅ usa precio antes de editar
   
-  // ✅ Si el precio baja → guardar precio_original automáticamente
-  // ✅ Si el precio sube al original o más → limpiar precio_original
-  let updateData = { precio: val };
+  let updateData = { precio: val, _precioAntes: undefined };
   if (val < precioActual && !p.precio_original) {
     updateData.precio_original = precioActual;
   } else if (p.precio_original && val >= p.precio_original) {
     updateData.precio_original = null;
   }
   
-  await supabase.from("productos").update(updateData).eq("id", p.id);
+  await supabase.from("productos").update({ 
+    precio: val, 
+    precio_original: updateData.precio_original !== undefined ? updateData.precio_original : p.precio_original 
+  }).eq("id", p.id);
   actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, ...updateData } : pr));
   mostrarToast("✅ Precio actualizado");
 }}
