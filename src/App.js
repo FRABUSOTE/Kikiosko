@@ -1282,7 +1282,24 @@ const ventasPeriodo = datosGrafico.reduce((s, d) => s + d.total, 0);
                       <input type="text" value={isNaN(p.precio) ? "" : Number(p.precio).toFixed(2)}
                         onChange={e => { const val = e.target.value.replace(",", "."); actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, precio: parseFloat(val) || 0 } : pr)); }}
                         onFocus={e => { e.target.style.borderColor = "#2563EB"; e.target.select(); }}
-                        onBlur={async e => { e.target.style.borderColor = "#bfdbfe"; const val = parseFloat(e.target.value.replace(",", ".")) || 0; await supabase.from("productos").update({ precio: val }).eq("id", p.id); mostrarToast("✅ Precio actualizado"); }}
+                        onBlur={async e => {
+  e.target.style.borderColor = "#bfdbfe";
+  const val = parseFloat(e.target.value.replace(",", ".")) || 0;
+  const precioActual = parseFloat(p.precio) || 0;
+  
+  // ✅ Si el precio baja → guardar precio_original automáticamente
+  // ✅ Si el precio sube al original o más → limpiar precio_original
+  let updateData = { precio: val };
+  if (val < precioActual && !p.precio_original) {
+    updateData.precio_original = precioActual;
+  } else if (p.precio_original && val >= p.precio_original) {
+    updateData.precio_original = null;
+  }
+  
+  await supabase.from("productos").update(updateData).eq("id", p.id);
+  actualizarProductos(productos.map(pr => pr.id === p.id ? { ...pr, ...updateData } : pr));
+  mostrarToast("✅ Precio actualizado");
+}}
                         style={{ width: 70, background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 7, padding: "6px 8px", fontSize: 14, fontWeight: 900, color: "#2563EB", fontFamily: "inherit", outline: "none", textAlign: "center" }} />
                     </div>
                   )}
@@ -1966,7 +1983,21 @@ function CatalogoCliente({
               </div>
             )}
             <div style={{ marginTop: 10 }}>
-              <span style={{ fontWeight: 900, color: "#1d4ed8", fontSize: 15 }}>S/. {precioDisplay.toFixed(2)}</span>
+              <div style={{ marginBottom: 2 }}>
+  {p.precio_original && p.precio_original > precioDisplay && (
+    <span style={{ fontSize: 11, color: "#9ca3af", textDecoration: "line-through", display: "block", lineHeight: 1 }}>
+      S/. {Number(p.precio_original).toFixed(2)}
+    </span>
+  )}
+  <span style={{ fontWeight: 900, color: "#1d4ed8", fontSize: 15 }}>
+    S/. {precioDisplay.toFixed(2)}
+    {p.precio_original && p.precio_original > precioDisplay && (
+      <span style={{ fontSize: 10, fontWeight: 700, color: "#059669", background: "#dcfce7", padding: "1px 6px", borderRadius: 999, marginLeft: 6 }}>
+        -{Math.round((1 - precioDisplay / p.precio_original) * 100)}%
+      </span>
+    )}
+  </span>
+</div>
               {(() => {
                 const key = varSel ? `${p.id}-${varSel.nombre}` : `${p.id}-unica`;
                 const cantidad = carrito[key]?.cantidad || 0;
