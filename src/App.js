@@ -2724,7 +2724,19 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
                       {/* Info */}
                       <div style={{ padding: "8px 9px 10px" }}>
                         <p style={{ fontSize: 11, fontWeight: 800, color: "#111827", margin: "0 0 3px", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prod.nombre}</p>
-                        <p style={{ fontSize: 13, fontWeight: 900, color: "#dc2626", margin: "0 0 4px" }}>S/. {Number(prod.precio).toFixed(2)}</p>
+                        {prod.precio_original && prod.precio_original > prod.precio && (
+  <span style={{ fontSize: 10, color: "#9ca3af", textDecoration: "line-through", display: "block", lineHeight: 1.2 }}>
+    S/. {Number(prod.precio_original).toFixed(2)}
+  </span>
+)}
+<p style={{ fontSize: 13, fontWeight: 900, color: "#dc2626", margin: "0 0 4px", display: "flex", alignItems: "center", gap: 4 }}>
+  S/. {Number(prod.precio).toFixed(2)}
+  {prod.precio_original && prod.precio_original > prod.precio && (
+    <span style={{ fontSize: 9, fontWeight: 700, color: "#fff", background: "#dc2626", padding: "1px 5px", borderRadius: 999 }}>
+      -{Math.round((1 - prod.precio / prod.precio_original) * 100)}%
+    </span>
+  )}
+</p>
                         {kiosko && (
                           <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
                             <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#dc2626", flexShrink: 0 }}></div>
