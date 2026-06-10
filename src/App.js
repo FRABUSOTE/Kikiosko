@@ -2284,7 +2284,7 @@ function CatalogoCliente({
 )}
 
     {/* FILA DE BENEFICIOS */}
-    <div style={{ margin: "12px 14px", background: "#fff", borderRadius: 14, border: "1px solid #f1f5f9", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", display: "flex", overflow: "hidden" }}>
+    <div style={{ margin: "8px 14px", background: "#fff", borderRadius: 14, border: "1px solid #f1f5f9", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", display: "flex", overflow: "hidden" }}>
       
       {/* Delivery */}
       <div style={{ flex: 1, padding: "10px 8px", textAlign: "center", borderRight: "1px solid #f1f5f9" }}>
@@ -2317,14 +2317,14 @@ function CatalogoCliente({
     </div>
 
     {/* TÍTULO CATEGORÍAS */}
-    <div style={{ padding: "4px 14px 12px", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+    <div style={{ padding: "4px 14px 6px", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
       <span style={{ fontSize: 14 }}>✨</span>
       <p style={{ fontSize: 14, fontWeight: 900, color: "#111827", margin: 0 }}>Explora nuestras categorías</p>
       <span style={{ fontSize: 14 }}>✨</span>
     </div>
 
     {/* GRID CATEGORÍAS MADRE */}
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, padding: "0 14px 20px" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, padding: "0 14px 14px" }}>
       {catMadres.map(madre => (
         <button key={madre.id} onClick={() => entrarMadre(madre.nombre)}
           style={{ background: "#fff", borderRadius: 18, overflow: "hidden", border: "none", cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.08)", padding: 0, textAlign: "left" }}>
