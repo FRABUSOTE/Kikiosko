@@ -2237,6 +2237,52 @@ function CatalogoCliente({
       </div>
     )}
 
+{/* ✅ SECCIÓN OFERTAS DEL KIOSKO */}
+{kiosko.productos.filter(p => p.oferta && p.stock).length > 0 && (
+  <div style={{ background: "#fff", padding: "14px 14px 16px", marginTop: 12 }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ background: "#fef2f2", borderRadius: 8, padding: "3px 7px", fontSize: 14 }}>🔥</div>
+        <span style={{ fontSize: 13, fontWeight: 900, color: "#111827" }}>Ofertas de hoy</span>
+        <span style={{ fontSize: 10, background: "#fee2e2", color: "#dc2626", fontWeight: 800, padding: "2px 8px", borderRadius: 999 }}>
+          {kiosko.productos.filter(p => p.oferta && p.stock).length} productos
+        </span>
+      </div>
+    </div>
+    <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4 }}>
+      {kiosko.productos.filter(p => p.oferta && p.stock).map((prod, idx) => (
+        <div key={prod.id}
+          onClick={() => entrarMadre(prod.madre || "sin_madre")}
+          style={{ flexShrink: 0, width: 150, background: "#fff", borderRadius: 14, overflow: "hidden", border: "1.5px solid #fee2e2", boxShadow: "0 2px 8px rgba(220,38,38,0.08)", cursor: "pointer" }}>
+          <div style={{ position: "relative", width: "100%", aspectRatio: "1/1", background: "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {prod.foto
+              ? <img src={prod.foto} alt={prod.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : <span style={{ fontSize: 36 }}>{prod.emoji || "🏷️"}</span>
+            }
+            <div style={{ position: "absolute", top: 6, left: 6, background: "#dc2626", color: "#fff", fontSize: 9, fontWeight: 900, padding: "2px 7px", borderRadius: 999 }}>
+              {prod.precio_original && prod.precio_original > prod.precio
+                ? `-${Math.round((1 - prod.precio / prod.precio_original) * 100)}%`
+                : "🔥 OFERTA"
+              }
+            </div>
+          </div>
+          <div style={{ padding: "8px 9px 10px" }}>
+            <p style={{ fontSize: 11, fontWeight: 800, color: "#111827", margin: "0 0 3px", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prod.nombre}</p>
+            {prod.precio_original && prod.precio_original > prod.precio && (
+              <span style={{ fontSize: 10, color: "#9ca3af", textDecoration: "line-through", display: "block" }}>
+                S/. {Number(prod.precio_original).toFixed(2)}
+              </span>
+            )}
+            <p style={{ fontSize: 13, fontWeight: 900, color: "#dc2626", margin: "0" }}>
+              S/. {Number(prod.precio).toFixed(2)}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
     {/* FILA DE BENEFICIOS */}
     <div style={{ margin: "12px 14px", background: "#fff", borderRadius: 14, border: "1px solid #f1f5f9", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", display: "flex", overflow: "hidden" }}>
       
