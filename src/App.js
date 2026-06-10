@@ -2892,7 +2892,7 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
         </div>
       ) : (
         /* LISTA DE NEGOCIOS DEL RUBRO */
-        <div style={{ padding: "16px 14px" }}>
+        <div style={{ padding: "8px 6px 0" }}>
           {rubroActivo && (
             <p style={{ fontSize: 13, fontWeight: 700, color: "#9ca3af", marginBottom: 14 }}>
               {kioskosFiltered.length} negocio{kioskosFiltered.length !== 1 ? "s" : ""} en {rubroActivo.emoji} {rubroActivo.nombre}
