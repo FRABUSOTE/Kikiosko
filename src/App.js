@@ -1718,7 +1718,7 @@ function CatalogoCliente({
   }, [busqueda, kiosko.productos]);
 
 // ==========================================
-  // ✅ CONTROL DEL BOTÓN ATRÁS DEFINITIVO (USANDO HASH EN URL)
+  // ✅ CONTROL DEL BOTÓN ATRÁS DEFINITIVO (USANDO HASH SEGURO)
   // ==========================================
   
   // 1. Sincroniza el estado de React con la URL real (si entran por QR o dan atrás)
@@ -1733,19 +1733,19 @@ function CatalogoCliente({
           const nombreMadre = decodeURIComponent(hash.replace("#madre-", ""));
           setMadreActiva(nombreMadre);
         } else {
-          // Si el hash está vacío o no es de categoría madre, limpia y va a la portada
+          // Si el hash está vacío, solo regresamos a la portada de categorías
           setMadreActiva(null);
           setCategoria("Todos");
-          setProductoSeleccionado(null);
-          setMostrarResultados(false);
         }
       };
 
       // Escuchamos el cambio de hash nativo del navegador/celular
       window.addEventListener("hashchange", onHashChange);
       
-      // Ejecutar una vez al cargar por si el link ya venía con hash
-      onHashChange();
+      // SOLO ejecutamos si el usuario ya entró con un hash específico en la URL
+      if (window.location.hash.startsWith("#madre-")) {
+        onHashChange();
+      }
 
       return () => window.removeEventListener("hashchange", onHashChange);
     }
@@ -1753,15 +1753,18 @@ function CatalogoCliente({
 
   // 2. Escuchar el botón físico del celular SOLO para modales internos (Producto y Buscador)
   useEffect(() => {
-    const onBackModales = () => {
+    const onBackModales = (e) => {
       if (productoSeleccionado) {
         setProductoSeleccionado(null);
+        // Evitamos que el "atrás" mueva el hash si solo cerramos un producto
+        e.preventDefault(); 
         return;
       }
       if (mostrarResultados) {
         setMostrarResultados(false);
         setBusqueda("");
         setSugerencias([]);
+        e.preventDefault();
         return;
       }
     };
@@ -1779,7 +1782,7 @@ function CatalogoCliente({
 
 
   // ==========================================
-  // 🚀 FUNCIONES DE NAVEGACIÓN MODIFICADAS
+  // 🚀 FUNCIONES DE NAVEGACIÓN CORREGIDAS
   // ==========================================
   const entrarMadre = (n) => {
     setBusqueda("");
@@ -1788,9 +1791,7 @@ function CatalogoCliente({
     if (slugCond && slugKiosko) {
       navigate(`/c/${slugCond}/${slugKiosko}/${encodeURIComponent(n)}`);
     } else {
-      // 🔥 LA SOLUCIÓN REAL: Cambiamos el hash de la URL.
-      // Esto altera la URL visible (ej: mishop.com/#madre-Bebidas)
-      // El celular LO REGISTRA sí o sí en el historial y ya no se cerrará.
+      // Cambiamos el hash de la URL sin alterar la ruta base de React Router
       window.location.hash = `madre-${encodeURIComponent(n)}`;
     }
   };
@@ -1802,8 +1803,11 @@ function CatalogoCliente({
     if (slugCond && slugKiosko) {
       navigate(`/c/${slugCond}/${slugKiosko}`);
     } else {
-      // Si usa el botón de la app, simplemente limpiamos el hash de la URL
-      window.location.hash = "";
+      // 🔥 REPARACIÓN AQUÍ: En lugar de poner "", removemos el hash limpiamente 
+      // de la barra de direcciones sin dejar el caracter "#" flotando.
+      window.history.pushState(null, "", window.location.pathname);
+      setMadreActiva(null);
+      setCategoria("Todos");
     }
   };
   
