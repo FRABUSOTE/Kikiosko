@@ -1717,6 +1717,37 @@ function CatalogoCliente({
     return () => clearTimeout(timeout);
   }, [busqueda, kiosko.productos]);
 
+  // ✅ Manejo botón atrás en buscador
+  useEffect(() => {
+    if (mostrarResultados || productoSeleccionado) {
+      window.history.pushState({ catalogo: true }, "");
+    }
+  }, [mostrarResultados, productoSeleccionado]);
+
+  useEffect(() => {
+    const onBack = () => {
+      if (productoSeleccionado) {
+        setProductoSeleccionado(null);
+        setMostrarResultados(false);
+        setBusqueda("");
+        setSugerencias([]);
+        setMadreActiva(null);
+        window.history.pushState({ catalogo: true }, "");
+        return;
+      }
+      if (mostrarResultados) {
+        setMostrarResultados(false);
+        setBusqueda("");
+        setSugerencias([]);
+        setMadreActiva(null);
+        window.history.pushState({ catalogo: true }, "");
+        return;
+      }
+    };
+    window.addEventListener("popstate", onBack);
+    return () => window.removeEventListener("popstate", onBack);
+  }, [mostrarResultados, productoSeleccionado]);
+
   // 🚀 Funciones de navegación fluidas que alteran la URL
   const entrarMadre = (n) => {
   setBusqueda("");
@@ -2130,7 +2161,13 @@ function CatalogoCliente({
 {/* ✅ PRODUCTO SELECCIONADO — muestra como card normal */}
 {mostrarResultados && productoSeleccionado && (
   <div style={{ padding: "10px 10px 100px" }}>
-    <button onClick={() => { setProductoSeleccionado(null); setMostrarResultados(false); }}
+    <button onClick={() => { 
+  setProductoSeleccionado(null); 
+  setMostrarResultados(false); 
+  setBusqueda(""); 
+  setSugerencias([]);
+  setMadreActiva(null);
+}}
       style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#6B7280", fontSize: 12, fontWeight: 700, cursor: "pointer", marginBottom: 14 }}>
       ← Volver al buscador
     </button>
