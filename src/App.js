@@ -1717,12 +1717,15 @@ function CatalogoCliente({
     return () => clearTimeout(timeout);
   }, [busqueda, kiosko.productos]);
 
-  // ✅ Manejo unificado del botón atrás
-
 // ==========================================
-  // ✅ NUEVO CONTROL DEL BOTÓN ATRÁS (CORREGIDO)
+  // ✅ CONTROL DEL BOTÓN ATRÁS (REPARADO PARA LINK DIRECTO)
   // ==========================================
   useEffect(() => {
+    // Si es link directo, marcamos el inicio en el historial para tener soporte atrás
+    if (!slugCond && !slugKiosko && !madreActiva) {
+      window.history.replaceState({ inicio: true }, "");
+    }
+
     const necesitaHistorial = 
       mostrarResultados || 
       productoSeleccionado || 
@@ -1753,6 +1756,9 @@ function CatalogoCliente({
       if (!slugCond && !slugKiosko && madreActiva && madreActiva !== "sin_madre") {
         setMadreActiva(null);
         setCategoria("Todos");
+        
+        // El seguro: le devolvemos una entrada al historial para que el siguiente "atrás" recién lo saque
+        window.history.pushState({ inicio: true }, "");
         return;
       }
     };
