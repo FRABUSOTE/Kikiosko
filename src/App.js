@@ -2230,7 +2230,7 @@ function CatalogoCliente({
 
     {/* BANNER PROMOCIONAL */}
     {kiosko.banner && kiosko.plan !== "Básico" && (
-      <div style={{ padding: "12px 14px 0" }}>
+  <div style={{ padding: "8px 6px 0" }}>
         <div style={{ borderRadius: 18, overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.10)" }}>
           <img src={kiosko.banner} alt="banner" style={{ width: "100%", aspectRatio: "16/7", objectFit: "cover", display: "block" }} />
         </div>
@@ -2348,7 +2348,7 @@ function CatalogoCliente({
 {!mostrarResultados && madreActiva !== null && (
   <>
           {kiosko.banner && kiosko.plan !== "Básico" && (
-  <div style={{ padding: "10px 12px 0" }}>
+  <div style={{ padding: "8px 6px 0" }}>
     <div style={{ borderRadius: 20, overflow: "hidden", boxShadow: "0 6px 20px rgba(0,0,0,0.12)", position: "relative" }}>
       <img src={kiosko.banner} alt="banner" style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }} />
       {/* OVERLAY con horario y dirección */}
