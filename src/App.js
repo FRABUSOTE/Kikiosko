@@ -1718,66 +1718,74 @@ function CatalogoCliente({
   }, [busqueda, kiosko.productos]);
 
   // ✅ Manejo unificado del botón atrás
-useEffect(() => {
-  if (mostrarResultados || productoSeleccionado || (!slugCond && !slugKiosko && madreActiva && madreActiva !== "sin_madre")) {
-    window.history.pushState({ app: true }, "");
-    window.history.pushState({ app: true }, "");
-  }
-}, [mostrarResultados, productoSeleccionado, madreActiva]);
 
-useEffect(() => {
-  const onBack = () => {
-    if (productoSeleccionado) {
-      setProductoSeleccionado(null);
-      setMostrarResultados(false);
-      setBusqueda("");
-      setSugerencias([]);
-      setMadreActiva(null);
-      window.history.pushState({ app: true }, "");
-      return;
+// ==========================================
+  // ✅ NUEVO CONTROL DEL BOTÓN ATRÁS (CORREGIDO)
+  // ==========================================
+  useEffect(() => {
+    const necesitaHistorial = 
+      mostrarResultados || 
+      productoSeleccionado || 
+      (!slugCond && !slugKiosko && madreActiva && madreActiva !== "sin_madre");
+
+    if (necesitaHistorial) {
+      const muevoEstado = {
+        producto: !!productoSeleccionado,
+        busqueda: mostrarResultados,
+        madre: madreActiva
+      };
+      window.history.pushState(muevoEstado, "");
     }
-    if (mostrarResultados) {
-      setMostrarResultados(false);
-      setBusqueda("");
-      setSugerencias([]);
-      setMadreActiva(null);
-      window.history.pushState({ app: true }, "");
-      return;
-    }
-    if (!slugCond && !slugKiosko && madreActiva && madreActiva !== "sin_madre") {
-      setMadreActiva(null);
+  }, [mostrarResultados, productoSeleccionado, madreActiva, slugCond, slugKiosko]);
+
+  useEffect(() => {
+    const onBack = (e) => {
+      if (productoSeleccionado) {
+        setProductoSeleccionado(null);
+        return;
+      }
+      if (mostrarResultados) {
+        setMostrarResultados(false);
+        setBusqueda("");
+        setSugerencias([]);
+        return;
+      }
+      if (!slugCond && !slugKiosko && madreActiva && madreActiva !== "sin_madre") {
+        setMadreActiva(null);
+        setCategoria("Todos");
+        return;
+      }
+    };
+
+    window.addEventListener("popstate", onBack);
+    return () => window.removeEventListener("popstate", onBack);
+  }, [mostrarResultados, productoSeleccionado, madreActiva, slugCond, slugKiosko]);
+
+  // ==========================================
+  // 🚀 NUEVAS FUNCIONES DE NAVEGACIÓN
+  // ==========================================
+  const entrarMadre = (n) => {
+    setBusqueda("");
+    setMostrarResultados(false);
+    if (slugCond && slugKiosko) {
+      navigate(`/c/${slugCond}/${slugKiosko}/${encodeURIComponent(n)}`);
+    } else {
+      setMadreActiva(n);
       setCategoria("Todos");
-      window.history.pushState({ app: true }, "");
-      return;
     }
   };
-  window.addEventListener("popstate", onBack);
-  return () => window.removeEventListener("popstate", onBack);
-}, [mostrarResultados, productoSeleccionado, madreActiva, slugCond, slugKiosko]);
 
-
-  // 🚀 Funciones de navegación fluidas que alteran la URL
-  const entrarMadre = (n) => {
-  setBusqueda("");
-  if (slugCond && slugKiosko) {
-    navigate(`/c/${slugCond}/${slugKiosko}/${encodeURIComponent(n)}`);
-  } else {
-    // ✅ Link individual — empujar historial para que atrás funcione
-    window.history.pushState({ madre: n }, "");
-    setMadreActiva(n);
-    setCategoria("Todos");
-  }
-};
-
-const volverInicio = () => {
-  setBusqueda("");
-  if (slugCond && slugKiosko) {
-    navigate(`/c/${slugCond}/${slugKiosko}`);
-  } else {
-    setMadreActiva(null);
-    setCategoria("Todos");
-  }
-};
+  const volverInicio = () => {
+    setBusqueda("");
+    setMostrarResultados(false);
+    if (slugCond && slugKiosko) {
+      navigate(`/c/${slugCond}/${slugKiosko}`);
+    } else {
+      setMadreActiva(null);
+      setCategoria("Todos");
+    }
+  };
+  
 
   const agregar = (p, variacion) => {
     const key = variacion ? `${p.id}-${variacion.nombre}` : `${p.id}-unica`;
