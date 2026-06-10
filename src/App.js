@@ -1718,29 +1718,26 @@ function CatalogoCliente({
   }, [busqueda, kiosko.productos]);
 
 // ==========================================
-  // ✅ CONTROL DEL BOTÓN ATRÁS (REPARADO PARA LINK DIRECTO)
+  // ✅ CONTROL DEL BOTÓN ATRÁS (VERSION SÍNCRONIZADA DE RAÍZ)
   // ==========================================
+  
+  // 1. Seguro inicial apenas carga la app (para links directos)
   useEffect(() => {
-    // Si es link directo, marcamos el inicio en el historial para tener soporte atrás
     if (!slugCond && !slugKiosko && !madreActiva) {
       window.history.replaceState({ inicio: true }, "");
     }
+  }, [slugCond, slugKiosko]);
 
-    const necesitaHistorial = 
-      mostrarResultados || 
-      productoSeleccionado || 
-      (!slugCond && !slugKiosko && madreActiva && madreActiva !== "sin_madre");
+  // 2. Controladores de historial para modales dinámicos (Buscador y Producto)
+  useEffect(() => {
+    const necesitaHistorial = mostrarResultados || productoSeleccionado;
 
     if (necesitaHistorial) {
-      const muevoEstado = {
-        producto: !!productoSeleccionado,
-        busqueda: mostrarResultados,
-        madre: madreActiva
-      };
-      window.history.pushState(muevoEstado, "");
+      window.history.pushState({ modal: true }, "");
     }
-  }, [mostrarResultados, productoSeleccionado, madreActiva, slugCond, slugKiosko]);
+  }, [mostrarResultados, productoSeleccionado]);
 
+  // 3. Escuchar el botón físico del celular
   useEffect(() => {
     const onBack = (e) => {
       if (productoSeleccionado) {
@@ -1753,12 +1750,11 @@ function CatalogoCliente({
         setSugerencias([]);
         return;
       }
+      
+      // SI ENTRÓ POR LINK DIRECTO: Si está dentro de un rubro y da atrás
       if (!slugCond && !slugKiosko && madreActiva && madreActiva !== "sin_madre") {
-        setMadreActiva(null);
+        setMadreActiva(null); // Regresa visualmente a la portada
         setCategoria("Todos");
-        
-        // El seguro: le devolvemos una entrada al historial para que el siguiente "atrás" recién lo saque
-        window.history.pushState({ inicio: true }, "");
         return;
       }
     };
@@ -1768,7 +1764,7 @@ function CatalogoCliente({
   }, [mostrarResultados, productoSeleccionado, madreActiva, slugCond, slugKiosko]);
 
   // ==========================================
-  // 🚀 NUEVAS FUNCIONES DE NAVEGACIÓN
+  // 🚀 FUNCIONES DE NAVEGACIÓN (CON PUSHSTATE INMEDIATO)
   // ==========================================
   const entrarMadre = (n) => {
     setBusqueda("");
@@ -1776,6 +1772,9 @@ function CatalogoCliente({
     if (slugCond && slugKiosko) {
       navigate(`/c/${slugCond}/${slugKiosko}/${encodeURIComponent(n)}`);
     } else {
+      // 🔥 LA SOLUCIÓN: Empujamos el historial de inmediato al hacer CLIC
+      // Esto garantiza que el celular tenga un "paso adelante" antes de cambiar la pantalla
+      window.history.pushState({ madre: n }, "");
       setMadreActiva(n);
       setCategoria("Todos");
     }
@@ -1787,8 +1786,12 @@ function CatalogoCliente({
     if (slugCond && slugKiosko) {
       navigate(`/c/${slugCond}/${slugKiosko}`);
     } else {
+      // Si usa el botón interno de la app, limpiamos el estado y "limpiamos" un paso de historial
       setMadreActiva(null);
       setCategoria("Todos");
+      if (window.history.state?.madre) {
+        window.history.back();
+      }
     }
   };
   
