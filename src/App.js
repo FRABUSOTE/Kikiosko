@@ -1718,80 +1718,102 @@ function CatalogoCliente({
   }, [busqueda, kiosko.productos]);
 
 // ==========================================
-  // ✅ CONTROL DEL BOTÓN ATRÁS (VERSION SÍNCRONIZADA DE RAÍZ)
+  // ✅ CONTROL DEL BOTÓN ATRÁS DEFINITIVO (USANDO HASH SEGURO)
   // ==========================================
   
-  // 1. Seguro inicial apenas carga la app (para links directos)
+  // 1. Sincroniza el estado de React con la URL real (si entran por QR o dan atrás)
   useEffect(() => {
-    if (!slugCond && !slugKiosko && !madreActiva) {
-      window.history.replaceState({ inicio: true }, "");
+    if (!slugCond && !slugKiosko) {
+      const onHashChange = () => {
+        const hash = window.location.hash;
+        
+        // Buscamos si el hash contiene la marca del rubro
+        if (hash.includes("madre-")) {
+          // Extraemos lo que está después de "madre-" de forma segura
+          const partes = hash.split("madre-");
+          const nombreMadre = decodeURIComponent(partes[1]);
+          setMadreActiva(nombreMadre);
+        } else {
+          // Si regresó a la ruta limpia, limpiamos la categoría activa
+          setMadreActiva(null);
+          setCategoria("Todos");
+        }
+      };
+
+      window.addEventListener("hashchange", onHashChange);
+      
+      // Forzar revisión inicial por si ya carga con un hash en la URL
+      if (window.location.hash.includes("madre-")) {
+        onHashChange();
+      }
+
+      return () => window.removeEventListener("hashchange", onHashChange);
     }
   }, [slugCond, slugKiosko]);
 
-  // 2. Controladores de historial para modales dinámicos (Buscador y Producto)
+  // 2. Escuchar el botón físico del celular SOLO para modales internos (Producto y Buscador)
   useEffect(() => {
-    const necesitaHistorial = mostrarResultados || productoSeleccionado;
-
-    if (necesitaHistorial) {
-      window.history.pushState({ modal: true }, "");
-    }
-  }, [mostrarResultados, productoSeleccionado]);
-
-  // 3. Escuchar el botón físico del celular
-  useEffect(() => {
-    const onBack = (e) => {
+    const onBackModales = (e) => {
       if (productoSeleccionado) {
         setProductoSeleccionado(null);
+        e.preventDefault(); 
         return;
       }
       if (mostrarResultados) {
         setMostrarResultados(false);
         setBusqueda("");
         setSugerencias([]);
-        return;
-      }
-      
-      // SI ENTRÓ POR LINK DIRECTO: Si está dentro de un rubro y da atrás
-      if (!slugCond && !slugKiosko && madreActiva && madreActiva !== "sin_madre") {
-        setMadreActiva(null); // Regresa visualmente a la portada
-        setCategoria("Todos");
+        e.preventDefault();
         return;
       }
     };
 
-    window.addEventListener("popstate", onBack);
-    return () => window.removeEventListener("popstate", onBack);
-  }, [mostrarResultados, productoSeleccionado, madreActiva, slugCond, slugKiosko]);
+    window.addEventListener("popstate", onBackModales);
+    return () => window.removeEventListener("popstate", onBackModales);
+  }, [mostrarResultados, productoSeleccionado]);
+
+  // Asegura el historial para los modales
+  useEffect(() => {
+    if (mostrarResultados || productoSeleccionado) {
+      window.history.pushState({ modal: true }, "");
+    }
+  }, [mostrarResultados, productoSeleccionado]);
+
 
   // ==========================================
-  // 🚀 FUNCIONES DE NAVEGACIÓN (CON PUSHSTATE INMEDIATO)
+  // 🚀 FUNCIONES DE NAVEGACIÓN CORREGIDAS
   // ==========================================
   const entrarMadre = (n) => {
     setBusqueda("");
     setMostrarResultados(false);
+    
     if (slugCond && slugKiosko) {
       navigate(`/c/${slugCond}/${slugKiosko}/${encodeURIComponent(n)}`);
     } else {
-      // 🔥 LA SOLUCIÓN: Empujamos el historial de inmediato al hacer CLIC
-      // Esto garantiza que el celular tenga un "paso adelante" antes de cambiar la pantalla
-      window.history.pushState({ madre: n }, "");
-      setMadreActiva(n);
-      setCategoria("Todos");
+      // Modificamos el hash respetando tu estructura con HashRouter de React Router (#/tiendaderopa)
+      window.location.hash = `${window.location.hash.split("?")[0]}?madre-${encodeURIComponent(n)}`;
     }
   };
 
   const volverInicio = () => {
     setBusqueda("");
     setMostrarResultados(false);
+    
     if (slugCond && slugKiosko) {
       navigate(`/c/${slugCond}/${slugKiosko}`);
     } else {
-      // Si usa el botón interno de la app, limpiamos el estado y "limpiamos" un paso de historial
+      // Limpiamos el parámetro de la categoría volviendo al hash base de la tienda
+      if (slugKiosko) {
+        window.location.hash = `/${slugKiosko}`;
+      } else {
+        // Fallback por si acaso no encuentra la variable
+        const hashActual = window.location.hash;
+        if (hashActual.includes("?madre-")) {
+          window.location.hash = hashActual.split("?madre-")[0];
+        }
+      }
       setMadreActiva(null);
       setCategoria("Todos");
-      if (window.history.state?.madre) {
-        window.history.back();
-      }
     }
   };
   
@@ -1814,25 +1836,6 @@ function CatalogoCliente({
     });
   };
   
-
-  const agregar = (p, variacion) => {
-    const key = variacion ? `${p.id}-${variacion.nombre}` : `${p.id}-unica`;
-    setCarrito(prev => {
-      const existente = prev[key];
-      if (existente) return { ...prev, [key]: { ...existente, cantidad: existente.cantidad + 1 } };
-      return { ...prev, [key]: { id: p.id, nombre: variacion ? `${p.nombre} (${variacion.nombre})` : p.nombre, precio: variacion ? Number(variacion.precio) : Number(p.precio), cantidad: 1, variacionObj: variacion } };
-    });
-  };
-
-  const quitar = (key) => {
-    setCarrito(prev => {
-      const nuevo = { ...prev };
-      if (nuevo[key].cantidad > 1) nuevo[key] = { ...nuevo[key], cantidad: nuevo[key].cantidad - 1 };
-      else delete nuevo[key];
-      return nuevo;
-    });
-  };
-
   const listaCarrito = Object.entries(carrito);
   const totalPrecio = listaCarrito.reduce((s, [_, item]) => s + (item.precio * item.cantidad), 0);
   const totalItems = listaCarrito.reduce((s, [_, item]) => s + item.cantidad, 0);
