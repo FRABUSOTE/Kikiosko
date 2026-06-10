@@ -1748,18 +1748,36 @@ function CatalogoCliente({
     return () => window.removeEventListener("popstate", onBack);
   }, [mostrarResultados, productoSeleccionado]);
 
+  // ✅ Botón atrás para link individual (sin condominio)
+  useEffect(() => {
+    if (!slugCond && !slugKiosko) {
+      const onBack = () => {
+        if (madreActiva && madreActiva !== "sin_madre") {
+          setMadreActiva(null);
+          setCategoria("Todos");
+          window.history.pushState({ madre: null }, "");
+          return;
+        }
+      };
+      window.addEventListener("popstate", onBack);
+      return () => window.removeEventListener("popstate", onBack);
+    }
+  }, [madreActiva, slugCond, slugKiosko]);
+
   // 🚀 Funciones de navegación fluidas que alteran la URL
   const entrarMadre = (n) => {
   setBusqueda("");
   if (slugCond && slugKiosko) {
     navigate(`/c/${slugCond}/${slugKiosko}/${encodeURIComponent(n)}`);
   } else {
+    // ✅ Link individual — empujar historial para que atrás funcione
+    window.history.pushState({ madre: n }, "");
     setMadreActiva(n);
     setCategoria("Todos");
   }
 };
 
-  const volverInicio = () => {
+const volverInicio = () => {
   setBusqueda("");
   if (slugCond && slugKiosko) {
     navigate(`/c/${slugCond}/${slugKiosko}`);
