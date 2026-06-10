@@ -1718,28 +1718,42 @@ function CatalogoCliente({
   }, [busqueda, kiosko.productos]);
 
 // ==========================================
-  // ✅ CONTROL DEL BOTÓN ATRÁS (VERSION SÍNCRONIZADA DE RAÍZ)
+  // ✅ CONTROL DEL BOTÓN ATRÁS DEFINITIVO (USANDO HASH EN URL)
   // ==========================================
   
-  // 1. Seguro inicial apenas carga la app (para links directos)
+  // 1. Sincroniza el estado de React con la URL real (si entran por QR o dan atrás)
   useEffect(() => {
-    if (!slugCond && !slugKiosko && !madreActiva) {
-      window.history.replaceState({ inicio: true }, "");
+    // Si estamos en un link individual (sin condominio)
+    if (!slugCond && !slugKiosko) {
+      const onHashChange = () => {
+        const hash = window.location.hash;
+        
+        if (hash.startsWith("#madre-")) {
+          // Extrae el nombre de la categoría del hash (ej: #madre-Bebidas -> Bebidas)
+          const nombreMadre = decodeURIComponent(hash.replace("#madre-", ""));
+          setMadreActiva(nombreMadre);
+        } else {
+          // Si el hash está vacío o no es de categoría madre, limpia y va a la portada
+          setMadreActiva(null);
+          setCategoria("Todos");
+          setProductoSeleccionado(null);
+          setMostrarResultados(false);
+        }
+      };
+
+      // Escuchamos el cambio de hash nativo del navegador/celular
+      window.addEventListener("hashchange", onHashChange);
+      
+      // Ejecutar una vez al cargar por si el link ya venía con hash
+      onHashChange();
+
+      return () => window.removeEventListener("hashchange", onHashChange);
     }
   }, [slugCond, slugKiosko]);
 
-  // 2. Controladores de historial para modales dinámicos (Buscador y Producto)
+  // 2. Escuchar el botón físico del celular SOLO para modales internos (Producto y Buscador)
   useEffect(() => {
-    const necesitaHistorial = mostrarResultados || productoSeleccionado;
-
-    if (necesitaHistorial) {
-      window.history.pushState({ modal: true }, "");
-    }
-  }, [mostrarResultados, productoSeleccionado]);
-
-  // 3. Escuchar el botón físico del celular
-  useEffect(() => {
-    const onBack = (e) => {
+    const onBackModales = () => {
       if (productoSeleccionado) {
         setProductoSeleccionado(null);
         return;
@@ -1750,48 +1764,46 @@ function CatalogoCliente({
         setSugerencias([]);
         return;
       }
-      
-      // SI ENTRÓ POR LINK DIRECTO: Si está dentro de un rubro y da atrás
-      if (!slugCond && !slugKiosko && madreActiva && madreActiva !== "sin_madre") {
-        setMadreActiva(null); // Regresa visualmente a la portada
-        setCategoria("Todos");
-        return;
-      }
     };
 
-    window.addEventListener("popstate", onBack);
-    return () => window.removeEventListener("popstate", onBack);
-  }, [mostrarResultados, productoSeleccionado, madreActiva, slugCond, slugKiosko]);
+    window.addEventListener("popstate", onBackModales);
+    return () => window.removeEventListener("popstate", onBackModales);
+  }, [mostrarResultados, productoSeleccionado]);
+
+  // Asegura el historial para los modales
+  useEffect(() => {
+    if (mostrarResultados || productoSeleccionado) {
+      window.history.pushState({ modal: true }, "");
+    }
+  }, [mostrarResultados, productoSeleccionado]);
+
 
   // ==========================================
-  // 🚀 FUNCIONES DE NAVEGACIÓN (CON PUSHSTATE INMEDIATO)
+  // 🚀 FUNCIONES DE NAVEGACIÓN MODIFICADAS
   // ==========================================
   const entrarMadre = (n) => {
     setBusqueda("");
     setMostrarResultados(false);
+    
     if (slugCond && slugKiosko) {
       navigate(`/c/${slugCond}/${slugKiosko}/${encodeURIComponent(n)}`);
     } else {
-      // 🔥 LA SOLUCIÓN: Empujamos el historial de inmediato al hacer CLIC
-      // Esto garantiza que el celular tenga un "paso adelante" antes de cambiar la pantalla
-      window.history.pushState({ madre: n }, "");
-      setMadreActiva(n);
-      setCategoria("Todos");
+      // 🔥 LA SOLUCIÓN REAL: Cambiamos el hash de la URL.
+      // Esto altera la URL visible (ej: mishop.com/#madre-Bebidas)
+      // El celular LO REGISTRA sí o sí en el historial y ya no se cerrará.
+      window.location.hash = `madre-${encodeURIComponent(n)}`;
     }
   };
 
   const volverInicio = () => {
     setBusqueda("");
     setMostrarResultados(false);
+    
     if (slugCond && slugKiosko) {
       navigate(`/c/${slugCond}/${slugKiosko}`);
     } else {
-      // Si usa el botón interno de la app, limpiamos el estado y "limpiamos" un paso de historial
-      setMadreActiva(null);
-      setCategoria("Todos");
-      if (window.history.state?.madre) {
-        window.history.back();
-      }
+      // Si usa el botón de la app, simplemente limpiamos el hash de la URL
+      window.location.hash = "";
     }
   };
   
