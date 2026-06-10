@@ -1717,52 +1717,44 @@ function CatalogoCliente({
     return () => clearTimeout(timeout);
   }, [busqueda, kiosko.productos]);
 
-  // ✅ Manejo botón atrás en buscador
-  useEffect(() => {
-    if (mostrarResultados || productoSeleccionado) {
-      window.history.pushState({ catalogo: true }, "");
-    }
-  }, [mostrarResultados, productoSeleccionado]);
+  // ✅ Manejo unificado del botón atrás
+useEffect(() => {
+  if (mostrarResultados || productoSeleccionado || (!slugCond && !slugKiosko && madreActiva && madreActiva !== "sin_madre")) {
+    window.history.pushState({ app: true }, "");
+    window.history.pushState({ app: true }, "");
+  }
+}, [mostrarResultados, productoSeleccionado, madreActiva]);
 
-  useEffect(() => {
-    const onBack = () => {
-      if (productoSeleccionado) {
-        setProductoSeleccionado(null);
-        setMostrarResultados(false);
-        setBusqueda("");
-        setSugerencias([]);
-        setMadreActiva(null);
-        window.history.pushState({ catalogo: true }, "");
-        return;
-      }
-      if (mostrarResultados) {
-        setMostrarResultados(false);
-        setBusqueda("");
-        setSugerencias([]);
-        setMadreActiva(null);
-        window.history.pushState({ catalogo: true }, "");
-        return;
-      }
-    };
-    window.addEventListener("popstate", onBack);
-    return () => window.removeEventListener("popstate", onBack);
-  }, [mostrarResultados, productoSeleccionado]);
-
-  // ✅ Botón atrás para link individual (sin condominio)
-  useEffect(() => {
-    if (!slugCond && !slugKiosko) {
-      const onBack = () => {
-        if (madreActiva && madreActiva !== "sin_madre") {
-          setMadreActiva(null);
-          setCategoria("Todos");
-          window.history.pushState({ madre: null }, "");
-          return;
-        }
-      };
-      window.addEventListener("popstate", onBack);
-      return () => window.removeEventListener("popstate", onBack);
+useEffect(() => {
+  const onBack = () => {
+    if (productoSeleccionado) {
+      setProductoSeleccionado(null);
+      setMostrarResultados(false);
+      setBusqueda("");
+      setSugerencias([]);
+      setMadreActiva(null);
+      window.history.pushState({ app: true }, "");
+      return;
     }
-  }, [madreActiva, slugCond, slugKiosko]);
+    if (mostrarResultados) {
+      setMostrarResultados(false);
+      setBusqueda("");
+      setSugerencias([]);
+      setMadreActiva(null);
+      window.history.pushState({ app: true }, "");
+      return;
+    }
+    if (!slugCond && !slugKiosko && madreActiva && madreActiva !== "sin_madre") {
+      setMadreActiva(null);
+      setCategoria("Todos");
+      window.history.pushState({ app: true }, "");
+      return;
+    }
+  };
+  window.addEventListener("popstate", onBack);
+  return () => window.removeEventListener("popstate", onBack);
+}, [mostrarResultados, productoSeleccionado, madreActiva, slugCond, slugKiosko]);
+
 
   // 🚀 Funciones de navegación fluidas que alteran la URL
   const entrarMadre = (n) => {
