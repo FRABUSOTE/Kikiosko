@@ -3293,7 +3293,7 @@ function LoginScreen() {
 // ─── WRAPPER DE CONDOMINIO ───
 function CondominioWrapper() {
   const { slugCond, slugKiosko, slugMadre } = useParams();
-  const navigate = useNavigate(); // 🌟 Lo agregamos para controlar el botón "Salir"
+  const navigate = useNavigate();
   const [condominioPublico, setCondominioPublico] = useState(null);
   const [rubrosPublicos, setRubrosPublicos] = useState([]);
   const [rubroActivo, setRubroActivo] = useState(null);
@@ -3301,6 +3301,7 @@ function CondominioWrapper() {
   const [productosDestacados, setProductosDestacados] = useState([]);
   const [productosOferta, setProductosOferta] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [carritoGlobal, setCarritoGlobal] = useState({}); // ✅ AGREGAR ESTO
 
   useEffect(() => {
     cargarCondominio();
@@ -3388,8 +3389,6 @@ function KioskoWrapper() {
   const { slug } = useParams();
   const [kiosko, setKiosko] = useState(null);
   const [cargando, setCargando] = useState(true);
-  const [carritoGlobal, setCarritoGlobal] = useState({});
-// Estructura: { "kiosko_id": { kiosko: {...}, items: { key: {nombre, precio, cantidad} } } }
 
   useEffect(() => {
     cargarKiosko();
