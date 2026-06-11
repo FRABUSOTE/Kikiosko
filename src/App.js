@@ -1661,11 +1661,37 @@ function CatalogoCliente({
   onSalir,
   slugCond,
   slugKiosko,
-  slugMadre // Este slug viene de tu componente Route (ej: :slugMadre)
+  slugMadre,
+  carritoGlobal,
+  setCarritoGlobal
 }) {
   const navigate = useNavigate(); // 🔥 ¡Aquí estaba el error principal! Faltaba declarar navigate
 
-  const [carrito, setCarrito] = useState({});
+  // ✅ Si viene del condominio usa carrito global, si es individual usa local
+const esCondominio = !!(slugCond && slugKiosko);
+const carritoLocal = esCondominio
+  ? (carritoGlobal?.[kiosko.id]?.items || {})
+  : null;
+const [carritoIndividual, setCarritoIndividual] = useState({});
+const carrito = esCondominio ? carritoLocal : carritoIndividual;
+
+const setCarrito = (updater) => {
+  if (esCondominio) {
+    setCarritoGlobal(prev => {
+      const itemsActuales = prev?.[kiosko.id]?.items || {};
+      const nuevosItems = typeof updater === "function" ? updater(itemsActuales) : updater;
+      return {
+        ...prev,
+        [kiosko.id]: {
+          kiosko: { id: kiosko.id, nombre: kiosko.nombre, whatsapp: kiosko.whatsapp, datos_pago: kiosko.datos_pago },
+          items: nuevosItems
+        }
+      };
+    });
+  } else {
+    setCarritoIndividual(updater);
+  }
+};
   const [categoria, setCategoria] = useState("Todos");
   const [nombreCliente, setNombreCliente] = useState("");
   const [verCarrito, setVerCarrito] = useState(false);
@@ -2528,12 +2554,130 @@ function CatalogoCliente({
     </div>
   );
 }
+function TiendaCarrito({ tienda, nombreGlobal, onEnviado }) {
+  const [tipoEntrega, setTipoEntrega] = useState("delivery");
+  const [medioPago, setMedioPago] = useState("efectivo");
+  const [direccion, setDireccion] = useState("");
+  const [nota, setNota] = useState("");
+
+  const items = Object.entries(tienda.items);
+  const total = items.reduce((s, [_, i]) => s + i.precio * i.cantidad, 0);
+  const d = tienda.kiosko.datos_pago || {};
+
+  const enviar = async () => {
+    if (!nombreGlobal.trim()) return alert("Por favor escribe tu nombre arriba");
+    if (tipoEntrega === "delivery" && !direccion.trim()) return alert("Ingresa tu dirección de delivery");
+    const lineas = items.map(([_, i]) => `• ${i.nombre} x${i.cantidad} — S/. ${(i.precio * i.cantidad).toFixed(2)}`).join("\n");
+    const entregaTexto = tipoEntrega === "delivery" ? `Delivery — ${direccion}` : "Recojo en tienda";
+    let pagoTexto = "";
+    if (medioPago === "efectivo") pagoTexto = "Efectivo";
+    else if (medioPago === "yape") pagoTexto = `Yape/Plin${d.yape_numero ? ` al ${d.yape_numero}` : ""}${d.yape_nombre ? ` (${d.yape_nombre})` : ""}`;
+    else if (medioPago === "transferencia") pagoTexto = `Transferencia${d.banco ? ` — ${d.banco}` : ""}${d.cuenta ? ` | Cta: ${d.cuenta}` : ""}${d.cci ? ` | CCI: ${d.cci}` : ""}${d.cuenta_nombre ? ` | A nombre de: ${d.cuenta_nombre}` : ""}`;
+    const msg = encodeURIComponent(`*Nuevo Pedido*\n\n${lineas}\n\n*Total: S/. ${total.toFixed(2)}*\n*Cliente:* ${nombreGlobal}\n*Entrega:* ${entregaTexto}\n*Pago:* ${pagoTexto}${nota ? `\n*Nota:* ${nota}` : ""}`);
+    await supabase.from("pedidos").insert([{ kiosko_id: tienda.kiosko.id, nombre_cliente: nombreGlobal, detalle: lineas, total }]);
+    window.open(`https://wa.me/51${tienda.kiosko.whatsapp}?text=${msg}`, "_blank");
+    onEnviado();
+  };
+
+  return (
+    <div style={{ borderBottom: "4px solid #f1f5f9" }}>
+      {/* Nombre tienda */}
+      <div style={{ padding: "14px 20px 10px", background: "#f8fafc" }}>
+        <p style={{ fontWeight: 900, fontSize: 14, color: "#111827", margin: 0 }}>🏪 {tienda.kiosko.nombre}</p>
+        <p style={{ fontSize: 11, color: "#9ca3af", margin: "2px 0 0" }}>Total: S/. {total.toFixed(2)}</p>
+      </div>
+
+      {/* Items */}
+      <div style={{ padding: "10px 20px", borderBottom: "1px solid #E5E7EB" }}>
+        {items.map(([key, item]) => (
+          <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, fontWeight: 800, fontSize: 13 }}>{item.nombre}</p>
+              <p style={{ margin: 0, color: "#2563EB", fontSize: 12, fontWeight: 700 }}>S/. {(item.precio * item.cantidad).toFixed(2)}</p>
+            </div>
+            <span style={{ fontSize: 12, fontWeight: 900, color: "#6B7280", background: "#f1f5f9", padding: "3px 10px", borderRadius: 999 }}>x{item.cantidad}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Entrega */}
+      <div style={{ padding: "12px 20px", borderBottom: "1px solid #E5E7EB" }}>
+        <p style={{ fontSize: 12, fontWeight: 800, color: "#111827", marginBottom: 8 }}>🚚 Tipo de entrega</p>
+        <div style={{ display: "flex", gap: 8, marginBottom: tipoEntrega === "delivery" ? 10 : 0 }}>
+          {[{ id: "delivery", label: "🚚 Delivery" }, { id: "tienda", label: "🏪 Recojo" }].map(opt => (
+            <button key={opt.id} onClick={() => setTipoEntrega(opt.id)}
+              style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: `1.5px solid ${tipoEntrega === opt.id ? "#1D4ED8" : "#E5E7EB"}`, background: tipoEntrega === opt.id ? "#eff6ff" : "#F8FAFC", fontWeight: 700, fontSize: 12, cursor: "pointer", color: tipoEntrega === opt.id ? "#1D4ED8" : "#6B7280", fontFamily: "Nunito, sans-serif" }}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {tipoEntrega === "delivery" && (
+          <div style={{ display: "flex", alignItems: "center", border: "1.5px solid #E5E7EB", borderRadius: 10, padding: "9px 12px", gap: 8, background: "#F8FAFC" }}>
+            <span>📍</span>
+            <input style={{ border: "none", outline: "none", fontSize: 13, background: "transparent", flex: 1, fontFamily: "Nunito, sans-serif" }}
+              placeholder="Tu dirección" value={direccion} onChange={e => setDireccion(e.target.value)} />
+          </div>
+        )}
+      </div>
+
+      {/* Pago */}
+      <div style={{ padding: "12px 20px", borderBottom: "1px solid #E5E7EB" }}>
+        <p style={{ fontSize: 12, fontWeight: 800, color: "#111827", marginBottom: 8 }}>💳 Medio de pago</p>
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          {[{ id: "efectivo", label: "Efectivo", icon: "💵" }, { id: "yape", label: "Yape", icon: "📱" }, { id: "transferencia", label: "Banco", icon: "🏦" }].map(op => (
+            <button key={op.id} onClick={() => setMedioPago(op.id)}
+              style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "10px 4px", borderRadius: 10, border: `1.5px solid ${medioPago === op.id ? "#1D4ED8" : "#E5E7EB"}`, background: medioPago === op.id ? "#eff6ff" : "#F8FAFC", cursor: "pointer", fontFamily: "Nunito, sans-serif" }}>
+              <span style={{ fontSize: 20, marginBottom: 3 }}>{op.icon}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "#111827" }}>{op.label}</span>
+            </button>
+          ))}
+        </div>
+        {medioPago === "yape" && d.yape_numero && (
+          <div style={{ background: "#fdf4ff", border: "1.5px solid #e9d5ff", borderRadius: 10, padding: "10px 12px" }}>
+            <p style={{ fontSize: 11, fontWeight: 800, color: "#7c3aed", marginBottom: 4 }}>📱 Yape / Plin</p>
+            <p style={{ fontSize: 14, fontWeight: 900, color: "#111827", margin: 0 }}>📞 {d.yape_numero}</p>
+            {d.yape_nombre && <p style={{ fontSize: 11, color: "#6B7280", margin: "3px 0 0" }}>👤 {d.yape_nombre}</p>}
+          </div>
+        )}
+        {medioPago === "transferencia" && (d.banco || d.cuenta) && (
+          <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 10, padding: "10px 12px" }}>
+            <p style={{ fontSize: 11, fontWeight: 800, color: "#1d4ed8", marginBottom: 6 }}>🏦 Transferencia</p>
+            {d.banco && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}><span style={{ fontSize: 11, color: "#6B7280" }}>Banco</span><span style={{ fontSize: 12, fontWeight: 800 }}>{d.banco}</span></div>}
+            {d.cuenta && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}><span style={{ fontSize: 11, color: "#6B7280" }}>Cuenta</span><span style={{ fontSize: 12, fontWeight: 800 }}>{d.cuenta}</span></div>}
+            {d.cci && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}><span style={{ fontSize: 11, color: "#6B7280" }}>CCI</span><span style={{ fontSize: 12, fontWeight: 800 }}>{d.cci}</span></div>}
+            {d.cuenta_nombre && <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ fontSize: 11, color: "#6B7280" }}>A nombre de</span><span style={{ fontSize: 12, fontWeight: 800 }}>{d.cuenta_nombre}</span></div>}
+          </div>
+        )}
+      </div>
+
+      {/* Nota */}
+      <div style={{ padding: "12px 20px", borderBottom: "1px solid #E5E7EB" }}>
+        <textarea style={{ width: "100%", boxSizing: "border-box", border: "1.5px solid #E5E7EB", borderRadius: 10, padding: "10px 12px", fontSize: 13, background: "#F8FAFC", resize: "none", outline: "none", fontFamily: "Nunito, sans-serif" }}
+          placeholder="¿Alguna indicación? (opcional)" rows={2} value={nota} onChange={e => setNota(e.target.value)} />
+      </div>
+
+      {/* Botón enviar */}
+      <div style={{ padding: "12px 20px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <p style={{ fontSize: 11, color: "#6B7280", margin: 0 }}>Total</p>
+          <p style={{ fontSize: 18, fontWeight: 900, margin: 0 }}>S/. {total.toFixed(2)}</p>
+        </div>
+        <button onClick={enviar}
+          style={{ display: "flex", alignItems: "center", gap: 8, background: "#25D366", color: "#fff", border: "none", borderRadius: 12, padding: "12px 18px", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Nunito, sans-serif" }}>
+          📲 Enviar pedido
+        </button>
+      </div>
+    </div>
+  );
+}
+
 
 // ─── CONDOMINIO PÚBLICO ───
-function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, productosOferta, rubroActivo, setRubroActivo, kioskoDirecto, onKioskoDirectoVisto }) {
+function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, productosOferta, rubroActivo, setRubroActivo, kioskoDirecto, onKioskoDirectoVisto, carritoGlobal, setCarritoGlobal }) {
   // 🚀 Declaramos el hook de navegación nativo de React Router
   const navigate = useNavigate(); 
-  
+  const [verCarritoGlobal, setVerCarritoGlobal] = useState(false);
+  const [nombreGlobal, setNombreGlobal] = useState("");
   const [mostrarResultados, setMostrarResultados] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [resultadosBusqueda, setResultadosBusqueda] = useState([]);
@@ -2596,9 +2740,20 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
               style={{ position: "absolute", left: 0, background: "#f1f5f9", border: "none", color: "#374151", width: 32, height: 32, borderRadius: 8, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
           )}
           <img src="/logo.png" style={{ height: 28, objectFit: "contain" }} alt="KiKiosko" />
+{(() => {
+  const tiendasConItems = Object.values(carritoGlobal || {}).filter(t => Object.keys(t.items || {}).length > 0);
+  const totalItems = tiendasConItems.reduce((s, t) => s + Object.values(t.items).reduce((ss, i) => ss + i.cantidad, 0), 0);
+  return totalItems > 0 ? (
+    <button onClick={() => setVerCarritoGlobal(true)}
+      style={{ position: "absolute", right: 0, background: "#eff6ff", border: "none", color: "#2563EB", width: 38, height: 38, borderRadius: 10, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      🛒
+      <span style={{ position: "absolute", top: -4, right: -4, background: "#F59E0B", color: "#fff", fontSize: 10, fontWeight: 900, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>{totalItems}</span>
+    </button>
+  ) : null;
+})()}
           {rubroActivo && (
-            <span style={{ position: "absolute", right: 0, fontSize: 11, color: "#6B7280", fontWeight: 700 }}>{rubroActivo.emoji} {rubroActivo.nombre}</span>
-          )}
+  <span style={{ position: "absolute", right: 46, fontSize: 11, color: "#6B7280", fontWeight: 700 }}>{rubroActivo.emoji} {rubroActivo.nombre}</span>
+)}
         </div>
 
         {/* FILA 2 — Buscador con dropdown */}
@@ -2981,8 +3136,8 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
                         {k.plan === "Premium" && (
                           <span style={{ fontSize: 9, color: "#f59e0b", fontWeight: 800 }}>⭐ Premium</span>
                         )}
+                      
                       </div>
-
                     </div>
                   </div>
                 );
@@ -2991,6 +3146,56 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
           )}
         </div>
       )}
+
+      {/* ✅ MODAL CARRITO MULTI-TIENDA — AQUÍ FUERA */}
+      {verCarritoGlobal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", zIndex: 100 }}>
+          <div style={{ background: "#fff", width: "100%", borderTopLeftRadius: 25, borderTopRightRadius: 25, maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
+            
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 20px 14px", borderBottom: "1px solid #E5E7EB" }}>
+              <h3 style={{ margin: 0, fontWeight: 900, fontSize: 18 }}>
+                🛒 Tu pedido
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#9ca3af", marginLeft: 8 }}>
+                  {Object.values(carritoGlobal || {}).filter(t => Object.keys(t.items || {}).length > 0).length} tiendas
+                </span>
+              </h3>
+              <button onClick={() => setVerCarritoGlobal(false)} style={{ border: "none", background: "#F8FAFC", width: 35, height: 35, borderRadius: "50%", fontSize: 16, cursor: "pointer" }}>✕</button>
+            </div>
+
+            {/* Nombre global */}
+            <div style={{ padding: "14px 20px", borderBottom: "1px solid #E5E7EB" }}>
+              <p style={{ fontSize: 12, fontWeight: 800, color: "#111827", marginBottom: 8 }}>👤 Tu nombre</p>
+              <input style={{ width: "100%", padding: 12, borderRadius: 12, border: "1.5px solid #e5e7eb", boxSizing: "border-box", outline: "none", fontSize: 14, background: "#f9fafb", fontFamily: "Nunito, sans-serif" }}
+                placeholder="Escribe tu nombre aquí..."
+                value={nombreGlobal}
+                onChange={e => setNombreGlobal(e.target.value)} />
+            </div>
+
+            {/* Lista de tiendas */}
+            <div style={{ overflowY: "auto", flex: 1 }}>
+              {Object.values(carritoGlobal || {})
+                .filter(t => Object.keys(t.items || {}).length > 0)
+                .map(tienda => (
+                  <TiendaCarrito
+                    key={tienda.kiosko.id}
+                    tienda={tienda}
+                    nombreGlobal={nombreGlobal}
+                    onEnviado={() => {
+                      setCarritoGlobal(prev => {
+                        const nuevo = { ...prev };
+                        delete nuevo[tienda.kiosko.id];
+                        return nuevo;
+                      });
+                      if (Object.keys(carritoGlobal).length <= 1) setVerCarritoGlobal(false);
+                    }}
+                  />
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -3156,22 +3361,26 @@ function CondominioWrapper() {
     slugKiosko={slugKiosko}
     slugMadre={slugMadre}
     onSalir={() => navigate(`/c/${condominioPublico.slug}`)}
+    carritoGlobal={carritoGlobal}
+    setCarritoGlobal={setCarritoGlobal}
   />
 );
     }
   }
 
   return (
-    <CondominioPublico
-      condominio={condominioPublico}
-      rubros={rubrosPublicos}
-      kioskos={kioskosPorRubro}
-      productosDestacados={productosDestacados}
-      productosOferta={productosOferta}
-      rubroActivo={rubroActivo}
-      setRubroActivo={setRubroActivo}
-    />
-  );
+  <CondominioPublico
+    condominio={condominioPublico}
+    rubros={rubrosPublicos}
+    kioskos={kioskosPorRubro}
+    productosDestacados={productosDestacados}
+    productosOferta={productosOferta}
+    rubroActivo={rubroActivo}
+    setRubroActivo={setRubroActivo}
+    carritoGlobal={carritoGlobal}
+    setCarritoGlobal={setCarritoGlobal}
+  />
+);
 }
 
 // ─── WRAPPER DE KIOSKO INDIVIDUAL ───
@@ -3179,6 +3388,8 @@ function KioskoWrapper() {
   const { slug } = useParams();
   const [kiosko, setKiosko] = useState(null);
   const [cargando, setCargando] = useState(true);
+  const [carritoGlobal, setCarritoGlobal] = useState({});
+// Estructura: { "kiosko_id": { kiosko: {...}, items: { key: {nombre, precio, cantidad} } } }
 
   useEffect(() => {
     cargarKiosko();
