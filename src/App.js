@@ -2744,9 +2744,7 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
     </button>
   ) : null;
 })()}
-          {rubroActivo && (
-  <span style={{ position: "absolute", right: 46, fontSize: 11, color: "#6B7280", fontWeight: 700 }}>{rubroActivo.emoji} {rubroActivo.nombre}</span>
-)}
+          
         </div>
 
         {/* FILA 2 — Buscador con dropdown */}
