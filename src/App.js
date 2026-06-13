@@ -3014,7 +3014,7 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
             <div style={{ padding: "0 14px 16px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
                 <div style={{ background: "#fff7ed", borderRadius: 8, padding: "3px 7px", fontSize: 14 }}>🔥</div>
-                <span style={{ fontSize: 13, fontWeight: 900, color: "#111827" }}>Lo más pedido</span>
+                <span style={{ fontSize: 13, fontWeight: 900, color: "#111827" }}>Descubre nuestras tiendas</span>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
                 {productosDestacados.map((prod, idx) => {
@@ -3314,9 +3314,19 @@ function CondominioWrapper() {
       setCondominioPublico(cond);
       setRubrosPublicos(rubros || []);
       setKioskosPorRubro(kioskosConProductos || []);
-      setProductosDestacados(
-        kioskosConProductos.flatMap(k => (k.productos || []).filter(p => p.foto && p.stock)).slice(0, 3)
-      );
+      // ✅ 1 producto al azar por tienda, máximo 3 tiendas distintas (rotativo)
+      const destacadosPorTienda = kioskosConProductos
+        .map(k => {
+          const disponibles = (k.productos || []).filter(p => p.foto && p.stock);
+          if (disponibles.length === 0) return null;
+          const random = disponibles[Math.floor(Math.random() * disponibles.length)];
+          return { ...random, kiosko_id: k.id };
+        })
+        .filter(Boolean);
+
+      const mezclados = destacadosPorTienda.sort(() => Math.random() - 0.5);
+
+      setProductosDestacados(mezclados.slice(0, 3));
       setProductosOferta(
         kioskosConProductos.flatMap(k =>
           (k.productos || []).filter(p => p.oferta && p.stock).map(p => ({ ...p, kiosko_nombre: k.nombre }))
