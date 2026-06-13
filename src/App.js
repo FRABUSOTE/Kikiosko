@@ -2114,7 +2114,7 @@ const setCarrito = (updater) => {
       {/* HEADER AZUL */}
       <div style={{ background: "#fff", position: "sticky", top: 0, zIndex: 40, boxShadow: "0 4px 16px rgba(0,0,0,0.08)", borderRadius: "0 0 20px 20px" }}>
   {/* FILA 1 — Logo + botones + Carrito */}
-<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px 6px" }}>
+<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 14px 4px" }}>
   {/* Izquierda — botones volver */}
   <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
     {onSalir && (
@@ -2137,15 +2137,15 @@ const setCarrito = (updater) => {
 </div>
 
 {/* FILA 2 — Nombre tienda completo */}
-<div style={{ padding: "0 14px 8px", textAlign: "center" }}>
-  <p style={{ margin: 0, fontSize: 14, fontWeight: 900, color: "#111827", lineHeight: 1.3 }}>{kiosko.nombre}</p>
+<div style={{ padding: "0 14px 4px", textAlign: "center" }}>
+  <p style={{ margin: 0, fontSize: 13, fontWeight: 900, color: "#111827", lineHeight: 1.2 }}>{kiosko.nombre}</p>
   {kiosko.info_tienda?.descripcion && (
-    <p style={{ margin: 0, fontSize: 11, color: "#9ca3af", fontWeight: 600, marginTop: 2 }}>{kiosko.info_tienda.descripcion}</p>
+    <p style={{ margin: 0, fontSize: 10, color: "#9ca3af", fontWeight: 600, marginTop: 1 }}>{kiosko.info_tienda.descripcion}</p>
   )}
 </div>
 
   {/* FILA 2 — Buscador con dropdown */}
-<div style={{ padding: "0 14px 12px", position: "relative" }}>
+<div style={{ padding: "0 14px 8px", position: "relative" }}>
   <div style={{ display: "flex", alignItems: "center", gap: 8, background: busqueda ? "#eff6ff" : "#f8fafc", border: busqueda ? "2px solid #2563EB" : "1.5px solid #e5e7eb", borderRadius: busqueda && sugerencias.length > 0 && !mostrarResultados ? "12px 12px 0 0" : 999, padding: "8px 14px", transition: "all 0.2s" }}>
     <span style={{ fontSize: 14, flexShrink: 0 }}>🔍</span>
     <input
