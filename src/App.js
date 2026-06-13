@@ -2297,11 +2297,13 @@ const setCarrito = (updater) => {
               : <span style={{ fontSize: 36 }}>{prod.emoji || "🏷️"}</span>
             }
             <div style={{ position: "absolute", top: 6, left: 6, background: "#dc2626", color: "#fff", fontSize: 8, fontWeight: 900, padding: "2px 5px", borderRadius: 999 }}>
-              {prod.precio_original && prod.precio_original > prod.precio
-                ? `-${Math.round((1 - prod.precio / prod.precio_original) * 100)}%`
-                : "🔥 OFERTA"
-              }
-            </div>
+  🔥 OFERTA
+</div>
+{prod.precio_original && prod.precio_original > prod.precio && (
+  <div style={{ position: "absolute", top: 6, right: 6, background: "#111827", color: "#fff", fontSize: 8, fontWeight: 900, padding: "2px 5px", borderRadius: 999 }}>
+    -{Math.round((1 - prod.precio / prod.precio_original) * 100)}%
+  </div>
+)}
           </div>
           <div style={{ padding: "6px 7px 8px" }}>
             <p style={{ fontSize: 10, fontWeight: 800, color: "#111827", margin: "0 0 3px", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prod.nombre}</p>
