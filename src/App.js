@@ -2387,7 +2387,7 @@ const setCarrito = (updater) => {
           {kiosko.banner && kiosko.plan !== "Básico" && (
   <div style={{ padding: "8px 6px 0" }}>
     <div style={{ borderRadius: 20, overflow: "hidden", boxShadow: "0 6px 20px rgba(0,0,0,0.12)", position: "relative" }}>
-      <img src={kiosko.banner} alt="banner" style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }} />
+      <img src={kiosko.banner} alt="banner" style={{ width: "100%", aspectRatio: "16/7", objectFit: "cover", display: "block" }} />
       {/* OVERLAY con horario y dirección */}
       {(kiosko.info_tienda?.horario || kiosko.info_tienda?.direccion || kiosko.info_tienda?.delivery === "si") && (
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.65) 100%)", padding: "20px 14px 12px", display: "flex", gap: 12, flexWrap: "wrap" }}>
