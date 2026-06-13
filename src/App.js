@@ -2269,7 +2269,7 @@ const setCarrito = (updater) => {
     {kiosko.banner && kiosko.plan !== "Básico" && (
   <div style={{ padding: "8px 6px 0" }}>
         <div style={{ borderRadius: 18, overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.10)" }}>
-          <img src={kiosko.banner} alt="banner" style={{ width: "100%", aspectRatio: "16/7", objectFit: "cover", display: "block" }} />
+          <img src={kiosko.banner} alt="banner" style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }} />
         </div>
       </div>
     )}
