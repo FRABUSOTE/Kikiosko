@@ -932,14 +932,23 @@ function AdminKiosko({ kiosko, onSalir, onVerCatalogo, onProductosChange }) {
         veces_usada: 1
       }]);
     }
-    const productoParaDB = {
-      nombre: nuevoProducto.nombre, precio: parseFloat(nuevoProducto.precio) || 0,
-      emoji: nuevoProducto.emoji || "🛒", categoria: nuevoProducto.categoria,
-      madre: nuevoProducto.madre || null,
-      cantidad: parseInt(nuevoProducto.cantidad) || 0,
-      stock: (parseInt(nuevoProducto.cantidad) || 0) > 0,
-      kiosko_id: kiosko.id, foto: fotoUrl,
-    };
+    const precioNuevo = parseFloat(nuevoProducto.precio) || 0;
+const precioAnterior = parseFloat(modalProducto?.precio) || 0;
+let precio_original = modalProducto?.precio_original ?? null;
+if (precioNuevo < precioAnterior && !precio_original) {
+  precio_original = precioAnterior;
+} else if (precio_original && precioNuevo >= precio_original) {
+  precio_original = null;
+}
+
+const productoParaDB = {
+  nombre: nuevoProducto.nombre, precio: precioNuevo, precio_original,
+  emoji: nuevoProducto.emoji || "🛒", categoria: nuevoProducto.categoria,
+  madre: nuevoProducto.madre || null,
+  cantidad: parseInt(nuevoProducto.cantidad) || 0,
+  stock: (parseInt(nuevoProducto.cantidad) || 0) > 0,
+  kiosko_id: kiosko.id, foto: fotoUrl,
+};
     let nuevos;
     if (modalProducto?.id) {
       const { error } = await supabase.from("productos").update(productoParaDB).eq("id", modalProducto.id);
