@@ -3339,11 +3339,18 @@ function CondominioWrapper() {
       const mezclados = destacadosPorTienda.sort(() => Math.random() - 0.5);
 
       setProductosDestacados(mezclados.slice(0, 3));
-      setProductosOferta(
-        kioskosConProductos.flatMap(k =>
-          (k.productos || []).filter(p => p.oferta && p.stock).map(p => ({ ...p, kiosko_nombre: k.nombre }))
-        )
-      );
+      // ✅ Máximo 2 ofertas por tienda, máximo 10 en total, orden aleatorio
+const ofertasMezcladas = kioskosConProductos
+  .flatMap(k => {
+    const ofertas = (k.productos || [])
+      .filter(p => p.oferta && p.stock)
+      .map(p => ({ ...p, kiosko_nombre: k.nombre }));
+    return ofertas.sort(() => Math.random() - 0.5).slice(0, 2);
+  })
+  .sort(() => Math.random() - 0.5)
+  .slice(0, 10);
+
+setProductosOferta(ofertasMezcladas);
     }
     setCargando(false);
   };
