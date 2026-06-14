@@ -2299,11 +2299,7 @@ const setCarrito = (updater) => {
             <div style={{ position: "absolute", top: 6, left: 6, background: "#dc2626", color: "#fff", fontSize: 8, fontWeight: 900, padding: "2px 5px", borderRadius: 999 }}>
   🔥 OFERTA
 </div>
-{prod.precio_original && prod.precio_original > prod.precio && (
-  <div style={{ position: "absolute", top: 6, right: 6, background: "#111827", color: "#fff", fontSize: 8, fontWeight: 900, padding: "2px 5px", borderRadius: 999 }}>
-    -{Math.round((1 - prod.precio / prod.precio_original) * 100)}%
-  </div>
-)}
+
           </div>
           <div style={{ padding: "6px 7px 8px" }}>
             <p style={{ fontSize: 10, fontWeight: 800, color: "#111827", margin: "0 0 3px", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prod.nombre}</p>
@@ -2312,9 +2308,14 @@ const setCarrito = (updater) => {
                 S/. {Number(prod.precio_original).toFixed(2)}
               </span>
             )}
-            <p style={{ fontSize: 12, fontWeight: 900, color: "#dc2626", margin: "0" }}>
-              S/. {Number(prod.precio).toFixed(2)}
-            </p>
+            <p style={{ fontSize: 12, fontWeight: 900, color: "#dc2626", margin: "0", display: "flex", alignItems: "center", gap: 4 }}>
+  S/. {Number(prod.precio).toFixed(2)}
+  {prod.precio_original && prod.precio_original > prod.precio && (
+    <span style={{ fontSize: 9, fontWeight: 700, color: "#fff", background: "#dc2626", padding: "1px 5px", borderRadius: 999 }}>
+      -{Math.round((1 - prod.precio / prod.precio_original) * 100)}%
+    </span>
+  )}
+</p>
           </div>
         </div>
       ))}
@@ -3037,7 +3038,7 @@ function CondominioPublico({ condominio, rubros, kioskos, productosDestacados, p
                       style={{ background: "#fff", borderRadius: 14, overflow: "hidden", border: "1px solid #f1f5f9", cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.05)" }}>
                       <div style={{ position: "relative", aspectRatio: "1/1", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <img src={prod.foto} alt={prod.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        <div style={{ position: "absolute", top: 5, left: 5, width: 18, height: 18, borderRadius: 6, background: idx === 0 ? "#f59e0b" : idx === 1 ? "#6b7280" : "#b45309", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 900, color: "#fff" }}>{idx + 1}</div>
+                    
                       </div>
                       <div style={{ padding: "7px 8px 9px" }}>
                         <p style={{ fontSize: 10, fontWeight: 800, color: "#111827", marginBottom: 2, lineHeight: 1.2 }}>{prod.nombre}</p>
