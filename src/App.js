@@ -87,11 +87,52 @@ function SuperAdmin({ onSalir }) {
   const [condominioDetalle, setCondominioDetalle] = useState(null);
   const [rubrosCondominio, setRubrosCondominio] = useState([]);
   const [nuevoRubro, setNuevoRubro] = useState({ nombre: "", emoji: "🏪", color: "#2563EB" });
-  const fileRef = useRef();
+  const [vistaBiblioteca, setVistaBiblioteca] = useState(false);
+  const [bibliotecaFotos, setBibliotecaFotos] = useState([]);
+  const [cargandoBiblioteca, setCargandoBiblioteca] = useState(false);
+  const [busquedaBiblioteca, setBusquedaBiblioteca] = useState("");
+  const [nuevaFoto, setNuevaFoto] = useState({ nombre: "", categoria: "", file: null, preview: null });
+  const bibliotecaRef = useRef();
+  
 
   const mostrarToast = (msg, tipo = "ok") => { setToast({ msg, tipo }); setTimeout(() => setToast(null), 2500); };
 
   useEffect(() => { cargarKioskos(); cargarCondominios(); }, []);
+
+  const cargarBiblioteca = async (termino = "") => {
+  setCargandoBiblioteca(true);
+  const query = supabase.from("imagenes_biblioteca").select("*").order("veces_usada", { ascending: false }).limit(50);
+  const { data } = termino.length > 0 ? await query.ilike("nombre", `%${termino}%`) : await query;
+  setBibliotecaFotos(data || []);
+  setCargandoBiblioteca(false);
+};
+
+const subirFotoBiblioteca = async () => {
+  if (!nuevaFoto.file || !nuevaFoto.nombre) return mostrarToast("❌ Falta nombre o foto", "error");
+  mostrarToast("⏳ Subiendo foto...", "ok");
+  const fileComprimido = await comprimirImagen(nuevaFoto.file, "producto");
+  const fileName = `biblioteca_${Date.now()}.jpg`;
+  const { error: uploadError } = await supabase.storage.from("fotos-productos").upload(fileName, fileComprimido, { upsert: true, contentType: "image/jpeg" });
+  if (uploadError) { mostrarToast("❌ Error subiendo foto", "error"); return; }
+  const { data: urlData } = supabase.storage.from("fotos-productos").getPublicUrl(fileName);
+  const { data: nueva } = await supabase.from("imagenes_biblioteca").insert([{
+    nombre: nuevaFoto.nombre.trim(),
+    categoria: nuevaFoto.categoria.trim() || "General",
+    url: urlData.publicUrl,
+    veces_usada: 0
+  }]).select();
+  if (nueva) {
+    setBibliotecaFotos(prev => [nueva[0], ...prev]);
+    setNuevaFoto({ nombre: "", categoria: "", file: null, preview: null });
+    mostrarToast("✅ Foto agregada a la biblioteca");
+  }
+};
+
+const eliminarFotoBiblioteca = async (id) => {
+  await supabase.from("imagenes_biblioteca").delete().eq("id", id);
+  setBibliotecaFotos(prev => prev.filter(f => f.id !== id));
+  mostrarToast("🗑 Foto eliminada");
+};
 
   const cargarCondominios = async () => {
     const { data } = await supabase.from("condominios").select("*").order("created_at", { ascending: false });
@@ -343,6 +384,7 @@ function SuperAdmin({ onSalir }) {
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
           <button className="btn" style={{ background: vistaCondominios ? "#2563EB" : "#eff6ff", color: vistaCondominios ? "#fff" : "#2563EB", padding: "9px 14px", fontSize: 12, border: "1px solid #bfdbfe" }} onClick={() => setVistaCondominios(!vistaCondominios)}>🏘 Condominios</button>
           <button className="btn" style={{ background: "#2563EB", color: "#fff", padding: "9px 18px", fontSize: 12 }} onClick={() => setModalNuevo(true)}>+ Nuevo kiosko</button>
+          <button className="btn" style={{ background: vistaBiblioteca ? "#7c3aed" : "#f5f3ff", color: vistaBiblioteca ? "#fff" : "#7c3aed", padding: "9px 14px", fontSize: 12, border: "1px solid #ddd6fe" }} onClick={() => setVistaBiblioteca(!vistaBiblioteca)}>📚 Biblioteca</button>
           <button className="btn" style={{ background: "#F8FAFC", color: "#6B7280", padding: "9px 14px", fontSize: 12, border: "1px solid #E5E7EB" }} onClick={onSalir}>Salir</button>
         </div>
       </div>
@@ -378,6 +420,100 @@ function SuperAdmin({ onSalir }) {
             <button key={id} className="btn" style={{ padding: "8px 14px", fontSize: 11, background: filtro === id ? "#eff6ff" : "#F8FAFC", color: filtro === id ? "#2563EB" : "#6B7280", border: `1px solid ${filtro === id ? "#bfdbfe" : "#E5E7EB"}` }} onClick={() => setFiltro(id)}>{label}</button>
           ))}
         </div>
+
+        {/* ✅ VISTA BIBLIOTECA */}
+{vistaBiblioteca && (
+  <div style={{ marginBottom: 24 }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+      <div>
+        <p style={{ fontWeight: 900, fontSize: 16 }}>📚 Biblioteca de imágenes</p>
+        <p style={{ fontSize: 12, color: "#9ca3af" }}>{bibliotecaFotos.length} fotos disponibles para todos los kioskos</p>
+      </div>
+    </div>
+
+    {/* SUBIR NUEVA FOTO */}
+    <div className="card" style={{ padding: "16px 20px", marginBottom: 16 }}>
+      <p style={{ fontWeight: 800, fontSize: 14, marginBottom: 12 }}>➕ Agregar nueva foto</p>
+      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+        <div style={{ width: 80, height: 80, borderRadius: 10, background: "#f3f4f6", border: "1.5px dashed #bfdbfe", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0, cursor: "pointer" }}
+          onClick={() => bibliotecaRef.current.click()}>
+          {nuevaFoto.preview
+            ? <img src={nuevaFoto.preview} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            : <span style={{ fontSize: 28 }}>📷</span>}
+        </div>
+        <input type="file" accept="image/jpeg,image/png,image/webp" ref={bibliotecaRef} style={{ display: "none" }}
+          onChange={e => {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => setNuevaFoto(p => ({ ...p, file, preview: ev.target.result }));
+            reader.readAsDataURL(file);
+            // Auto-nombre desde el archivo
+            const nombreArchivo = file.name.replace(/\.[^/.]+$/, "").replace(/-|_/g, " ");
+            setNuevaFoto(p => ({ ...p, file, nombre: nombreArchivo }));
+          }} />
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+          <input className="inp" placeholder="Nombre del producto (ej: Arroz Costeño)" value={nuevaFoto.nombre}
+            onChange={e => setNuevaFoto(p => ({ ...p, nombre: e.target.value }))} />
+          <input className="inp" placeholder="Categoría (ej: Abarrotes, Bebidas, Lácteos)" value={nuevaFoto.categoria}
+            onChange={e => setNuevaFoto(p => ({ ...p, categoria: e.target.value }))} />
+          <button className="btn" style={{ background: "#7c3aed", color: "#fff", padding: "10px", fontSize: 12 }}
+            onClick={subirFotoBiblioteca} disabled={!nuevaFoto.file || !nuevaFoto.nombre}>
+            📤 Subir a biblioteca
+          </button>
+        </div>
+      </div>
+    </div>
+
+    {/* BUSCADOR */}
+    <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+      <input className="inp" placeholder="🔍 Buscar por nombre..." value={busquedaBiblioteca}
+        onChange={async e => {
+          setBusquedaBiblioteca(e.target.value);
+          await cargarBiblioteca(e.target.value);
+        }} />
+      <button className="btn" style={{ background: "#7c3aed", color: "#fff", padding: "10px 16px", fontSize: 12, flexShrink: 0 }}
+        onClick={() => cargarBiblioteca(busquedaBiblioteca)}>
+        Buscar
+      </button>
+      <button className="btn" style={{ background: "#f5f3ff", color: "#7c3aed", padding: "10px 16px", fontSize: 12, border: "1px solid #ddd6fe", flexShrink: 0 }}
+        onClick={() => { setBusquedaBiblioteca(""); cargarBiblioteca(""); }}>
+        Ver todas
+      </button>
+    </div>
+
+    {/* GRID DE FOTOS */}
+    {cargandoBiblioteca ? (
+      <div style={{ textAlign: "center", padding: "40px 0", color: "#9ca3af" }}>⏳ Cargando...</div>
+    ) : bibliotecaFotos.length === 0 ? (
+      <div className="card" style={{ padding: "40px", textAlign: "center", color: "#9ca3af" }}>
+        <p style={{ fontSize: 32, marginBottom: 8 }}>📭</p>
+        <p style={{ fontSize: 13, fontWeight: 700 }}>Sin fotos aún</p>
+        <button className="btn" style={{ background: "#7c3aed", color: "#fff", padding: "10px 20px", fontSize: 12, marginTop: 12 }}
+          onClick={() => cargarBiblioteca("")}>
+          📂 Cargar fotos
+        </button>
+      </div>
+    ) : (
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12 }}>
+        {bibliotecaFotos.map(foto => (
+          <div key={foto.id} className="card" style={{ overflow: "hidden" }}>
+            <div style={{ aspectRatio: "1/1", background: "#f8fafc", overflow: "hidden" }}>
+              <img src={foto.url} alt={foto.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </div>
+            <div style={{ padding: "8px 10px" }}>
+              <p style={{ fontSize: 11, fontWeight: 800, color: "#111827", margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{foto.nombre}</p>
+              <p style={{ fontSize: 10, color: "#9ca3af", margin: "0 0 6px" }}>{foto.categoria} · {foto.veces_usada} usos</p>
+              <button className="btn" style={{ width: "100%", background: "#fee2e2", color: "#dc2626", padding: "5px", fontSize: 11, border: "1px solid #fecaca" }}
+                onClick={() => eliminarFotoBiblioteca(foto.id)}>
+                🗑 Eliminar
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+)}
 
         {/* ✅ VISTA CONDOMINIOS */}
         {vistaCondominios && (
