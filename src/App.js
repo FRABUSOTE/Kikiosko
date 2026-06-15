@@ -93,7 +93,7 @@ function SuperAdmin({ onSalir }) {
   const [busquedaBiblioteca, setBusquedaBiblioteca] = useState("");
   const [nuevaFoto, setNuevaFoto] = useState({ nombre: "", categoria: "", file: null, preview: null });
   const bibliotecaRef = useRef();
-  
+  const fileRef = useRef();
 
   const mostrarToast = (msg, tipo = "ok") => { setToast({ msg, tipo }); setTimeout(() => setToast(null), 2500); };
 
