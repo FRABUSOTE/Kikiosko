@@ -382,9 +382,9 @@ const eliminarFotoBiblioteca = async (id) => {
         <img src="/logo.png" style={{ height: 32, objectFit: "contain" }} alt="KiKiosko" />
         <span style={{ fontSize: 11, background: "#dbeafe", color: "#1d4ed8", padding: "3px 10px", borderRadius: 999, fontWeight: 700 }}>👑 SÚPER ADMIN</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-          <button className="btn" style={{ background: vistaCondominios ? "#2563EB" : "#eff6ff", color: vistaCondominios ? "#fff" : "#2563EB", padding: "9px 14px", fontSize: 12, border: "1px solid #bfdbfe" }} onClick={() => setVistaCondominios(!vistaCondominios)}>🏘 Condominios</button>
+          <button className="btn" style={{ background: vistaCondominios ? "#2563EB" : "#eff6ff", color: vistaCondominios ? "#fff" : "#2563EB", padding: "9px 14px", fontSize: 12, border: "1px solid #bfdbfe" }} onClick={() => { setVistaCondominios(!vistaCondominios); setVistaBiblioteca(false); }}>🏘 Condominios</button>
           <button className="btn" style={{ background: "#2563EB", color: "#fff", padding: "9px 18px", fontSize: 12 }} onClick={() => setModalNuevo(true)}>+ Nuevo kiosko</button>
-          <button className="btn" style={{ background: vistaBiblioteca ? "#7c3aed" : "#f5f3ff", color: vistaBiblioteca ? "#fff" : "#7c3aed", padding: "9px 14px", fontSize: 12, border: "1px solid #ddd6fe" }} onClick={() => setVistaBiblioteca(!vistaBiblioteca)}>📚 Biblioteca</button>
+          <button className="btn" style={{ background: vistaBiblioteca ? "#7c3aed" : "#f5f3ff", color: vistaBiblioteca ? "#fff" : "#7c3aed", padding: "9px 14px", fontSize: 12, border: "1px solid #ddd6fe" }} onClick={() => { setVistaBiblioteca(!vistaBiblioteca); setVistaCondominios(false); if (!vistaBiblioteca) cargarBiblioteca(""); }}>📚 Biblioteca</button>
           <button className="btn" style={{ background: "#F8FAFC", color: "#6B7280", padding: "9px 14px", fontSize: 12, border: "1px solid #E5E7EB" }} onClick={onSalir}>Salir</button>
         </div>
       </div>
