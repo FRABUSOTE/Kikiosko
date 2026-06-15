@@ -2200,7 +2200,7 @@ const setCarrito = (updater) => {
               {p.foto ? <img src={p.foto} style={{ width: "100%", objectFit: "contain", display: "block" }} /> : <span style={{ fontSize: "40px", opacity: 0.6, marginTop: 20 }}>{p.emoji || "📦"}</span>}
             </div>
           </div>
-          <div style={{ padding: 12 }}>
+          <div style={{ padding: "8px 12px 12px" }}>
             <p style={{ fontWeight: 800, fontSize: 13, margin: 0 }}>{p.nombre}</p>
             {p.variaciones?.length > 0 && (
               <div style={{ display: "flex", gap: 5, margin: "8px 0", flexWrap: "wrap" }}>
