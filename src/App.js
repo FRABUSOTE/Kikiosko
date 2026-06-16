@@ -2510,10 +2510,10 @@ const setCarrito = (updater) => {
               : <span style={{ fontSize: 48 }}>🗂</span>
             }
           </div>
-          <div style={{ padding: "10px 14px 12px" }}>
-            <p style={{ fontWeight: 800, fontSize: 14, color: "#111827", margin: 0 }}>{madre.nombre}</p>
-            <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{kiosko.productos.filter(p => p.madre === madre.nombre).length} productos</p>
-          </div>
+          <div style={{ padding: "6px 10px 8px" }}>
+  <p style={{ fontWeight: 800, fontSize: 13, color: "#111827", margin: 0 }}>{madre.nombre}</p>
+  <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 1 }}>{kiosko.productos.filter(p => p.madre === madre.nombre).length} productos</p>
+</div>
         </button>
       ))}
     </div>
