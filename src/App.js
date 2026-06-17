@@ -2504,7 +2504,7 @@ const setCarrito = (updater) => {
       {catMadres.map(madre => (
         <button key={madre.id} onClick={() => entrarMadre(madre.nombre)}
   style={{ background: "#fff", borderRadius: 18, overflow: "hidden", border: "none", cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.08)", padding: 0, textAlign: "left" }}>
-  <div style={{ width: "100%", aspectRatio: "4/3", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+  <div style={{ width: "100%", aspectRatio: "16/9", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
     {madre.imagen_url
       ? <img src={madre.imagen_url} alt={madre.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
       : <span style={{ fontSize: 48 }}>🗂</span>
